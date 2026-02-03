@@ -1,24 +1,71 @@
 using UnityEngine;
+using System.Collections;
+
+[System.Serializable]
+public class Wave
+{
+    public string nomeOndata;
+    public int numeroNemici;
+    public float intervalloTraNemici;
+}
 
 public class EnemySpawner : MonoBehaviour
 {
-    public GameObject enemyPrefab;
-    public float spawnRate = 2f;
-    private float nextSpawn = 0f;
+    public GameObject foxPrefab;
+    public float spawnDistance = 10f;
+    
+    // Lista delle ondate configurabile da Inspector
+    public Wave[] ondate; 
+    public float tempoTraOndate = 5f;
 
-    void Update()
+    private int currentWaveIndex = 0;
+
+    void Start()
     {
-        if (Time.time > nextSpawn)
+        StartCoroutine(GestoreOndate());
+    }
+
+    IEnumerator GestoreOndate()
+    {
+        // Cicla attraverso tutte le ondate che abbiamo impostato
+        while (currentWaveIndex < ondate.Length)
         {
-            nextSpawn = Time.time + spawnRate;
-            SpawnEnemy();
+            Wave ondataCorrente = ondate[currentWaveIndex];
+            Debug.Log("Inizia: " + ondataCorrente.nomeOndata);
+
+            // 1. Spawna i nemici di questa ondata
+            for (int i = 0; i < ondataCorrente.numeroNemici; i++)
+            {
+                SpawnEnemy();
+                yield return new WaitForSeconds(ondataCorrente.intervalloTraNemici);
+            }
+
+            // 2. Aspetta che il giocatore uccida tutti i nemici prima di passare alla prossima
+            // (Controlla ogni secondo se ci sono ancora nemici vivi)
+            while (GameObject.FindGameObjectWithTag("Nemico") != null)
+            {
+                yield return new WaitForSeconds(1f);
+            }
+
+            Debug.Log("Ondata completata!");
+            
+            // 3. Pausa meritata prima della prossima ondata
+            yield return new WaitForSeconds(tempoTraOndate);
+
+            currentWaveIndex++;
+        }
+
+        // Se esce dal ciclo, le ondate sono finite -> VITTORIA
+        if (GameManager.instance != null)
+        {
+            GameManager.instance.Vittoria();
         }
     }
 
     void SpawnEnemy()
     {
-        // Crea un punto casuale fuori dallo schermo (per ora semplificato)
-        Vector2 spawnPos = new Vector2(Random.Range(-10, 10), 6); 
-        Instantiate(enemyPrefab, spawnPos, Quaternion.identity);
+        if (foxPrefab == null) return;
+        Vector2 spawnPos = Random.insideUnitCircle.normalized * spawnDistance;
+        Instantiate(foxPrefab, spawnPos, Quaternion.identity);
     }
 }
