@@ -7,8 +7,9 @@ public class PlayerMovement : MonoBehaviour
     public float speed = 6f;
     public float durataBoost = 5f;
 
+    public Vector2 DirezioneMovimento { get; private set; }
+
     private Rigidbody2D corpo;
-    private Vector2 direzione;
     private float moltiplicatoreVelocita = 1f;
     private Coroutine boostRoutine;
 
@@ -19,7 +20,7 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
-        direzione = new Vector2(
+        DirezioneMovimento = new Vector2(
             Input.GetAxisRaw("Horizontal"),
             Input.GetAxisRaw("Vertical")
         ).normalized;
@@ -28,7 +29,8 @@ public class PlayerMovement : MonoBehaviour
     void FixedUpdate()
     {
         corpo.MovePosition(
-            corpo.position + direzione * speed * moltiplicatoreVelocita * Time.fixedDeltaTime
+            corpo.position +
+            DirezioneMovimento * speed * moltiplicatoreVelocita * Time.fixedDeltaTime
         );
     }
 
