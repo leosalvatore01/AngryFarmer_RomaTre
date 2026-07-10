@@ -53,6 +53,10 @@ public class EnemyAI : MonoBehaviour
 
     public void Die()
     {
+        if (GameManager.instance != null)
+        {
+            GameManager.instance.AggiungiMonete(1);
+        }
         if (Random.Range(0f, 100f) < dropChance)
         {
             if (Random.value > 0.5f && dentePrefab != null)
