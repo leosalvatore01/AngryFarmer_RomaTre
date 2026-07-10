@@ -1,16 +1,30 @@
 using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody2D))]
 public class PlayerMovement : MonoBehaviour
 {
-    public float speed = 10f;
+    public float speed = 6f;
+
+    private Rigidbody2D corpo;
+    private Vector2 direzione;
+
+    void Awake()
+    {
+        corpo = GetComponent<Rigidbody2D>();
+    }
 
     void Update()
     {
-        if (Input.GetMouseButton(0))
-        {
-            Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            mousePos.z = 0;
-            transform.position = Vector3.MoveTowards(transform.position, mousePos, speed * Time.deltaTime);
-        }
+        direzione = new Vector2(
+            Input.GetAxisRaw("Horizontal"),
+            Input.GetAxisRaw("Vertical")
+        ).normalized;
+    }
+
+    void FixedUpdate()
+    {
+        corpo.MovePosition(
+            corpo.position + direzione * speed * Time.fixedDeltaTime
+        );
     }
 }
