@@ -74,6 +74,15 @@ public class GameManager : MonoBehaviour
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
+    public void GameOverGiocatore()
+    {
+        if (isGameOver) return;
+
+        isGameOver = true;
+        Debug.Log("GAME OVER! Il contadino è stato sconfitto.");
+        gameOverPanel.SetActive(true);
+        Time.timeScale = 0f;
+    }
     public void Vittoria()
     {
         if (isGameOver) return;
