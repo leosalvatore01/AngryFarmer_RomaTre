@@ -28,4 +28,11 @@ public class PowerUp : MonoBehaviour
         EnemyAI.isSlowed = false;
         Destroy(gameObject);
     }
+    void Update()
+    {
+        transform.Rotate(0f, 0f, 120f * Time.deltaTime);
+
+        float scala = 1f + Mathf.Sin(Time.time * 5f) * 0.12f;
+        transform.localScale = Vector3.one * scala;
+    }
 }
