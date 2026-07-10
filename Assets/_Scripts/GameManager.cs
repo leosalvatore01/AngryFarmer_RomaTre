@@ -1,4 +1,6 @@
 using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
@@ -6,10 +8,25 @@ public class GameManager : MonoBehaviour
     public int gallineRimaste = 0;
     public bool isGameOver = false;
 
+    [SerializeField] private GameObject gameOverPanel;
+
     void Awake()
     {
         if (instance == null) instance = this;
         else Destroy(gameObject);
+    }
+
+    void Start()
+    {
+        Time.timeScale = 1f;
+
+        Button pulsanteRiprova = gameOverPanel.GetComponentInChildren<Button>(true);
+        if (pulsanteRiprova != null)
+        {
+            pulsanteRiprova.onClick.AddListener(Riprova);
+        }
+
+        gameOverPanel.SetActive(false);
     }
 
     public void RegistraGallina()
@@ -32,7 +49,14 @@ public class GameManager : MonoBehaviour
     {
         isGameOver = true;
         Debug.Log("GAME OVER! Le volpi hanno vinto.");
-        Time.timeScale = 0; 
+        gameOverPanel.SetActive(true);
+        Time.timeScale = 0f;
+    }
+
+    public void Riprova()
+    {
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
     public void Vittoria()
@@ -40,7 +64,6 @@ public class GameManager : MonoBehaviour
         if (isGameOver) return;
         isGameOver = true;
         Debug.Log("VITTORIA! Hai difeso il pollaio da tutte le ondate!");
-        // Qui in futuro faremo apparire i fuochi d artificio
-        Time.timeScale = 0;
+        Time.timeScale = 0f;
     }
 }
