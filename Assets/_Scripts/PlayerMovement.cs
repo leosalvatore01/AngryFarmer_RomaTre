@@ -1,12 +1,16 @@
 using UnityEngine;
+using System.Collections;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class PlayerMovement : MonoBehaviour
 {
     public float speed = 6f;
+    public float durataBoost = 5f;
 
     private Rigidbody2D corpo;
     private Vector2 direzione;
+    private float moltiplicatoreVelocita = 1f;
+    private Coroutine boostRoutine;
 
     void Awake()
     {
@@ -24,7 +28,25 @@ public class PlayerMovement : MonoBehaviour
     void FixedUpdate()
     {
         corpo.MovePosition(
-            corpo.position + direzione * speed * Time.fixedDeltaTime
+            corpo.position + direzione * speed * moltiplicatoreVelocita * Time.fixedDeltaTime
         );
+    }
+
+    public void AttivaBoostVelocita()
+    {
+        if (boostRoutine != null)
+        {
+            StopCoroutine(boostRoutine);
+        }
+
+        boostRoutine = StartCoroutine(BoostVelocita());
+    }
+
+    IEnumerator BoostVelocita()
+    {
+        moltiplicatoreVelocita = 2f;
+        yield return new WaitForSeconds(durataBoost);
+        moltiplicatoreVelocita = 1f;
+        boostRoutine = null;
     }
 }
