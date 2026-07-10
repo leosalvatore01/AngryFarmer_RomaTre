@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using TMPro;
 
 public class GameManager : MonoBehaviour
 {
@@ -9,6 +10,7 @@ public class GameManager : MonoBehaviour
     public bool isGameOver = false;
 
     [SerializeField] private GameObject gameOverPanel;
+    private TMP_Text testoUova;
 
     void Awake()
     {
@@ -19,6 +21,9 @@ public class GameManager : MonoBehaviour
     void Start()
     {
         Time.timeScale = 1f;
+
+        testoUova = GameObject.Find("UovaText")?.GetComponent<TMP_Text>();
+        AggiornaContatoreUova();
 
         Button pulsanteRiprova = gameOverPanel.GetComponentInChildren<Button>(true);
         if (pulsanteRiprova != null)
@@ -32,6 +37,7 @@ public class GameManager : MonoBehaviour
     public void RegistraGallina()
     {
         gallineRimaste++;
+        AggiornaContatoreUova();
     }
 
     public void GallinaMorta()
@@ -39,16 +45,25 @@ public class GameManager : MonoBehaviour
         if (isGameOver) return;
 
         gallineRimaste--;
+        AggiornaContatoreUova();
+
         if (gallineRimaste <= 0)
         {
             GameOver();
         }
     }
 
+    void AggiornaContatoreUova()
+    {
+        if (testoUova != null)
+        {
+            testoUova.text = "UOVA: " + gallineRimaste;
+        }
+    }
+
     void GameOver()
     {
         isGameOver = true;
-        Debug.Log("GAME OVER! Le volpi hanno vinto.");
         gameOverPanel.SetActive(true);
         Time.timeScale = 0f;
     }
@@ -63,7 +78,6 @@ public class GameManager : MonoBehaviour
     {
         if (isGameOver) return;
         isGameOver = true;
-        Debug.Log("VITTORIA! Hai difeso il pollaio da tutte le ondate!");
         Time.timeScale = 0f;
     }
 }
