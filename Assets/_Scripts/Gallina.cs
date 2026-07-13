@@ -14,6 +14,9 @@ public class Gallina : MonoBehaviour
         // Se mi tocca un Nemico (Volpe)
         if (other.CompareTag("Nemico"))
         {
+            EnemyAI volpe = other.GetComponentInParent<EnemyAI>();
+            if (volpe != null && volpe.IsDead) return;
+
             // La volpe mangia la gallina (sparisce la volpe perché è sazia)
             Destroy(other.gameObject);
             

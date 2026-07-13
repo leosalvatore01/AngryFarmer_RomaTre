@@ -1,9 +1,16 @@
 using UnityEngine;
 using System.Collections;
 
-public class EnemyAI : MonoBehaviour
+[RequireComponent(typeof(Rigidbody2D))]
+public class EnemyAI : MonoBehaviour, IDanneggiabile
 {
     public float speed = 2.4f;
+
+    [Header("Fluidita inseguimento")]
+    [Min(0f)] public float accelerazione = 12f;
+    [Min(0f)] public float decelerazione = 18f;
+    [Min(0f)] public float distanzaRipresaInseguimento = 0.95f;
+    [Min(1f)] public float frameCorsaAlSecondo = 7f;
 
     [Header("Movimento visivo")]
     [Min(0f)] public float ampiezzaIdle = 0.02f;
@@ -25,9 +32,17 @@ public class EnemyAI : MonoBehaviour
 
     private Transform target;
     private PlayerHealth playerHealth;
+    private Rigidbody2D corpo;
+    private Collider2D colliderFisico;
+    private Vector2 velocitaAttuale;
+    private Vector2 velocitaDesiderata;
+    private bool staInseguendo;
     private float prossimoAttacco;
     private Transform grafica;
     private SpriteRenderer spriteRendererVisibile;
+    private Sprite spriteIdle;
+    private Sprite[] frameCorsa;
+    private float timerAnimazione;
     private Color coloreBase;
     private float faseMovimento;
     private float offsetVerticale;
@@ -42,6 +57,7 @@ public class EnemyAI : MonoBehaviour
     private SpriteRenderer rendererRiempimentoBarra;
 
     private static Sprite spriteBarra;
+    private static Sprite[] cacheFrameCorsa;
 
     public GameObject dentePrefab;
     public GameObject codaPrefab;
@@ -52,13 +68,42 @@ public class EnemyAI : MonoBehaviour
     public SpriteRenderer RendererVisibile => spriteRendererVisibile;
     public int VitaMassima => vitaMassima;
     public int VitaCorrente => vitaCorrente;
+    public bool IsDead => morto;
 
     void Awake()
     {
+        corpo = GetComponent<Rigidbody2D>();
+        corpo.interpolation = RigidbodyInterpolation2D.Interpolate;
+        colliderFisico = GetComponent<Collider2D>();
+
         spriteRendererVisibile = CreaRendererVisivo(GetComponent<SpriteRenderer>());
+        spriteIdle = spriteRendererVisibile != null
+            ? spriteRendererVisibile.sprite
+            : null;
         coloreBase = spriteRendererVisibile != null
             ? spriteRendererVisibile.color
             : Color.white;
+
+        if (cacheFrameCorsa == null)
+        {
+            cacheFrameCorsa = Resources.LoadAll<Sprite>("FoxRun");
+            System.Array.Sort(cacheFrameCorsa, (a, b) =>
+                string.CompareOrdinal(a.name, b.name)
+            );
+        }
+        frameCorsa = cacheFrameCorsa;
+        if (spriteRendererVisibile != null && frameCorsa.Length > 0)
+        {
+            spriteIdle = frameCorsa[0];
+            spriteRendererVisibile.sprite = spriteIdle;
+        }
+
+        OmbraDinamica2D.Crea(
+            transform,
+            spriteRendererVisibile,
+            new Vector2(0f, -0.36f),
+            new Vector2(0.74f, 0.24f)
+        );
 
         vitaMassima = Mathf.Max(1, vitaBase);
         vitaCorrente = vitaMassima;
@@ -80,37 +125,109 @@ public class EnemyAI : MonoBehaviour
 
     void Update()
     {
-        bool staCamminando = false;
+        if (morto) return;
+
+        CalcolaMovimentoEAttacco();
+
+        bool staCamminando = velocitaAttuale.sqrMagnitude > 0.01f;
+        float fattoreCadenza = Mathf.Clamp(
+            velocitaAttuale.magnitude / Mathf.Max(0.01f, speed),
+            0.35f,
+            1.5f
+        );
+
+        AggiornaAnimazioneCorsa(staCamminando, fattoreCadenza);
+        AggiornaMovimentoVisivo(staCamminando, fattoreCadenza);
+    }
+
+    void FixedUpdate()
+    {
+        if (morto || corpo == null) return;
+
+        float rapiditaCambio = velocitaDesiderata.sqrMagnitude > 0.001f
+            ? accelerazione
+            : decelerazione;
+
+        if (Vector2.Dot(velocitaAttuale, velocitaDesiderata) < 0f)
+        {
+            rapiditaCambio *= 1.3f;
+        }
+
+        velocitaAttuale = Vector2.MoveTowards(
+            velocitaAttuale,
+            velocitaDesiderata,
+            rapiditaCambio * Time.fixedDeltaTime
+        );
+
+        corpo.MovePosition(
+            corpo.position + velocitaAttuale * Time.fixedDeltaTime
+        );
+    }
+
+    void CalcolaMovimentoEAttacco()
+    {
+        velocitaDesiderata = Vector2.zero;
+
+        if (GameManager.instance != null && GameManager.instance.isGameOver)
+        {
+            staInseguendo = false;
+            return;
+        }
 
         if (target != null && playerHealth != null)
         {
             float distanzaDalGiocatore = Vector2.Distance(transform.position, target.position);
 
-            if (distanzaDalGiocatore > distanzaAttacco)
+            if (staInseguendo && distanzaDalGiocatore <= distanzaAttacco)
+            {
+                staInseguendo = false;
+            }
+            else if (!staInseguendo &&
+                     distanzaDalGiocatore > distanzaRipresaInseguimento)
+            {
+                staInseguendo = true;
+            }
+
+            if (staInseguendo)
             {
                 float velocitaCorrente = isSlowed ? speed / 2f : speed;
-                transform.position = Vector2.MoveTowards(
-                    transform.position,
-                    target.position,
-                    velocitaCorrente * Time.deltaTime
-                );
+                Vector2 direzione =
+                    ((Vector2)target.position - corpo.position).normalized;
+                velocitaDesiderata = direzione * velocitaCorrente;
 
                 float direzioneOrizzontale = target.position.x - transform.position.x;
                 if (spriteRendererVisibile != null && Mathf.Abs(direzioneOrizzontale) > 0.01f)
                 {
                     spriteRendererVisibile.flipX = direzioneOrizzontale < 0f;
                 }
-
-                staCamminando = true;
             }
-            else if (Time.time >= prossimoAttacco)
+            else if (distanzaDalGiocatore <= distanzaAttacco &&
+                     Time.time >= prossimoAttacco)
             {
                 playerHealth.SubisciDanno(danno);
                 prossimoAttacco = Time.time + intervalloAttacco;
             }
         }
+    }
 
-        AggiornaMovimentoVisivo(staCamminando);
+    void AggiornaAnimazioneCorsa(bool staCamminando, float fattoreCadenza)
+    {
+        if (spriteRendererVisibile == null) return;
+
+        if (!staCamminando || frameCorsa == null || frameCorsa.Length == 0)
+        {
+            timerAnimazione = 0f;
+            if (spriteIdle != null)
+            {
+                spriteRendererVisibile.sprite = spriteIdle;
+            }
+            return;
+        }
+
+        timerAnimazione += Time.deltaTime * fattoreCadenza;
+        int indice = Mathf.FloorToInt(timerAnimazione * frameCorsaAlSecondo) %
+                     frameCorsa.Length;
+        spriteRendererVisibile.sprite = frameCorsa[indice];
     }
 
     public void InizializzaVita(int nuovaVitaMassima)
@@ -134,6 +251,14 @@ public class EnemyAI : MonoBehaviour
         {
             Die();
         }
+    }
+
+    public bool ProvaSubireDanno(int quantita)
+    {
+        if (morto || quantita <= 0) return false;
+
+        SubisciDanno(quantita);
+        return true;
     }
 
     void AvviaFlashDanno()
@@ -292,11 +417,13 @@ public class EnemyAI : MonoBehaviour
         return nuovoRenderer;
     }
 
-    void AggiornaMovimentoVisivo(bool staCamminando)
+    void AggiornaMovimentoVisivo(bool staCamminando, float fattoreCadenza)
     {
         if (grafica == null) return;
 
-        float frequenza = staCamminando ? frequenzaCamminata : frequenzaIdle;
+        float frequenza = staCamminando
+            ? frequenzaCamminata * fattoreCadenza
+            : frequenzaIdle;
         float ampiezza = staCamminando ? ampiezzaCamminata : ampiezzaIdle;
 
         faseMovimento = Mathf.Repeat(
@@ -319,6 +446,12 @@ public class EnemyAI : MonoBehaviour
     {
         if (morto) return;
         morto = true;
+        velocitaAttuale = Vector2.zero;
+        velocitaDesiderata = Vector2.zero;
+        if (colliderFisico != null)
+        {
+            colliderFisico.enabled = false;
+        }
 
         if (GameManager.instance != null)
         {
@@ -338,6 +471,8 @@ public class EnemyAI : MonoBehaviour
     void OnDisable()
     {
         flashDannoRoutine = null;
+        velocitaAttuale = Vector2.zero;
+        velocitaDesiderata = Vector2.zero;
 
         if (spriteRendererVisibile != null)
         {

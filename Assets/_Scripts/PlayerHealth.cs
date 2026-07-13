@@ -8,10 +8,12 @@ public class PlayerHealth : MonoBehaviour
     private int vitaCorrente;
     private TMP_Text testoVita;
 
+    public int VitaCorrente => vitaCorrente;
+
     void Start()
     {
         vitaCorrente = vitaMassima;
-        testoVita = GameObject.Find("VitaText")?.GetComponent<TMP_Text>();
+        testoVita = GameManager.TrovaTestoInterfaccia("VitaText");
         AggiornaInterfaccia();
     }
 
@@ -36,7 +38,24 @@ public class PlayerHealth : MonoBehaviour
     {
         if (testoVita != null)
         {
-            testoVita.text = "VITA: " + vitaCorrente + " / " + vitaMassima;
+            float rapporto = vitaMassima > 0
+                ? (float)vitaCorrente / vitaMassima
+                : 0f;
+
+            if (rapporto > 0.5f)
+            {
+                testoVita.color = new Color(0.5f, 0.95f, 0.47f, 1f);
+            }
+            else if (rapporto > 0.25f)
+            {
+                testoVita.color = new Color(1f, 0.78f, 0.24f, 1f);
+            }
+            else
+            {
+                testoVita.color = new Color(1f, 0.28f, 0.2f, 1f);
+            }
+
+            testoVita.text = "Salute   " + vitaCorrente + " / " + vitaMassima;
         }
     }
 }

@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using System.Collections;
 using TMPro;
 
@@ -6,14 +7,21 @@ using TMPro;
 public class Wave
 {
     public string nomeOndata;
-    public int numeroNemici;
-    public float intervalloTraNemici;
+    [Min(0)] public int numeroNemici;
+    [Min(0.05f)] public float intervalloTraNemici = 1f;
+
+    [Header("Bonus")]
+    [Min(0)] public int numeroMaialiniBonus;
+    [Min(1)] public int vitaMaialinoBonus = 1;
+    [Min(0)] public int moneteMaialinoBonus = 3;
 }
 
 public class EnemySpawner : MonoBehaviour
 {
     public GameObject foxPrefab;
+    public GameObject pigPrefab;
     public float spawnDistance = 10f;
+    public float distanzaSpawnMaialino = 5.2f;
 
     [Header("Vita nemici")]
     [Min(1)] public int vitaPrimaOndata = 2;
@@ -23,49 +31,88 @@ public class EnemySpawner : MonoBehaviour
     public float tempoTraOndate = 3f;
 
     private int currentWaveIndex = 0;
+    private int tokenOndata;
     private TMP_Text testoOndata;
     private TMP_Text messaggioOndata;
+    private GameObject contenitoreMessaggio;
+    private Transform giocatore;
 
     void Start()
     {
-        testoOndata = GameObject.Find("OndataText")?.GetComponent<TMP_Text>();
-        messaggioOndata = GameObject.Find("MessaggioOndataText")?.GetComponent<TMP_Text>();
+        testoOndata = GameManager.TrovaTestoInterfaccia("OndataText");
+        messaggioOndata =
+            GameManager.TrovaTestoInterfaccia("MessaggioOndataText");
 
-        if (messaggioOndata != null)
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null)
         {
-            messaggioOndata.gameObject.SetActive(false);
+            giocatore = player.transform;
         }
 
+        ConfiguraPannelloMessaggio();
+        NascondiMessaggio();
         StartCoroutine(GestoreOndate());
     }
 
     IEnumerator GestoreOndate()
     {
+        if (ondate == null || ondate.Length == 0)
+        {
+            yield break;
+        }
+
         while (currentWaveIndex < ondate.Length)
         {
-            if (GameManager.instance != null && GameManager.instance.isGameOver)
+            if (PartitaTerminata())
             {
+                MaialinoBonus.RimuoviTuttiSenzaPremio();
                 yield break;
             }
 
+            int tokenCorrente = ++tokenOndata;
+            Wave ondataCorrente = ondate[currentWaveIndex];
             AggiornaContatoreOndata();
 
-            Wave ondataCorrente = ondate[currentWaveIndex];
+            MostraMessaggio(
+                "Ondata " + (currentWaveIndex + 1) + " / " + ondate.Length +
+                "\n" + ondataCorrente.nomeOndata
+            );
+            yield return new WaitForSeconds(0.85f);
+            NascondiMessaggio();
+
+            if (ondataCorrente.numeroMaialiniBonus > 0)
+            {
+                StartCoroutine(
+                    SpawnMaialiniGraduali(ondataCorrente, tokenCorrente)
+                );
+            }
 
             for (int i = 0; i < ondataCorrente.numeroNemici; i++)
             {
+                if (PartitaTerminata())
+                {
+                    MaialinoBonus.RimuoviTuttiSenzaPremio();
+                    yield break;
+                }
+
                 SpawnEnemy();
-                yield return new WaitForSeconds(ondataCorrente.intervalloTraNemici);
+                if (i < ondataCorrente.numeroNemici - 1)
+                {
+                    yield return new WaitForSeconds(
+                        ondataCorrente.intervalloTraNemici
+                    );
+                }
             }
 
             while (GameObject.FindGameObjectWithTag("Nemico") != null)
             {
-                if (GameManager.instance != null && GameManager.instance.isGameOver)
+                if (PartitaTerminata())
                 {
+                    MaialinoBonus.RimuoviTuttiSenzaPremio();
                     yield break;
                 }
 
-                yield return new WaitForSeconds(1f);
+                yield return new WaitForSeconds(0.2f);
             }
 
             if (currentWaveIndex < ondate.Length - 1)
@@ -76,11 +123,39 @@ public class EnemySpawner : MonoBehaviour
             currentWaveIndex++;
         }
 
-        MostraMessaggio("VITTORIA!\nHai difeso tutte le uova!");
+        tokenOndata++;
+        MaialinoBonus.RimuoviTuttiSenzaPremio();
+        NascondiMessaggio();
 
         if (GameManager.instance != null)
         {
             GameManager.instance.Vittoria();
+        }
+    }
+
+    IEnumerator SpawnMaialiniGraduali(Wave ondata, int tokenCorrente)
+    {
+        int quantita = Mathf.Max(0, ondata.numeroMaialiniBonus);
+        float durataSpawnVolpi = Mathf.Max(
+            1f,
+            Mathf.Max(0, ondata.numeroNemici - 1) *
+            ondata.intervalloTraNemici
+        );
+        float tempoPrecedente = 0f;
+
+        for (int i = 0; i < quantita; i++)
+        {
+            float frazione = (i + 1f) / (quantita + 1f);
+            float tempoSpawn = durataSpawnVolpi * frazione;
+            yield return new WaitForSeconds(tempoSpawn - tempoPrecedente);
+            tempoPrecedente = tempoSpawn;
+
+            if (tokenCorrente != tokenOndata || PartitaTerminata())
+            {
+                yield break;
+            }
+
+            SpawnMaialino(ondata);
         }
     }
 
@@ -89,8 +164,7 @@ public class EnemySpawner : MonoBehaviour
         for (int secondi = Mathf.CeilToInt(tempoTraOndate); secondi > 0; secondi--)
         {
             MostraMessaggio(
-                "ONDATA " + (currentWaveIndex + 1) + " COMPLETATA!\n" +
-                "Prossima ondata tra: " + secondi
+                "Ondata completata\nLa prossima comincia tra " + secondi
             );
 
             yield return new WaitForSeconds(1f);
@@ -103,22 +177,85 @@ public class EnemySpawner : MonoBehaviour
     {
         if (testoOndata != null)
         {
-            testoOndata.text = "ONDATA: " + (currentWaveIndex + 1) + "/" + ondate.Length;
+            testoOndata.text =
+                "Ondata   " + (currentWaveIndex + 1) + " / " + ondate.Length;
         }
+    }
+
+    void ConfiguraPannelloMessaggio()
+    {
+        if (messaggioOndata == null) return;
+
+        RectTransform testoRect = messaggioOndata.rectTransform;
+        Transform canvas = testoRect.parent;
+        int indice = testoRect.GetSiblingIndex();
+
+        contenitoreMessaggio = new GameObject(
+            "PannelloMessaggioOndata",
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(Image),
+            typeof(Outline)
+        );
+        contenitoreMessaggio.transform.SetParent(canvas, false);
+        contenitoreMessaggio.transform.SetSiblingIndex(indice);
+
+        RectTransform pannelloRect =
+            contenitoreMessaggio.GetComponent<RectTransform>();
+        pannelloRect.anchorMin = new Vector2(0.5f, 0.5f);
+        pannelloRect.anchorMax = new Vector2(0.5f, 0.5f);
+        pannelloRect.pivot = new Vector2(0.5f, 0.5f);
+        pannelloRect.anchoredPosition = Vector2.zero;
+        pannelloRect.sizeDelta = new Vector2(650f, 132f);
+
+        Image sfondo = contenitoreMessaggio.GetComponent<Image>();
+        sfondo.color = new Color(0.08f, 0.042f, 0.022f, 0.9f);
+        sfondo.raycastTarget = false;
+
+        Outline bordo = contenitoreMessaggio.GetComponent<Outline>();
+        bordo.effectColor = new Color(0.72f, 0.38f, 0.1f, 0.95f);
+        bordo.effectDistance = new Vector2(3f, -3f);
+
+        testoRect.SetParent(pannelloRect, false);
+        testoRect.anchorMin = Vector2.zero;
+        testoRect.anchorMax = Vector2.one;
+        testoRect.pivot = new Vector2(0.5f, 0.5f);
+        testoRect.anchoredPosition = Vector2.zero;
+        testoRect.offsetMin = new Vector2(24f, 14f);
+        testoRect.offsetMax = new Vector2(-24f, -14f);
+
+        messaggioOndata.fontSize = 31f;
+        messaggioOndata.fontStyle = FontStyles.Bold;
+        messaggioOndata.alignment = TextAlignmentOptions.Center;
+        messaggioOndata.color = new Color(1f, 0.88f, 0.56f, 1f);
+        messaggioOndata.textWrappingMode = TextWrappingModes.Normal;
+        messaggioOndata.raycastTarget = false;
+        messaggioOndata.gameObject.SetActive(true);
     }
 
     void MostraMessaggio(string testo)
     {
-        if (messaggioOndata != null)
+        if (messaggioOndata == null) return;
+
+        if (contenitoreMessaggio != null)
+        {
+            contenitoreMessaggio.SetActive(true);
+        }
+        else
         {
             messaggioOndata.gameObject.SetActive(true);
-            messaggioOndata.text = testo;
         }
+
+        messaggioOndata.text = testo;
     }
 
     void NascondiMessaggio()
     {
-        if (messaggioOndata != null)
+        if (contenitoreMessaggio != null)
+        {
+            contenitoreMessaggio.SetActive(false);
+        }
+        else if (messaggioOndata != null)
         {
             messaggioOndata.gameObject.SetActive(false);
         }
@@ -128,13 +265,17 @@ public class EnemySpawner : MonoBehaviour
     {
         if (foxPrefab == null) return;
 
-        Vector2 spawnPos = Random.insideUnitCircle.normalized * spawnDistance;
-        GameObject nuovaVolpe = Instantiate(foxPrefab, spawnPos, Quaternion.identity);
+        Vector2 spawnPos = DirezioneCasuale() * spawnDistance;
+        GameObject nuovaVolpe =
+            Instantiate(foxPrefab, spawnPos, Quaternion.identity);
 
         EnemyAI nemico = nuovaVolpe.GetComponent<EnemyAI>();
         if (nemico == null)
         {
-            Debug.LogError("Il prefab della volpe non contiene EnemyAI.", nuovaVolpe);
+            Debug.LogError(
+                "Il prefab della volpe non contiene EnemyAI.",
+                nuovaVolpe
+            );
             Destroy(nuovaVolpe);
             return;
         }
@@ -144,5 +285,53 @@ public class EnemySpawner : MonoBehaviour
             vitaPrimaOndata + currentWaveIndex * vitaAggiuntivaPerOndata
         );
         nemico.InizializzaVita(vitaOndata);
+    }
+
+    void SpawnMaialino(Wave ondata)
+    {
+        if (pigPrefab == null) return;
+
+        Vector2 centro = giocatore != null
+            ? (Vector2)giocatore.position
+            : Vector2.zero;
+        Vector2 spawnPos =
+            centro + DirezioneCasuale() * distanzaSpawnMaialino;
+
+        GameObject nuovoMaialino =
+            Instantiate(pigPrefab, spawnPos, Quaternion.identity);
+        MaialinoBonus bonus = nuovoMaialino.GetComponent<MaialinoBonus>();
+
+        if (bonus == null)
+        {
+            Debug.LogError(
+                "Il prefab del maialino non contiene MaialinoBonus.",
+                nuovoMaialino
+            );
+            Destroy(nuovoMaialino);
+            return;
+        }
+
+        bonus.Inizializza(
+            ondata.vitaMaialinoBonus,
+            ondata.moneteMaialinoBonus
+        );
+    }
+
+    bool PartitaTerminata()
+    {
+        return GameManager.instance != null && GameManager.instance.isGameOver;
+    }
+
+    static Vector2 DirezioneCasuale()
+    {
+        Vector2 direzione = Random.insideUnitCircle;
+        return direzione.sqrMagnitude > 0.001f
+            ? direzione.normalized
+            : Vector2.right;
+    }
+
+    void OnDisable()
+    {
+        tokenOndata++;
     }
 }

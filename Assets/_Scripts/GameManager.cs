@@ -10,9 +10,13 @@ public class GameManager : MonoBehaviour
     public bool isGameOver = false;
 
     [SerializeField] private GameObject gameOverPanel;
+
     private TMP_Text testoUova;
-    public int monete = 0;
     private TMP_Text testoMonete;
+    private TMP_Text titoloFinePartita;
+    private Button pulsanteRiprova;
+
+    public int monete = 0;
 
     void Awake()
     {
@@ -24,23 +28,190 @@ public class GameManager : MonoBehaviour
     {
         Time.timeScale = 1f;
 
-        testoUova = GameObject.Find("UovaText")?.GetComponent<TMP_Text>();
+        testoUova = TrovaTestoInterfaccia("UovaText");
+        testoMonete = TrovaTestoInterfaccia("MoneteText");
+
+        ConfiguraHUD();
         AggiornaContatoreUova();
-        testoMonete = GameObject.Find("MoneteText")?.GetComponent<TMP_Text>();
         AggiornaContatoreMonete();
 
-        Button pulsanteRiprova = gameOverPanel.GetComponentInChildren<Button>(true);
-        if (pulsanteRiprova != null)
+        ConfiguraPannelloFinale();
+        if (gameOverPanel != null)
         {
-            pulsanteRiprova.onClick.AddListener(Riprova);
+            gameOverPanel.SetActive(false);
+        }
+    }
+
+    public static TMP_Text TrovaTestoInterfaccia(string nome)
+    {
+        GameObject interfaccia = GameObject.Find("Interfaccia");
+        if (interfaccia == null) return null;
+
+        Transform elemento = interfaccia.transform.Find(nome);
+        return elemento != null ? elemento.GetComponent<TMP_Text>() : null;
+    }
+
+    void ConfiguraHUD()
+    {
+        GameObject interfaccia = GameObject.Find("Interfaccia");
+        if (interfaccia == null) return;
+
+        if (interfaccia.transform.Find("PannelloHUD") == null)
+        {
+            GameObject pannello = new GameObject(
+                "PannelloHUD",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image),
+                typeof(Outline)
+            );
+            pannello.transform.SetParent(interfaccia.transform, false);
+            pannello.transform.SetAsFirstSibling();
+
+            RectTransform rect = pannello.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = new Vector2(18f, -18f);
+            rect.sizeDelta = new Vector2(286f, 162f);
+
+            Image immagine = pannello.GetComponent<Image>();
+            immagine.color = new Color(0.075f, 0.04f, 0.022f, 0.82f);
+            immagine.raycastTarget = false;
+
+            Outline bordo = pannello.GetComponent<Outline>();
+            bordo.effectColor = new Color(0.48f, 0.25f, 0.08f, 0.9f);
+            bordo.effectDistance = new Vector2(2f, -2f);
+            bordo.useGraphicAlpha = true;
         }
 
-        gameOverPanel.SetActive(false);
+        ConfiguraTestoHUD(
+            TrovaTestoInterfaccia("OndataText"),
+            new Vector2(34f, -38f),
+            new Color(1f, 0.77f, 0.32f, 1f)
+        );
+        ConfiguraTestoHUD(
+            TrovaTestoInterfaccia("VitaText"),
+            new Vector2(34f, -76f),
+            new Color(0.5f, 0.95f, 0.47f, 1f)
+        );
+        ConfiguraTestoHUD(
+            testoMonete,
+            new Vector2(34f, -114f),
+            new Color(1f, 0.9f, 0.24f, 1f)
+        );
+        ConfiguraTestoHUD(
+            testoUova,
+            new Vector2(34f, -146f),
+            new Color(1f, 0.94f, 0.76f, 1f)
+        );
+
+        if (testoUova != null)
+        {
+            testoUova.gameObject.SetActive(gallineRimaste > 0);
+        }
+    }
+
+    static void ConfiguraTestoHUD(
+        TMP_Text testo,
+        Vector2 posizione,
+        Color colore
+    )
+    {
+        if (testo == null) return;
+
+        RectTransform rect = testo.rectTransform;
+        rect.anchorMin = new Vector2(0f, 1f);
+        rect.anchorMax = new Vector2(0f, 1f);
+        rect.pivot = new Vector2(0f, 0.5f);
+        rect.anchoredPosition = posizione;
+        rect.sizeDelta = new Vector2(230f, 32f);
+
+        testo.fontSize = 22f;
+        testo.fontStyle = FontStyles.Bold;
+        testo.alignment = TextAlignmentOptions.MidlineLeft;
+        testo.textWrappingMode = TextWrappingModes.NoWrap;
+        testo.overflowMode = TextOverflowModes.Overflow;
+        testo.raycastTarget = false;
+        testo.color = colore;
+    }
+
+    void ConfiguraPannelloFinale()
+    {
+        if (gameOverPanel == null) return;
+
+        RectTransform pannelloRect = gameOverPanel.GetComponent<RectTransform>();
+        if (pannelloRect != null)
+        {
+            pannelloRect.anchorMin = Vector2.zero;
+            pannelloRect.anchorMax = Vector2.one;
+            pannelloRect.offsetMin = Vector2.zero;
+            pannelloRect.offsetMax = Vector2.zero;
+        }
+
+        Image sfondo = gameOverPanel.GetComponent<Image>();
+        if (sfondo != null)
+        {
+            sfondo.color = new Color(0.035f, 0.018f, 0.012f, 0.72f);
+        }
+
+        Transform titoloTransform = gameOverPanel.transform.Find("Text");
+        titoloFinePartita = titoloTransform != null
+            ? titoloTransform.GetComponent<TMP_Text>()
+            : gameOverPanel.GetComponentInChildren<TMP_Text>(true);
+
+        if (titoloFinePartita != null)
+        {
+            RectTransform rect = titoloFinePartita.rectTransform;
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = new Vector2(0f, 65f);
+            rect.sizeDelta = new Vector2(620f, 90f);
+
+            titoloFinePartita.fontSize = 50f;
+            titoloFinePartita.fontStyle = FontStyles.Bold;
+            titoloFinePartita.alignment = TextAlignmentOptions.Center;
+            titoloFinePartita.color = new Color(1f, 0.83f, 0.34f, 1f);
+            titoloFinePartita.raycastTarget = false;
+        }
+
+        pulsanteRiprova = gameOverPanel.GetComponentInChildren<Button>(true);
+        if (pulsanteRiprova != null)
+        {
+            RectTransform rect = pulsanteRiprova.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = new Vector2(0f, -42f);
+            rect.sizeDelta = new Vector2(220f, 54f);
+
+            TMP_Text testoPulsante =
+                pulsanteRiprova.GetComponentInChildren<TMP_Text>(true);
+            if (testoPulsante != null)
+            {
+                testoPulsante.text = "RIPROVA";
+                testoPulsante.fontSize = 25f;
+                testoPulsante.fontStyle = FontStyles.Bold;
+            }
+
+            pulsanteRiprova.onClick.AddListener(Riprova);
+        }
     }
 
     public void RegistraGallina()
     {
         gallineRimaste++;
+
+        if (testoUova == null)
+        {
+            testoUova = TrovaTestoInterfaccia("UovaText");
+        }
+        if (testoUova != null)
+        {
+            testoUova.gameObject.SetActive(true);
+        }
+
         AggiornaContatoreUova();
     }
 
@@ -61,14 +232,37 @@ public class GameManager : MonoBehaviour
     {
         if (testoUova != null)
         {
-            testoUova.text = "UOVA: " + gallineRimaste;
+            testoUova.text = "Uova protette   " + gallineRimaste;
         }
     }
 
     void GameOver()
     {
+        MostraFinePartita("FATTORIA PERDUTA");
+    }
+
+    public void GameOverGiocatore()
+    {
+        if (isGameOver) return;
+
+        Debug.Log("Game over: il contadino e stato sconfitto.");
+        MostraFinePartita("CONTADINO SCONFITTO");
+    }
+
+    void MostraFinePartita(string titolo)
+    {
+        if (isGameOver) return;
+
         isGameOver = true;
-        gameOverPanel.SetActive(true);
+        if (titoloFinePartita != null)
+        {
+            titoloFinePartita.text = titolo;
+        }
+        if (gameOverPanel != null)
+        {
+            gameOverPanel.SetActive(true);
+            gameOverPanel.transform.SetAsLastSibling();
+        }
         Time.timeScale = 0f;
     }
 
@@ -78,18 +272,9 @@ public class GameManager : MonoBehaviour
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
-    public void GameOverGiocatore()
-    {
-        if (isGameOver) return;
-
-        isGameOver = true;
-        Debug.Log("GAME OVER! Il contadino è stato sconfitto.");
-        gameOverPanel.SetActive(true);
-        Time.timeScale = 0f;
-    }
     public void AggiungiMonete(int quantita)
     {
-        monete += quantita;
+        monete += Mathf.Max(0, quantita);
         AggiornaContatoreMonete();
     }
 
@@ -97,13 +282,13 @@ public class GameManager : MonoBehaviour
     {
         if (testoMonete != null)
         {
-            testoMonete.text = "MONETE: " + monete;
+            testoMonete.text = "Monete   " + monete;
         }
     }
+
     public void Vittoria()
     {
         if (isGameOver) return;
-        isGameOver = true;
-        Time.timeScale = 0f;
+        MostraFinePartita("FATTORIA SALVA!");
     }
 }

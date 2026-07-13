@@ -15,11 +15,10 @@ public class Proiettile : MonoBehaviour
     {
         if (consumato) return;
 
-        EnemyAI volpe = other.GetComponentInParent<EnemyAI>();
-        if (volpe == null) return;
+        IDanneggiabile bersaglio = other.GetComponentInParent<IDanneggiabile>();
+        if (bersaglio == null || !bersaglio.ProvaSubireDanno(danno)) return;
 
         consumato = true;
-        volpe.SubisciDanno(danno);
         Destroy(gameObject);
     }
 }

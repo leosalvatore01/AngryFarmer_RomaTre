@@ -7,7 +7,14 @@ public class PlayerMovement : MonoBehaviour
     public float speed = 8f;
     public float durataBoost = 5f;
 
+    [Header("Fluidità")]
+    [Min(0f)] public float accelerazione = 45f;
+    [Min(0f)] public float decelerazione = 60f;
+
     public Vector2 DirezioneMovimento { get; private set; }
+    public Vector2 VelocitaAttuale { get; private set; }
+    public float MoltiplicatoreVelocitaCorrente => moltiplicatoreVelocita;
+    public bool StaCamminando => VelocitaAttuale.sqrMagnitude > 0.01f;
 
     private Rigidbody2D corpo;
     private float moltiplicatoreVelocita = 1f;
@@ -16,21 +23,40 @@ public class PlayerMovement : MonoBehaviour
     void Awake()
     {
         corpo = GetComponent<Rigidbody2D>();
+        corpo.interpolation = RigidbodyInterpolation2D.Interpolate;
     }
 
     void Update()
     {
-        DirezioneMovimento = new Vector2(
+        DirezioneMovimento = Vector2.ClampMagnitude(new Vector2(
             Input.GetAxisRaw("Horizontal"),
             Input.GetAxisRaw("Vertical")
-        ).normalized;
+        ), 1f);
     }
 
     void FixedUpdate()
     {
+        Vector2 velocitaDesiderata =
+            DirezioneMovimento * speed * moltiplicatoreVelocita;
+
+        float rapiditaCambio = DirezioneMovimento.sqrMagnitude > 0.001f
+            ? accelerazione
+            : decelerazione;
+
+        if (Vector2.Dot(VelocitaAttuale, velocitaDesiderata) < 0f)
+        {
+            rapiditaCambio *= 1.35f;
+        }
+
+        VelocitaAttuale = Vector2.MoveTowards(
+            VelocitaAttuale,
+            velocitaDesiderata,
+            rapiditaCambio * Time.fixedDeltaTime
+        );
+
         corpo.MovePosition(
             corpo.position +
-            DirezioneMovimento * speed * moltiplicatoreVelocita * Time.fixedDeltaTime
+            VelocitaAttuale * Time.fixedDeltaTime
         );
     }
 

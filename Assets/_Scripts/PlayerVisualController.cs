@@ -20,8 +20,10 @@ public class PlayerVisualController : MonoBehaviour
 
     private int direzioneCorrente = 0;
     private float timerAnimazione;
-    private float faseMovimento;
-    private float offsetVerticale;
+    private float faseIdle;
+    private float faseCamminata;
+    private float blendCamminata;
+    private bool camminavaNelFramePrecedente;
 
     void Awake()
     {
@@ -38,23 +40,35 @@ public class PlayerVisualController : MonoBehaviour
         {
             Debug.LogError("FarmerWalk-v1 deve contenere 16 frame.");
         }
+
+        OmbraDinamica2D.Crea(
+            transform,
+            spriteRenderer,
+            new Vector2(0f, -0.42f),
+            new Vector2(0.66f, 0.22f)
+        );
     }
 
     void Update()
     {
         if (frameCamminata.Length < 16 || movimento == null)
         {
-            AggiornaMovimentoVisivo(false);
+            AggiornaMovimentoVisivo(false, 1f);
             return;
         }
 
-        Vector2 direzione = movimento.DirezioneMovimento;
-        bool staCamminando = direzione.sqrMagnitude > 0.01f;
+        Vector2 direzione = movimento.VelocitaAttuale;
+        bool staCamminando = movimento.StaCamminando;
 
         if (staCamminando)
         {
-            direzioneCorrente = OttieniDirezione(direzione);
-            timerAnimazione += Time.deltaTime;
+            direzioneCorrente = OttieniDirezione(direzione.normalized);
+            float cadenza = Mathf.Clamp(
+                direzione.magnitude / Mathf.Max(0.01f, movimento.speed),
+                0.35f,
+                2f
+            );
+            timerAnimazione += Time.deltaTime * cadenza;
         }
         else
         {
@@ -68,7 +82,12 @@ public class PlayerVisualController : MonoBehaviour
         int indiceSprite = direzioneCorrente * 2 + passo;
         spriteRenderer.sprite = frameCamminata[indiceSprite];
 
-        AggiornaMovimentoVisivo(staCamminando);
+        float fattoreCadenza = Mathf.Clamp(
+            direzione.magnitude / Mathf.Max(0.01f, movimento.speed),
+            0.35f,
+            2f
+        );
+        AggiornaMovimentoVisivo(staCamminando, fattoreCadenza);
     }
 
     SpriteRenderer CreaRendererVisivo(SpriteRenderer rendererOriginale)
@@ -97,27 +116,49 @@ public class PlayerVisualController : MonoBehaviour
         return nuovoRenderer;
     }
 
-    void AggiornaMovimentoVisivo(bool staCamminando)
+    void AggiornaMovimentoVisivo(bool staCamminando, float fattoreCadenza)
     {
         if (grafica == null) return;
 
-        float frequenza = staCamminando ? frequenzaCamminata : frequenzaIdle;
-        float ampiezza = staCamminando ? ampiezzaCamminata : ampiezzaIdle;
-
-        faseMovimento = Mathf.Repeat(
-            faseMovimento + Time.deltaTime * frequenza * Mathf.PI * 2f,
+        faseIdle = Mathf.Repeat(
+            faseIdle + Time.deltaTime * frequenzaIdle * Mathf.PI * 2f,
             Mathf.PI * 2f
         );
 
-        float onda = staCamminando
-            ? (1f - Mathf.Cos(faseMovimento)) * 0.5f
-            : Mathf.Sin(faseMovimento);
+        if (staCamminando && !camminavaNelFramePrecedente)
+        {
+            faseCamminata = 0f;
+        }
 
-        float offsetDesiderato = onda * ampiezza;
+        if (staCamminando)
+        {
+            faseCamminata = Mathf.Repeat(
+                faseCamminata +
+                Time.deltaTime * frequenzaCamminata *
+                Mathf.Clamp(fattoreCadenza, 0.5f, 2f) * Mathf.PI * 2f,
+                Mathf.PI * 2f
+            );
+        }
+
         float transizione = 1f - Mathf.Exp(-velocitaTransizione * Time.deltaTime);
-        offsetVerticale = Mathf.Lerp(offsetVerticale, offsetDesiderato, transizione);
+        blendCamminata = Mathf.Lerp(
+            blendCamminata,
+            staCamminando ? 1f : 0f,
+            transizione
+        );
+
+        float offsetIdle = Mathf.Sin(faseIdle) * ampiezzaIdle;
+        float offsetCamminata =
+            (1f - Mathf.Cos(faseCamminata)) * 0.5f * ampiezzaCamminata;
+
+        float offsetVerticale = Mathf.Lerp(
+            offsetIdle,
+            offsetCamminata,
+            blendCamminata
+        );
 
         grafica.localPosition = Vector3.up * offsetVerticale;
+        camminavaNelFramePrecedente = staCamminando;
     }
 
     int OttieniDirezione(Vector2 direzione)
@@ -146,5 +187,81 @@ public class PlayerVisualController : MonoBehaviour
         }
 
         return 0;
+    }
+}
+
+public static class OmbraDinamica2D
+{
+    private static Sprite spriteOmbra;
+
+    public static SpriteRenderer Crea(
+        Transform genitore,
+        SpriteRenderer riferimento,
+        Vector2 posizioneLocale,
+        Vector2 dimensioni
+    )
+    {
+        if (genitore == null || riferimento == null) return null;
+
+        GameObject oggettoOmbra = new GameObject("Ombra");
+        oggettoOmbra.layer = genitore.gameObject.layer;
+        oggettoOmbra.transform.SetParent(genitore, false);
+        oggettoOmbra.transform.localPosition = posizioneLocale;
+
+        SpriteRenderer renderer = oggettoOmbra.AddComponent<SpriteRenderer>();
+        renderer.sprite = OttieniSpriteOmbra();
+        renderer.color = new Color(0.08f, 0.045f, 0.025f, 0.38f);
+        renderer.sortingLayerID = riferimento.sortingLayerID;
+        renderer.sortingOrder = riferimento.sortingOrder - 1;
+        renderer.transform.localScale = new Vector3(
+            dimensioni.x,
+            dimensioni.y * 2f,
+            1f
+        );
+        return renderer;
+    }
+
+    private static Sprite OttieniSpriteOmbra()
+    {
+        if (spriteOmbra != null) return spriteOmbra;
+
+        const int larghezza = 64;
+        const int altezza = 32;
+        Texture2D texture = new Texture2D(
+            larghezza,
+            altezza,
+            TextureFormat.RGBA32,
+            false
+        );
+        texture.name = "TextureOmbraMorbida";
+        texture.filterMode = FilterMode.Bilinear;
+        texture.wrapMode = TextureWrapMode.Clamp;
+
+        Color[] pixel = new Color[larghezza * altezza];
+        for (int y = 0; y < altezza; y++)
+        {
+            for (int x = 0; x < larghezza; x++)
+            {
+                float nx = (x + 0.5f) / larghezza * 2f - 1f;
+                float ny = (y + 0.5f) / altezza * 2f - 1f;
+                float distanza = Mathf.Sqrt(nx * nx + ny * ny);
+                float alpha = Mathf.SmoothStep(1f, 0f, distanza);
+                pixel[y * larghezza + x] = new Color(1f, 1f, 1f, alpha);
+            }
+        }
+
+        texture.SetPixels(pixel);
+        texture.Apply(false, true);
+
+        spriteOmbra = Sprite.Create(
+            texture,
+            new Rect(0f, 0f, larghezza, altezza),
+            new Vector2(0.5f, 0.5f),
+            larghezza,
+            0,
+            SpriteMeshType.FullRect
+        );
+        spriteOmbra.name = "SpriteOmbraMorbida";
+        return spriteOmbra;
     }
 }
