@@ -28,7 +28,6 @@ public class EnemySpawner : MonoBehaviour
     [Min(0)] public int vitaAggiuntivaPerOndata = 1;
 
     public Wave[] ondate;
-    public float tempoTraOndate = 3f;
 
     private int currentWaveIndex = 0;
     private int tokenOndata;
@@ -65,7 +64,7 @@ public class EnemySpawner : MonoBehaviour
         {
             if (PartitaTerminata())
             {
-                MaialinoBonus.RimuoviTuttiSenzaPremio();
+                PulisciEntitaTraOndate();
                 yield break;
             }
 
@@ -91,7 +90,7 @@ public class EnemySpawner : MonoBehaviour
             {
                 if (PartitaTerminata())
                 {
-                    MaialinoBonus.RimuoviTuttiSenzaPremio();
+                    PulisciEntitaTraOndate();
                     yield break;
                 }
 
@@ -108,7 +107,7 @@ public class EnemySpawner : MonoBehaviour
             {
                 if (PartitaTerminata())
                 {
-                    MaialinoBonus.RimuoviTuttiSenzaPremio();
+                    PulisciEntitaTraOndate();
                     yield break;
                 }
 
@@ -117,14 +116,36 @@ public class EnemySpawner : MonoBehaviour
 
             if (currentWaveIndex < ondate.Length - 1)
             {
-                yield return StartCoroutine(ContoAllaRovescia());
+                tokenOndata++;
+                PulisciEntitaTraOndate();
+
+                // Lascia completare le distruzioni prima di fermare il tempo.
+                yield return null;
+
+                if (PartitaTerminata()) yield break;
+                PulisciEntitaTraOndate();
+
+                if (GameManager.instance != null)
+                {
+                    GameManager.instance.IniziaIntervallo(
+                        currentWaveIndex + 1,
+                        ondate.Length
+                    );
+
+                    while (!PartitaTerminata() &&
+                           GameManager.instance.StatoCorrente ==
+                           StatoPartita.Intervallo)
+                    {
+                        yield return null;
+                    }
+                }
             }
 
             currentWaveIndex++;
         }
 
         tokenOndata++;
-        MaialinoBonus.RimuoviTuttiSenzaPremio();
+        PulisciEntitaTraOndate();
         NascondiMessaggio();
 
         if (GameManager.instance != null)
@@ -157,20 +178,6 @@ public class EnemySpawner : MonoBehaviour
 
             SpawnMaialino(ondata);
         }
-    }
-
-    IEnumerator ContoAllaRovescia()
-    {
-        for (int secondi = Mathf.CeilToInt(tempoTraOndate); secondi > 0; secondi--)
-        {
-            MostraMessaggio(
-                "Ondata completata\nLa prossima comincia tra " + secondi
-            );
-
-            yield return new WaitForSeconds(1f);
-        }
-
-        NascondiMessaggio();
     }
 
     void AggiornaContatoreOndata()
@@ -320,6 +327,22 @@ public class EnemySpawner : MonoBehaviour
     bool PartitaTerminata()
     {
         return GameManager.instance != null && GameManager.instance.isGameOver;
+    }
+
+    static void PulisciEntitaTraOndate()
+    {
+        Proiettile[] proiettili = FindObjectsByType<Proiettile>(
+            FindObjectsSortMode.None
+        );
+        foreach (Proiettile proiettile in proiettili)
+        {
+            if (proiettile != null)
+            {
+                Destroy(proiettile.gameObject);
+            }
+        }
+
+        MaialinoBonus.RimuoviTuttiSenzaPremio();
     }
 
     static Vector2 DirezioneCasuale()

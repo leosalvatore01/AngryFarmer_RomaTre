@@ -29,7 +29,7 @@ public class PowerUp : MonoBehaviour
 
             if (sparo != null)
             {
-                sparo.AttivaDoppioSparo();
+                sparo.AttivaTriploSparo();
             }
         }
         else if (type == 1)

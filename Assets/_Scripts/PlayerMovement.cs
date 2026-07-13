@@ -28,6 +28,13 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
+        if (GameManager.instance != null &&
+            !GameManager.instance.GameplayAttivo)
+        {
+            DirezioneMovimento = Vector2.zero;
+            return;
+        }
+
         DirezioneMovimento = Vector2.ClampMagnitude(new Vector2(
             Input.GetAxisRaw("Horizontal"),
             Input.GetAxisRaw("Vertical")
@@ -68,6 +75,11 @@ public class PlayerMovement : MonoBehaviour
         }
 
         boostRoutine = StartCoroutine(BoostVelocita());
+    }
+
+    public void AumentaVelocitaBase(float quantita)
+    {
+        speed = Mathf.Max(0f, speed + quantita);
     }
 
     IEnumerator BoostVelocita()

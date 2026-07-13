@@ -21,6 +21,12 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
     [Min(0)] public int moneteBase = 3;
     [Min(0.01f)] public float durataFlashDanno = 0.1f;
 
+    [Header("Barra vita")]
+    public Vector2 posizioneBarraVita = new Vector2(0f, 0.56f);
+    [Min(0.01f)] public float larghezzaBarraVita = 0.74f;
+    [Min(0.01f)] public float altezzaBarraVita = 0.1f;
+    [Min(0f)] public float spessoreBordoBarra = 0.025f;
+
     [Header("Animazione")]
     [Min(1f)] public float frameAlSecondo = 5.5f;
     [Min(0f)] public float ampiezzaSaltello = 0.055f;
@@ -30,6 +36,7 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
         new HashSet<MaialinoBonus>();
     private static Sprite spriteFrammento;
     private static Sprite spriteMoneta;
+    private static Sprite spriteBarraVita;
     private static Sprite[] cacheFrameTrotto;
 
     private Rigidbody2D corpo;
@@ -46,11 +53,18 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
     private float tempoScadenza;
     private float timerAnimazione;
     private float faseSaltello;
+    private int vitaMassima;
     private int vitaCorrente;
     private int moneteRicompensa;
     private bool morto;
     private bool ricompensaAssegnata;
     private Coroutine flashRoutine;
+    private Transform barraVita;
+    private Transform riempimentoBarra;
+    private SpriteRenderer rendererRiempimentoBarra;
+
+    public int VitaMassima => vitaMassima;
+    public int VitaCorrente => vitaCorrente;
 
     void Awake()
     {
@@ -88,8 +102,12 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
             new Vector2(0.72f, 0.23f)
         );
 
-        vitaCorrente = Mathf.Max(1, vitaBase);
+        vitaMassima = Mathf.Max(1, vitaBase);
+        vitaCorrente = vitaMassima;
         moneteRicompensa = Mathf.Max(0, moneteBase);
+
+        CreaBarraVita();
+        AggiornaBarraVita();
     }
 
     void OnEnable()
@@ -111,8 +129,12 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
 
     public void Inizializza(int vita, int monete)
     {
-        vitaCorrente = Mathf.Max(1, vita);
+        if (morto) return;
+
+        vitaMassima = Mathf.Max(1, vita);
+        vitaCorrente = vitaMassima;
         moneteRicompensa = Mathf.Max(0, monete);
+        AggiornaBarraVita();
     }
 
     void Update()
@@ -232,19 +254,21 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
         grafica.localPosition = Vector3.up * salto * ampiezzaSaltello;
     }
 
-    public bool ProvaSubireDanno(int quantita)
+    public EsitoDanno ProvaSubireDanno(int quantita)
     {
-        if (morto || quantita <= 0) return false;
+        if (morto || quantita <= 0) return EsitoDanno.NessunDanno;
 
         vitaCorrente = Mathf.Max(0, vitaCorrente - quantita);
+        AggiornaBarraVita();
         AvviaFlashDanno();
 
-        if (vitaCorrente == 0)
+        bool ucciso = vitaCorrente == 0;
+        if (ucciso)
         {
             StartCoroutine(RompiSalvadanaio());
         }
 
-        return true;
+        return new EsitoDanno(true, ucciso, false);
     }
 
     void AvviaFlashDanno()
@@ -278,6 +302,7 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
         colliderFisico.enabled = false;
         velocitaDesiderata = Vector2.zero;
         velocitaAttuale = Vector2.zero;
+        NascondiBarraVita();
 
         if (!ricompensaAssegnata)
         {
@@ -433,6 +458,7 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
         colliderFisico.enabled = false;
         velocitaDesiderata = Vector2.zero;
         velocitaAttuale = Vector2.zero;
+        NascondiBarraVita();
         StartCoroutine(SvanisciSenzaPremio());
     }
 
@@ -458,6 +484,142 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
             yield return null;
         }
         Destroy(gameObject);
+    }
+
+    void CreaBarraVita()
+    {
+        GameObject contenitore = new GameObject("BarraVita");
+        contenitore.layer = gameObject.layer;
+
+        barraVita = contenitore.transform;
+        barraVita.SetParent(transform, false);
+        barraVita.localPosition = posizioneBarraVita;
+
+        int sortingLayer = spriteRendererVisibile != null
+            ? spriteRendererVisibile.sortingLayerID
+            : 0;
+        int ordineBase = spriteRendererVisibile != null
+            ? spriteRendererVisibile.sortingOrder + 20
+            : 20;
+
+        float bordo = Mathf.Clamp(
+            spessoreBordoBarra,
+            0f,
+            Mathf.Min(larghezzaBarraVita, altezzaBarraVita) * 0.45f
+        );
+        float larghezzaInterna = Mathf.Max(0.01f, larghezzaBarraVita - bordo * 2f);
+        float altezzaInterna = Mathf.Max(0.01f, altezzaBarraVita - bordo * 2f);
+
+        SpriteRenderer bordoRenderer = CreaElementoBarra(
+            "Bordo",
+            new Color(0.12f, 0.045f, 0.04f, 0.98f),
+            sortingLayer,
+            ordineBase
+        );
+        bordoRenderer.transform.localScale = new Vector3(
+            larghezzaBarraVita,
+            altezzaBarraVita,
+            1f
+        );
+
+        SpriteRenderer sfondoRenderer = CreaElementoBarra(
+            "Sfondo",
+            new Color(0.24f, 0.1f, 0.09f, 0.95f),
+            sortingLayer,
+            ordineBase + 1
+        );
+        sfondoRenderer.transform.localScale = new Vector3(
+            larghezzaInterna,
+            altezzaInterna,
+            1f
+        );
+
+        rendererRiempimentoBarra = CreaElementoBarra(
+            "Riempimento",
+            Color.green,
+            sortingLayer,
+            ordineBase + 2
+        );
+        riempimentoBarra = rendererRiempimentoBarra.transform;
+    }
+
+    SpriteRenderer CreaElementoBarra(
+        string nome,
+        Color colore,
+        int sortingLayer,
+        int sortingOrder
+    )
+    {
+        GameObject elemento = new GameObject(nome);
+        elemento.layer = gameObject.layer;
+        elemento.transform.SetParent(barraVita, false);
+
+        SpriteRenderer renderer = elemento.AddComponent<SpriteRenderer>();
+        renderer.sprite = OttieniSpriteBarraVita();
+        renderer.color = colore;
+        renderer.sortingLayerID = sortingLayer;
+        renderer.sortingOrder = sortingOrder;
+        return renderer;
+    }
+
+    static Sprite OttieniSpriteBarraVita()
+    {
+        if (spriteBarraVita != null) return spriteBarraVita;
+
+        Texture2D texture = Texture2D.whiteTexture;
+        spriteBarraVita = Sprite.Create(
+            texture,
+            new Rect(0f, 0f, texture.width, texture.height),
+            new Vector2(0.5f, 0.5f),
+            Mathf.Max(1, texture.width),
+            0,
+            SpriteMeshType.FullRect
+        );
+        spriteBarraVita.name = "SpriteBarraVitaMaialino";
+        return spriteBarraVita;
+    }
+
+    void AggiornaBarraVita()
+    {
+        if (riempimentoBarra == null || rendererRiempimentoBarra == null) return;
+
+        float rapporto = vitaMassima > 0
+            ? Mathf.Clamp01((float)vitaCorrente / vitaMassima)
+            : 0f;
+        float bordo = Mathf.Clamp(
+            spessoreBordoBarra,
+            0f,
+            Mathf.Min(larghezzaBarraVita, altezzaBarraVita) * 0.45f
+        );
+        float larghezzaInterna = Mathf.Max(0.01f, larghezzaBarraVita - bordo * 2f);
+        float altezzaInterna = Mathf.Max(0.01f, altezzaBarraVita - bordo * 2f);
+        float larghezzaRiempimento = larghezzaInterna * rapporto;
+
+        riempimentoBarra.localScale = new Vector3(
+            larghezzaRiempimento,
+            altezzaInterna,
+            1f
+        );
+        riempimentoBarra.localPosition = new Vector3(
+            (larghezzaRiempimento - larghezzaInterna) * 0.5f,
+            0f,
+            0f
+        );
+
+        Color rosso = new Color(0.92f, 0.12f, 0.08f, 1f);
+        Color giallo = new Color(1f, 0.72f, 0.08f, 1f);
+        Color verde = new Color(0.18f, 0.88f, 0.28f, 1f);
+        rendererRiempimentoBarra.color = rapporto <= 0.5f
+            ? Color.Lerp(rosso, giallo, rapporto * 2f)
+            : Color.Lerp(giallo, verde, (rapporto - 0.5f) * 2f);
+    }
+
+    void NascondiBarraVita()
+    {
+        if (barraVita != null)
+        {
+            barraVita.gameObject.SetActive(false);
+        }
     }
 
     SpriteRenderer CreaRendererVisivo(SpriteRenderer rendererOriginale)

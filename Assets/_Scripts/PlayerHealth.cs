@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using TMPro;
 
@@ -7,8 +8,15 @@ public class PlayerHealth : MonoBehaviour
 
     private int vitaCorrente;
     private TMP_Text testoVita;
+    private int frequenzaBlocco;
+    private int colpiContati;
 
     public int VitaCorrente => vitaCorrente;
+    public int VitaMassima => vitaMassima;
+    public bool VitaPiena => vitaCorrente >= vitaMassima;
+    public int FrequenzaBlocco => frequenzaBlocco;
+
+    public event Action VitaCambiata;
 
     void Start()
     {
@@ -19,8 +27,22 @@ public class PlayerHealth : MonoBehaviour
 
     public void SubisciDanno(int danno)
     {
+        if (danno <= 0 || vitaCorrente <= 0) return;
+
+        if (frequenzaBlocco > 0)
+        {
+            colpiContati++;
+            if (colpiContati >= frequenzaBlocco)
+            {
+                colpiContati = 0;
+                Debug.Log("Il contadino ha resistito al colpo.", this);
+                return;
+            }
+        }
+
         vitaCorrente = Mathf.Max(0, vitaCorrente - danno);
         AggiornaInterfaccia();
+        VitaCambiata?.Invoke();
 
         if (vitaCorrente <= 0 && GameManager.instance != null)
         {
@@ -30,8 +52,34 @@ public class PlayerHealth : MonoBehaviour
 
     public void Cura(int quantita)
     {
+        if (quantita <= 0 || VitaPiena) return;
+
+        int vitaPrecedente = vitaCorrente;
         vitaCorrente = Mathf.Min(vitaMassima, vitaCorrente + quantita);
         AggiornaInterfaccia();
+        if (vitaCorrente != vitaPrecedente)
+        {
+            VitaCambiata?.Invoke();
+        }
+    }
+
+    public void AumentaVitaMassima(int quantita, int curaBonus = 1)
+    {
+        if (quantita <= 0) return;
+
+        vitaMassima += quantita;
+        vitaCorrente = Mathf.Min(
+            vitaMassima,
+            vitaCorrente + Mathf.Max(0, curaBonus)
+        );
+        AggiornaInterfaccia();
+        VitaCambiata?.Invoke();
+    }
+
+    public void ImpostaFrequenzaBlocco(int ogniQuantiColpi)
+    {
+        frequenzaBlocco = Mathf.Max(0, ogniQuantiColpi);
+        colpiContati = 0;
     }
 
     void AggiornaInterfaccia()

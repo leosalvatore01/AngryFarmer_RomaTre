@@ -1,7 +1,15 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using TMPro;
+
+public enum StatoPartita
+{
+    Onda,
+    Intervallo,
+    FinePartita
+}
 
 public class GameManager : MonoBehaviour
 {
@@ -15,8 +23,16 @@ public class GameManager : MonoBehaviour
     private TMP_Text testoMonete;
     private TMP_Text titoloFinePartita;
     private Button pulsanteRiprova;
+    private ShopInterOndata shopInterOndata;
 
     public int monete = 0;
+    public StatoPartita StatoCorrente { get; private set; } = StatoPartita.Onda;
+    public bool GameplayAttivo =>
+        !isGameOver && StatoCorrente == StatoPartita.Onda;
+    public bool PausaInterOndataAttiva =>
+        !isGameOver && StatoCorrente == StatoPartita.Intervallo;
+
+    public event Action<int> MoneteCambiate;
 
     void Awake()
     {
@@ -26,7 +42,7 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        Time.timeScale = 1f;
+        ImpostaStatoPartita(StatoPartita.Onda);
 
         testoUova = TrovaTestoInterfaccia("UovaText");
         testoMonete = TrovaTestoInterfaccia("MoneteText");
@@ -40,6 +56,8 @@ public class GameManager : MonoBehaviour
         {
             gameOverPanel.SetActive(false);
         }
+
+        shopInterOndata = ShopInterOndata.CreaOTrova();
     }
 
     public static TMP_Text TrovaTestoInterfaccia(string nome)
@@ -254,6 +272,10 @@ public class GameManager : MonoBehaviour
         if (isGameOver) return;
 
         isGameOver = true;
+        if (shopInterOndata != null)
+        {
+            shopInterOndata.Nascondi();
+        }
         if (titoloFinePartita != null)
         {
             titoloFinePartita.text = titolo;
@@ -263,19 +285,33 @@ public class GameManager : MonoBehaviour
             gameOverPanel.SetActive(true);
             gameOverPanel.transform.SetAsLastSibling();
         }
-        Time.timeScale = 0f;
+        ImpostaStatoPartita(StatoPartita.FinePartita);
     }
 
     public void Riprova()
     {
-        Time.timeScale = 1f;
+        ImpostaStatoPartita(StatoPartita.Onda);
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
     public void AggiungiMonete(int quantita)
     {
-        monete += Mathf.Max(0, quantita);
+        int quantitaValida = Mathf.Max(0, quantita);
+        if (quantitaValida == 0) return;
+
+        monete += quantitaValida;
         AggiornaContatoreMonete();
+        MoneteCambiate?.Invoke(monete);
+    }
+
+    public bool ProvaSpendiMonete(int costo)
+    {
+        if (costo < 0 || monete < costo) return false;
+
+        monete -= costo;
+        AggiornaContatoreMonete();
+        MoneteCambiate?.Invoke(monete);
+        return true;
     }
 
     void AggiornaContatoreMonete()
@@ -290,5 +326,44 @@ public class GameManager : MonoBehaviour
     {
         if (isGameOver) return;
         MostraFinePartita("FATTORIA SALVA!");
+    }
+
+    public void IniziaIntervallo(int ondaCompletata, int totaleOndate)
+    {
+        if (isGameOver) return;
+
+        if (shopInterOndata == null)
+        {
+            shopInterOndata = ShopInterOndata.CreaOTrova();
+        }
+
+        if (shopInterOndata == null)
+        {
+            Debug.LogError(
+                "Impossibile creare la schermata tra le ondate."
+            );
+            ImpostaStatoPartita(StatoPartita.Onda);
+            return;
+        }
+
+        ImpostaStatoPartita(StatoPartita.Intervallo);
+        shopInterOndata.Mostra(ondaCompletata, totaleOndate);
+    }
+
+    public void ContinuaConOndataSuccessiva()
+    {
+        if (isGameOver || StatoCorrente != StatoPartita.Intervallo) return;
+
+        if (shopInterOndata != null)
+        {
+            shopInterOndata.Nascondi();
+        }
+        ImpostaStatoPartita(StatoPartita.Onda);
+    }
+
+    void ImpostaStatoPartita(StatoPartita nuovoStato)
+    {
+        StatoCorrente = nuovoStato;
+        Time.timeScale = nuovoStato == StatoPartita.Onda ? 1f : 0f;
     }
 }

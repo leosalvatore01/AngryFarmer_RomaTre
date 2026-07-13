@@ -26,6 +26,10 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     [Min(0.01f)] public float larghezzaBarraVita = 0.78f;
     [Min(0.01f)] public float altezzaBarraVita = 0.09f;
 
+    [Header("Morte")]
+    [Min(1f)] public float frameMorteAlSecondo = 8f;
+    [Min(0.01f)] public float durataDissolvenza = 0.2f;
+
     public int danno = 1;
     public float distanzaAttacco = 0.8f;
     public float intervalloAttacco = 1f;
@@ -40,8 +44,10 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     private float prossimoAttacco;
     private Transform grafica;
     private SpriteRenderer spriteRendererVisibile;
+    private SpriteRenderer ombraRenderer;
     private Sprite spriteIdle;
     private Sprite[] frameCorsa;
+    private Sprite[] frameMorte;
     private float timerAnimazione;
     private Color coloreBase;
     private float faseMovimento;
@@ -58,6 +64,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
 
     private static Sprite spriteBarra;
     private static Sprite[] cacheFrameCorsa;
+    private static Sprite[] cacheFrameMorte;
 
     public GameObject dentePrefab;
     public GameObject codaPrefab;
@@ -98,7 +105,16 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
             spriteRendererVisibile.sprite = spriteIdle;
         }
 
-        OmbraDinamica2D.Crea(
+        if (cacheFrameMorte == null)
+        {
+            cacheFrameMorte = Resources.LoadAll<Sprite>("FoxDeath");
+            System.Array.Sort(cacheFrameMorte, (a, b) =>
+                string.CompareOrdinal(a.name, b.name)
+            );
+        }
+        frameMorte = cacheFrameMorte;
+
+        ombraRenderer = OmbraDinamica2D.Crea(
             transform,
             spriteRendererVisibile,
             new Vector2(0f, -0.36f),
@@ -241,24 +257,24 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
 
     public void SubisciDanno(int quantita)
     {
-        if (morto || quantita <= 0) return;
+        ProvaSubireDanno(quantita);
+    }
+
+    public EsitoDanno ProvaSubireDanno(int quantita)
+    {
+        if (morto || quantita <= 0) return EsitoDanno.NessunDanno;
 
         vitaCorrente = Mathf.Max(0, vitaCorrente - quantita);
         AggiornaBarraVita();
         AvviaFlashDanno();
 
-        if (vitaCorrente == 0)
+        bool ucciso = vitaCorrente == 0;
+        if (ucciso)
         {
             Die();
         }
-    }
 
-    public bool ProvaSubireDanno(int quantita)
-    {
-        if (morto || quantita <= 0) return false;
-
-        SubisciDanno(quantita);
-        return true;
+        return new EsitoDanno(true, ucciso, ucciso);
     }
 
     void AvviaFlashDanno()
@@ -446,11 +462,28 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     {
         if (morto) return;
         morto = true;
+
         velocitaAttuale = Vector2.zero;
         velocitaDesiderata = Vector2.zero;
+        staInseguendo = false;
+
         if (colliderFisico != null)
         {
             colliderFisico.enabled = false;
+        }
+        if (corpo != null)
+        {
+            corpo.linearVelocity = Vector2.zero;
+            corpo.angularVelocity = 0f;
+        }
+        if (barraVita != null)
+        {
+            barraVita.gameObject.SetActive(false);
+        }
+        if (flashDannoRoutine != null)
+        {
+            StopCoroutine(flashDannoRoutine);
+            flashDannoRoutine = null;
         }
 
         if (GameManager.instance != null)
@@ -463,6 +496,77 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
                 Instantiate(dentePrefab, transform.position, Quaternion.identity);
             else if (codaPrefab != null)
                 Instantiate(codaPrefab, transform.position, Quaternion.identity);
+        }
+
+        StartCoroutine(AnimaMorte());
+    }
+
+    IEnumerator AnimaMorte()
+    {
+        bool ripristinaColoreDopoPrimoFrame =
+            spriteRendererVisibile != null &&
+            spriteRendererVisibile.color != coloreBase;
+
+        if (grafica != null)
+        {
+            grafica.localPosition = Vector3.zero;
+            grafica.localRotation = Quaternion.identity;
+        }
+
+        if (spriteRendererVisibile != null &&
+            frameMorte != null &&
+            frameMorte.Length > 0)
+        {
+            int numeroFrame = Mathf.Min(4, frameMorte.Length);
+            float durataFrame = 1f / Mathf.Max(1f, frameMorteAlSecondo);
+
+            for (int i = 0; i < numeroFrame; i++)
+            {
+                spriteRendererVisibile.sprite = frameMorte[i];
+                yield return new WaitForSeconds(durataFrame);
+
+                if (i == 0 && ripristinaColoreDopoPrimoFrame)
+                {
+                    spriteRendererVisibile.color = coloreBase;
+                    ripristinaColoreDopoPrimoFrame = false;
+                }
+            }
+        }
+
+        if (ripristinaColoreDopoPrimoFrame &&
+            spriteRendererVisibile != null)
+        {
+            spriteRendererVisibile.color = coloreBase;
+        }
+
+        float tempo = 0f;
+        float durata = Mathf.Max(0.01f, durataDissolvenza);
+        Color coloreIniziale = spriteRendererVisibile != null
+            ? spriteRendererVisibile.color
+            : coloreBase;
+        Color coloreOmbraIniziale = ombraRenderer != null
+            ? ombraRenderer.color
+            : Color.clear;
+
+        while (tempo < durata)
+        {
+            tempo += Time.deltaTime;
+            float t = Mathf.Clamp01(tempo / durata);
+
+            if (spriteRendererVisibile != null)
+            {
+                Color colore = coloreIniziale;
+                colore.a = Mathf.Lerp(coloreIniziale.a, 0f, t);
+                spriteRendererVisibile.color = colore;
+            }
+            if (ombraRenderer != null)
+            {
+                Color colore = coloreOmbraIniziale;
+                colore.a = Mathf.Lerp(coloreOmbraIniziale.a, 0f, t);
+                ombraRenderer.color = colore;
+            }
+
+            yield return null;
         }
 
         Destroy(gameObject);
