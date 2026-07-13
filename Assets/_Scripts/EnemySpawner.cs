@@ -14,6 +14,11 @@ public class EnemySpawner : MonoBehaviour
 {
     public GameObject foxPrefab;
     public float spawnDistance = 10f;
+
+    [Header("Vita nemici")]
+    [Min(1)] public int vitaPrimaOndata = 2;
+    [Min(0)] public int vitaAggiuntivaPerOndata = 1;
+
     public Wave[] ondate;
     public float tempoTraOndate = 3f;
 
@@ -124,6 +129,20 @@ public class EnemySpawner : MonoBehaviour
         if (foxPrefab == null) return;
 
         Vector2 spawnPos = Random.insideUnitCircle.normalized * spawnDistance;
-        Instantiate(foxPrefab, spawnPos, Quaternion.identity);
+        GameObject nuovaVolpe = Instantiate(foxPrefab, spawnPos, Quaternion.identity);
+
+        EnemyAI nemico = nuovaVolpe.GetComponent<EnemyAI>();
+        if (nemico == null)
+        {
+            Debug.LogError("Il prefab della volpe non contiene EnemyAI.", nuovaVolpe);
+            Destroy(nuovaVolpe);
+            return;
+        }
+
+        int vitaOndata = Mathf.Max(
+            1,
+            vitaPrimaOndata + currentWaveIndex * vitaAggiuntivaPerOndata
+        );
+        nemico.InizializzaVita(vitaOndata);
     }
 }

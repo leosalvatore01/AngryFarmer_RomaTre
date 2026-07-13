@@ -2,6 +2,10 @@ using UnityEngine;
 
 public class Proiettile : MonoBehaviour
 {
+    [Min(1)] public int danno = 1;
+
+    private bool consumato;
+
     void Start()
     {
         Destroy(gameObject, 3f);
@@ -9,16 +13,13 @@ public class Proiettile : MonoBehaviour
 
     void OnTriggerEnter2D(Collider2D other)
     {
-        if (other.CompareTag("Nemico"))
-        {
-            EnemyAI volpe = other.GetComponent<EnemyAI>();
+        if (consumato) return;
 
-            if (volpe != null)
-            {
-                volpe.Die();
-            }
+        EnemyAI volpe = other.GetComponentInParent<EnemyAI>();
+        if (volpe == null) return;
 
-            Destroy(gameObject);
-        }
+        consumato = true;
+        volpe.SubisciDanno(danno);
+        Destroy(gameObject);
     }
 }

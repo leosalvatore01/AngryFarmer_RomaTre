@@ -84,8 +84,8 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
-  m_Color: {r: 1, g: 0.2705882, b: 0, a: 1}
+  m_Sprite: {fileID: 21300000, guid: 3f670187a4214c3d8bd05624c8d8399f, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -106,7 +106,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 18eb7235cc73d42c0bca5c76d4d60a32, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAI
-  speed: 3
+  speed: 2.4
+  vitaBase: 2
+  durataFlashDanno: 0.14
+  posizioneBarraVita: {x: 0, y: 0.58}
+  larghezzaBarraVita: 0.78
+  altezzaBarraVita: 0.09
   dentePrefab: {fileID: 2022869798940285240, guid: cd120d07c086d4d048f5a45dc9e9a9d5, type: 3}
   codaPrefab: {fileID: 8610828763211480147, guid: 41f4925c1feed421cbd0f1127ec9a2c6, type: 3}
   dropChance: 50

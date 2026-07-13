@@ -4,7 +4,7 @@ using System.Collections;
 [RequireComponent(typeof(Rigidbody2D))]
 public class PlayerMovement : MonoBehaviour
 {
-    public float speed = 6f;
+    public float speed = 8f;
     public float durataBoost = 5f;
 
     public Vector2 DirezioneMovimento { get; private set; }

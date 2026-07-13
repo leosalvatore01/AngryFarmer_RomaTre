@@ -169,4 +169,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a1f8c0c487a4f42539ace82483a805a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Proiettile
-  speed: 10
+  danno: 1
