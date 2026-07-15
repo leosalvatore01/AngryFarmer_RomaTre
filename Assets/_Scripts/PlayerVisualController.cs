@@ -83,7 +83,8 @@ public class PlayerVisualController : MonoBehaviour
         if (staCamminando)
         {
             float cadenza = Mathf.Clamp(
-                direzione.magnitude / Mathf.Max(0.01f, movimento.speed),
+                direzione.magnitude /
+                Mathf.Max(0.01f, movimento.VelocitaFinale),
                 0.35f,
                 2f
             );
@@ -102,7 +103,8 @@ public class PlayerVisualController : MonoBehaviour
         spriteRenderer.sprite = frameCamminata[indiceSprite];
 
         float fattoreCadenza = Mathf.Clamp(
-            direzione.magnitude / Mathf.Max(0.01f, movimento.speed),
+            direzione.magnitude /
+            Mathf.Max(0.01f, movimento.VelocitaFinale),
             0.35f,
             2f
         );

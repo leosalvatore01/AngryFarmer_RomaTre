@@ -11,11 +11,21 @@ public class Proiettile : MonoBehaviour
     private int penetrazioniRimaste;
     private Transform grafica;
     private float velocitaRotazioneVisiva;
+    private float durataVita = 3f;
 
     private bool consumato;
 
     void Awake()
     {
+        PlayerBalanceSettings bilanciamento =
+            GameBalanceConfig.Corrente.Giocatore;
+        danno = Mathf.Max(1, bilanciamento.dannoProiettile);
+        penetrazioniRimaste = Mathf.Max(
+            0,
+            bilanciamento.penetrazioneProiettile
+        );
+        durataVita = Mathf.Max(0.05f, bilanciamento.durataProiettile);
+
         ConfiguraGraficaRotante();
 
         float minimo = Mathf.Min(rotazioneVisivaMinima, rotazioneVisivaMassima);
@@ -32,7 +42,7 @@ public class Proiettile : MonoBehaviour
 
     void Start()
     {
-        Destroy(gameObject, 3f);
+        Destroy(gameObject, durataVita);
     }
 
     void Update()

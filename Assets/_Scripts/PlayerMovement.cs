@@ -1,10 +1,14 @@
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
+using UnityEngine.Serialization;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class PlayerMovement : MonoBehaviour
 {
-    public float speed = 8f;
+    [Header("Statistiche di movimento")]
+    [FormerlySerializedAs("speed")]
+    [SerializeField, Min(0f)] private float velocitaBase = 8f;
+
     public float durataBoost = 5f;
 
     [Header("Fluidità")]
@@ -13,15 +17,43 @@ public class PlayerMovement : MonoBehaviour
 
     public Vector2 DirezioneMovimento { get; private set; }
     public Vector2 VelocitaAttuale { get; private set; }
+
+    public float VelocitaBase => velocitaBase;
+    public float BonusVelocita => bonusVelocita;
+    public float VelocitaFinale => Mathf.Max(0f, velocitaBase + bonusVelocita);
+    public float VelocitaEffettiva =>
+        VelocitaFinale * MoltiplicatoreVelocitaCorrente;
     public float MoltiplicatoreVelocitaCorrente => moltiplicatoreVelocita;
     public bool StaCamminando => VelocitaAttuale.sqrMagnitude > 0.01f;
 
+    [System.Obsolete("Usa VelocitaFinale.")]
+    public float speed => VelocitaFinale;
+
     private Rigidbody2D corpo;
+    private float bonusVelocita;
     private float moltiplicatoreVelocita = 1f;
+    private float moltiplicatoreBoost = 2f;
+    private float moltiplicatoreInversione = 1.35f;
     private Coroutine boostRoutine;
 
     void Awake()
     {
+        PlayerBalanceSettings configurazione =
+            GameBalanceConfig.Corrente.Giocatore;
+
+        velocitaBase = Mathf.Max(0f, configurazione.velocitaMovimento);
+        accelerazione = Mathf.Max(0f, configurazione.accelerazione);
+        decelerazione = Mathf.Max(0f, configurazione.decelerazione);
+        moltiplicatoreInversione = Mathf.Max(
+            1f,
+            configurazione.moltiplicatoreInversione
+        );
+        durataBoost = Mathf.Max(0f, configurazione.durataBoostVelocita);
+        moltiplicatoreBoost = Mathf.Max(
+            1f,
+            configurazione.moltiplicatoreBoostVelocita
+        );
+
         corpo = GetComponent<Rigidbody2D>();
         corpo.interpolation = RigidbodyInterpolation2D.Interpolate;
     }
@@ -44,7 +76,7 @@ public class PlayerMovement : MonoBehaviour
     void FixedUpdate()
     {
         Vector2 velocitaDesiderata =
-            DirezioneMovimento * speed * moltiplicatoreVelocita;
+            DirezioneMovimento * VelocitaEffettiva;
 
         float rapiditaCambio = DirezioneMovimento.sqrMagnitude > 0.001f
             ? accelerazione
@@ -52,7 +84,7 @@ public class PlayerMovement : MonoBehaviour
 
         if (Vector2.Dot(VelocitaAttuale, velocitaDesiderata) < 0f)
         {
-            rapiditaCambio *= 1.35f;
+            rapiditaCambio *= moltiplicatoreInversione;
         }
 
         VelocitaAttuale = Vector2.MoveTowards(
@@ -77,14 +109,25 @@ public class PlayerMovement : MonoBehaviour
         boostRoutine = StartCoroutine(BoostVelocita());
     }
 
+    public void ImpostaBonusVelocita(float valore)
+    {
+        bonusVelocita = Mathf.Max(0f, valore);
+    }
+
+    public void AggiungiBonusVelocita(float quantita)
+    {
+        ImpostaBonusVelocita(bonusVelocita + Mathf.Max(0f, quantita));
+    }
+
+    [System.Obsolete("Usa AggiungiBonusVelocita.")]
     public void AumentaVelocitaBase(float quantita)
     {
-        speed = Mathf.Max(0f, speed + quantita);
+        AggiungiBonusVelocita(quantita);
     }
 
     IEnumerator BoostVelocita()
     {
-        moltiplicatoreVelocita = 2f;
+        moltiplicatoreVelocita = moltiplicatoreBoost;
         yield return new WaitForSeconds(durataBoost);
         moltiplicatoreVelocita = 1f;
         boostRoutine = null;

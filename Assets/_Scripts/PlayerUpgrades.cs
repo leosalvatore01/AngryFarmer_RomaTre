@@ -1,3 +1,4 @@
+using System.Globalization;
 using UnityEngine;
 
 public enum TipoPotenziamento
@@ -14,16 +15,6 @@ public enum TipoPotenziamento
 [DisallowMultipleComponent]
 public class PlayerUpgrades : MonoBehaviour
 {
-    private static readonly int[] costiMovimento = { 3, 6, 10 };
-    private static readonly int[] costiResistenza = { 4, 8, 13 };
-    private static readonly int[] costiSalute = { 5, 9, 14 };
-    private static readonly int[] costiDanno = { 9, 16 };
-    private static readonly int[] costiCadenza = { 4, 7, 11 };
-    private static readonly int[] costiPenetrazione = { 6, 10, 15 };
-    private static readonly int[] frequenzeBlocco = { 5, 4, 3 };
-
-    private const int CostoCura = 3;
-
     private PlayerMovement movimento;
     private PlayerHealth salute;
     private PlayerShooting sparo;
@@ -35,6 +26,9 @@ public class PlayerUpgrades : MonoBehaviour
     private int livelloCadenza;
     private int livelloPenetrazione;
 
+    private ShopBalanceSettings Configurazione =>
+        GameBalanceConfig.Corrente.Shop;
+
     void Awake()
     {
         movimento = GetComponent<PlayerMovement>();
@@ -44,22 +38,41 @@ public class PlayerUpgrades : MonoBehaviour
 
     public int OttieniCosto(TipoPotenziamento tipo)
     {
+        ShopBalanceSettings configurazione = Configurazione;
         switch (tipo)
         {
             case TipoPotenziamento.Movimento:
-                return CostoLivello(costiMovimento, livelloMovimento);
+                return CostoLivello(
+                    configurazione.costiMovimento,
+                    livelloMovimento
+                );
             case TipoPotenziamento.Resistenza:
-                return CostoLivello(costiResistenza, livelloResistenza);
+                return CostoLivello(
+                    configurazione.costiResistenza,
+                    livelloResistenza
+                );
             case TipoPotenziamento.SaluteMassima:
-                return CostoLivello(costiSalute, livelloSalute);
+                return CostoLivello(
+                    configurazione.costiSalute,
+                    livelloSalute
+                );
             case TipoPotenziamento.Cura:
-                return CostoCura;
+                return Mathf.Max(0, configurazione.costoCura);
             case TipoPotenziamento.Danno:
-                return CostoLivello(costiDanno, livelloDanno);
+                return CostoLivello(
+                    configurazione.costiDanno,
+                    livelloDanno
+                );
             case TipoPotenziamento.Cadenza:
-                return CostoLivello(costiCadenza, livelloCadenza);
+                return CostoLivello(
+                    configurazione.costiCadenza,
+                    livelloCadenza
+                );
             case TipoPotenziamento.Penetrazione:
-                return CostoLivello(costiPenetrazione, livelloPenetrazione);
+                return CostoLivello(
+                    configurazione.costiPenetrazione,
+                    livelloPenetrazione
+                );
             default:
                 return 0;
         }
@@ -70,20 +83,25 @@ public class PlayerUpgrades : MonoBehaviour
         switch (tipo)
         {
             case TipoPotenziamento.Movimento:
-                return movimento != null && livelloMovimento < costiMovimento.Length;
+                return movimento != null &&
+                       livelloMovimento < OttieniLivelloMassimo(tipo);
             case TipoPotenziamento.Resistenza:
-                return salute != null && livelloResistenza < costiResistenza.Length;
+                return salute != null &&
+                       livelloResistenza < OttieniLivelloMassimo(tipo);
             case TipoPotenziamento.SaluteMassima:
-                return salute != null && livelloSalute < costiSalute.Length;
+                return salute != null &&
+                       livelloSalute < OttieniLivelloMassimo(tipo);
             case TipoPotenziamento.Cura:
                 return salute != null && !salute.VitaPiena;
             case TipoPotenziamento.Danno:
-                return sparo != null && livelloDanno < costiDanno.Length;
+                return sparo != null &&
+                       livelloDanno < OttieniLivelloMassimo(tipo);
             case TipoPotenziamento.Cadenza:
-                return sparo != null && livelloCadenza < costiCadenza.Length;
+                return sparo != null &&
+                       livelloCadenza < OttieniLivelloMassimo(tipo);
             case TipoPotenziamento.Penetrazione:
                 return sparo != null &&
-                       livelloPenetrazione < costiPenetrazione.Length;
+                       livelloPenetrazione < OttieniLivelloMassimo(tipo);
             default:
                 return false;
         }
@@ -124,7 +142,7 @@ public class PlayerUpgrades : MonoBehaviour
             case TipoPotenziamento.Resistenza: return "GIACCA RINFORZATA";
             case TipoPotenziamento.SaluteMassima: return "SALUTE BONUS";
             case TipoPotenziamento.Cura: return "RIMEDIO DELLA NONNA";
-            case TipoPotenziamento.Danno: return "PATATE PIÙ DURE";
+            case TipoPotenziamento.Danno: return "PATATE PIU DURE";
             case TipoPotenziamento.Cadenza: return "CARICATORE RAPIDO";
             case TipoPotenziamento.Penetrazione: return "PATATA PERFORANTE";
             default: return "POTENZIAMENTO";
@@ -133,25 +151,32 @@ public class PlayerUpgrades : MonoBehaviour
 
     public string OttieniDescrizione(TipoPotenziamento tipo)
     {
+        ShopBalanceSettings configurazione = Configurazione;
         switch (tipo)
         {
             case TipoPotenziamento.Movimento:
-                return "+0,5 velocità di movimento";
+                return "+" + FormattaDecimale(
+                    configurazione.incrementoMovimento
+                ) + " velocità di movimento";
             case TipoPotenziamento.Resistenza:
-                return livelloResistenza < frequenzeBlocco.Length
-                    ? "Blocca 1 colpo ogni " +
-                      frequenzeBlocco[livelloResistenza]
-                    : "Blocca 1 colpo ogni 3";
+                return DescrizioneResistenza(configurazione);
             case TipoPotenziamento.SaluteMassima:
-                return "+1 salute massima e cura 1";
+                return "+" + configurazione.incrementoSaluteMassima +
+                       " salute massima e cura " +
+                       configurazione.curaSuIncrementoSalute;
             case TipoPotenziamento.Cura:
-                return "Recupera subito 2 salute";
+                return "Recupera subito " + configurazione.quantitaCura +
+                       " salute";
             case TipoPotenziamento.Danno:
-                return "+1 danno per ogni patata";
+                return "+" + configurazione.incrementoDanno +
+                       " danno per ogni patata";
             case TipoPotenziamento.Cadenza:
-                return "Riduce di 0,04 s il tempo tra i colpi";
+                return "Riduce di " + FormattaDecimale(
+                    configurazione.riduzioneIntervalloSparo
+                ) + " s il tempo tra i colpi";
             case TipoPotenziamento.Penetrazione:
-                return "+1 volpe attraversata sul colpo finale";
+                return "+" + configurazione.incrementoPenetrazione +
+                       " volpe attraversata sul colpo finale";
             default:
                 return string.Empty;
         }
@@ -162,7 +187,8 @@ public class PlayerUpgrades : MonoBehaviour
         if (tipo == TipoPotenziamento.Cura)
         {
             return salute != null
-                ? "Salute " + salute.VitaCorrente + " / " + salute.VitaMassima
+                ? "Salute " + salute.VitaCorrente + " / " +
+                  salute.VitaMassima
                 : "Non disponibile";
         }
 
@@ -175,36 +201,59 @@ public class PlayerUpgrades : MonoBehaviour
 
     void Applica(TipoPotenziamento tipo)
     {
+        ShopBalanceSettings configurazione = Configurazione;
         switch (tipo)
         {
             case TipoPotenziamento.Movimento:
                 livelloMovimento++;
-                movimento.AumentaVelocitaBase(0.5f);
+                movimento.ImpostaBonusVelocita(
+                    livelloMovimento *
+                    Mathf.Max(0f, configurazione.incrementoMovimento)
+                );
                 break;
             case TipoPotenziamento.Resistenza:
                 livelloResistenza++;
-                salute.ImpostaFrequenzaBlocco(
-                    frequenzeBlocco[livelloResistenza - 1]
+                salute.ImpostaBonusFrequenzaBlocco(
+                    configurazione.frequenzeBlocco[livelloResistenza - 1]
                 );
                 break;
             case TipoPotenziamento.SaluteMassima:
                 livelloSalute++;
-                salute.AumentaVitaMassima(1, 1);
+                salute.ImpostaBonusVitaMassima(
+                    livelloSalute * Mathf.Max(
+                        0,
+                        configurazione.incrementoSaluteMassima
+                    ),
+                    Mathf.Max(0, configurazione.curaSuIncrementoSalute)
+                );
                 break;
             case TipoPotenziamento.Cura:
-                salute.Cura(2);
+                salute.Cura(Mathf.Max(0, configurazione.quantitaCura));
                 break;
             case TipoPotenziamento.Danno:
                 livelloDanno++;
-                sparo.AumentaDanno(1);
+                sparo.ImpostaBonusDanno(
+                    livelloDanno *
+                    Mathf.Max(0, configurazione.incrementoDanno)
+                );
                 break;
             case TipoPotenziamento.Cadenza:
                 livelloCadenza++;
-                sparo.RiduciIntervalloSparo(0.04f);
+                sparo.ImpostaBonusRiduzioneIntervalloSparo(
+                    livelloCadenza * Mathf.Max(
+                        0f,
+                        configurazione.riduzioneIntervalloSparo
+                    )
+                );
                 break;
             case TipoPotenziamento.Penetrazione:
                 livelloPenetrazione++;
-                sparo.AumentaPenetrazione(1);
+                sparo.ImpostaBonusPenetrazione(
+                    livelloPenetrazione * Mathf.Max(
+                        0,
+                        configurazione.incrementoPenetrazione
+                    )
+                );
                 break;
         }
     }
@@ -223,22 +272,63 @@ public class PlayerUpgrades : MonoBehaviour
         }
     }
 
-    static int OttieniLivelloMassimo(TipoPotenziamento tipo)
+    int OttieniLivelloMassimo(TipoPotenziamento tipo)
     {
+        ShopBalanceSettings configurazione = Configurazione;
         switch (tipo)
         {
-            case TipoPotenziamento.Movimento: return costiMovimento.Length;
-            case TipoPotenziamento.Resistenza: return costiResistenza.Length;
-            case TipoPotenziamento.SaluteMassima: return costiSalute.Length;
-            case TipoPotenziamento.Danno: return costiDanno.Length;
-            case TipoPotenziamento.Cadenza: return costiCadenza.Length;
-            case TipoPotenziamento.Penetrazione: return costiPenetrazione.Length;
-            default: return 0;
+            case TipoPotenziamento.Movimento:
+                return Lunghezza(configurazione.costiMovimento);
+            case TipoPotenziamento.Resistenza:
+                return Mathf.Min(
+                    Lunghezza(configurazione.costiResistenza),
+                    Lunghezza(configurazione.frequenzeBlocco)
+                );
+            case TipoPotenziamento.SaluteMassima:
+                return Lunghezza(configurazione.costiSalute);
+            case TipoPotenziamento.Danno:
+                return Lunghezza(configurazione.costiDanno);
+            case TipoPotenziamento.Cadenza:
+                return Lunghezza(configurazione.costiCadenza);
+            case TipoPotenziamento.Penetrazione:
+                return Lunghezza(configurazione.costiPenetrazione);
+            default:
+                return 0;
         }
+    }
+
+    string DescrizioneResistenza(ShopBalanceSettings configurazione)
+    {
+        int[] frequenze = configurazione.frequenzeBlocco;
+        if (frequenze == null || frequenze.Length == 0)
+        {
+            return "Nessun blocco configurato";
+        }
+
+        int indice = Mathf.Clamp(
+            livelloResistenza,
+            0,
+            frequenze.Length - 1
+        );
+        return "Blocca 1 colpo ogni " + Mathf.Max(1, frequenze[indice]);
     }
 
     static int CostoLivello(int[] costi, int livello)
     {
-        return livello >= 0 && livello < costi.Length ? costi[livello] : 0;
+        return costi != null && livello >= 0 && livello < costi.Length
+            ? Mathf.Max(0, costi[livello])
+            : 0;
+    }
+
+    static int Lunghezza(int[] valori)
+    {
+        return valori != null ? valori.Length : 0;
+    }
+
+    static string FormattaDecimale(float valore)
+    {
+        return Mathf.Max(0f, valore)
+            .ToString("0.##", CultureInfo.InvariantCulture)
+            .Replace('.', ',');
     }
 }

@@ -53,6 +53,10 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
     private float tempoScadenza;
     private float timerAnimazione;
     private float faseSaltello;
+    private float moltiplicatoreInversione = 1.25f;
+    private float cambioDirezioneMinimo = 1.4f;
+    private float cambioDirezioneMassimo = 2.8f;
+    private float ritardoDirezioneDopoFuga = 0.5f;
     private int vitaMassima;
     private int vitaCorrente;
     private int moneteRicompensa;
@@ -68,6 +72,8 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
 
     void Awake()
     {
+        ApplicaBilanciamento();
+
         corpo = GetComponent<Rigidbody2D>();
         corpo.bodyType = RigidbodyType2D.Kinematic;
         corpo.gravityScale = 0f;
@@ -108,6 +114,36 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
 
         CreaBarraVita();
         AggiornaBarraVita();
+    }
+
+    void ApplicaBilanciamento()
+    {
+        PigBalanceSettings bilanciamento = GameBalanceConfig.Corrente.Maialino;
+
+        velocitaPasseggio = Mathf.Max(0f, bilanciamento.velocitaPasseggio);
+        velocitaFuga = Mathf.Max(0f, bilanciamento.velocitaFuga);
+        accelerazione = Mathf.Max(0f, bilanciamento.accelerazione);
+        decelerazione = Mathf.Max(0f, bilanciamento.decelerazione);
+        moltiplicatoreInversione = Mathf.Max(
+            1f,
+            bilanciamento.moltiplicatoreInversione
+        );
+        raggioFuga = Mathf.Max(0f, bilanciamento.raggioFuga);
+        durataSullaMappa = Mathf.Max(0.1f, bilanciamento.durataSullaMappa);
+        vitaBase = Mathf.Max(1, bilanciamento.vitaBase);
+        moneteBase = Mathf.Max(0, bilanciamento.moneteBase);
+        cambioDirezioneMinimo = Mathf.Max(
+            0.05f,
+            bilanciamento.cambioDirezioneMinimo
+        );
+        cambioDirezioneMassimo = Mathf.Max(
+            cambioDirezioneMinimo,
+            bilanciamento.cambioDirezioneMassimo
+        );
+        ritardoDirezioneDopoFuga = Mathf.Max(
+            0f,
+            bilanciamento.ritardoDirezioneDopoFuga
+        );
     }
 
     void OnEnable()
@@ -167,7 +203,7 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
             : decelerazione;
         if (Vector2.Dot(velocitaAttuale, velocitaDesiderata) < 0f)
         {
-            rapidita *= 1.25f;
+            rapidita *= moltiplicatoreInversione;
         }
 
         velocitaAttuale = Vector2.MoveTowards(
@@ -192,7 +228,8 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
                     ? dalGiocatore.normalized
                     : Random.insideUnitCircle.normalized;
                 staFuggendo = true;
-                prossimoCambioDirezione = Time.time + 0.5f;
+                prossimoCambioDirezione =
+                    Time.time + ritardoDirezioneDopoFuga;
             }
         }
 
@@ -218,7 +255,10 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
         {
             direzionePasseggio = Vector2.right;
         }
-        prossimoCambioDirezione = Time.time + Random.Range(1.4f, 2.8f);
+        prossimoCambioDirezione = Time.time + Random.Range(
+            cambioDirezioneMinimo,
+            cambioDirezioneMassimo
+        );
     }
 
     void AggiornaAnimazione()

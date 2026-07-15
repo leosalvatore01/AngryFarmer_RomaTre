@@ -1,26 +1,61 @@
 using System;
-using UnityEngine;
 using TMPro;
+using UnityEngine;
+using UnityEngine.Serialization;
 
 public class PlayerHealth : MonoBehaviour
 {
-    public int vitaMassima = 5;
+    [Header("Statistiche di salute")]
+    [FormerlySerializedAs("vitaMassima")]
+    [SerializeField, Min(1)] private int vitaMassimaBase = 5;
 
     private int vitaCorrente;
     private TMP_Text testoVita;
-    private int frequenzaBlocco;
+    private int bonusVitaMassima;
+    private int frequenzaBloccoBase;
+    private int frequenzaBloccoBonus;
     private int colpiContati;
 
     public int VitaCorrente => vitaCorrente;
-    public int VitaMassima => vitaMassima;
-    public bool VitaPiena => vitaCorrente >= vitaMassima;
-    public int FrequenzaBlocco => frequenzaBlocco;
+    public int VitaMassimaBase => vitaMassimaBase;
+    public int BonusVitaMassima => bonusVitaMassima;
+    public int VitaMassimaFinale =>
+        Mathf.Max(1, vitaMassimaBase + bonusVitaMassima);
+    public int VitaMassima => VitaMassimaFinale;
+    public bool VitaPiena => vitaCorrente >= VitaMassimaFinale;
+
+    public int FrequenzaBloccoBase => frequenzaBloccoBase;
+    public int BonusFrequenzaBlocco => frequenzaBloccoBonus;
+    public int FrequenzaBloccoFinale
+    {
+        get
+        {
+            if (frequenzaBloccoBase <= 0) return frequenzaBloccoBonus;
+            if (frequenzaBloccoBonus <= 0) return frequenzaBloccoBase;
+            return Mathf.Min(frequenzaBloccoBase, frequenzaBloccoBonus);
+        }
+    }
+    public int FrequenzaBlocco => FrequenzaBloccoFinale;
+
+    [Obsolete("Usa VitaMassimaFinale.")]
+    public int vitaMassima => VitaMassimaFinale;
 
     public event Action VitaCambiata;
 
+    void Awake()
+    {
+        PlayerBalanceSettings configurazione =
+            GameBalanceConfig.Corrente.Giocatore;
+        vitaMassimaBase = Mathf.Max(1, configurazione.vitaMassima);
+        frequenzaBloccoBase = Mathf.Max(
+            0,
+            configurazione.frequenzaBloccoBase
+        );
+    }
+
     void Start()
     {
-        vitaCorrente = vitaMassima;
+        vitaCorrente = VitaMassimaFinale;
         testoVita = GameManager.TrovaTestoInterfaccia("VitaText");
         AggiornaInterfaccia();
     }
@@ -29,6 +64,7 @@ public class PlayerHealth : MonoBehaviour
     {
         if (danno <= 0 || vitaCorrente <= 0) return;
 
+        int frequenzaBlocco = FrequenzaBloccoFinale;
         if (frequenzaBlocco > 0)
         {
             colpiContati++;
@@ -55,7 +91,10 @@ public class PlayerHealth : MonoBehaviour
         if (quantita <= 0 || VitaPiena) return;
 
         int vitaPrecedente = vitaCorrente;
-        vitaCorrente = Mathf.Min(vitaMassima, vitaCorrente + quantita);
+        vitaCorrente = Mathf.Min(
+            VitaMassimaFinale,
+            vitaCorrente + quantita
+        );
         AggiornaInterfaccia();
         if (vitaCorrente != vitaPrecedente)
         {
@@ -63,29 +102,59 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
-    public void AumentaVitaMassima(int quantita, int curaBonus = 1)
+    public void ImpostaBonusVitaMassima(
+        int nuovoBonus,
+        int curaBonus = 0
+    )
     {
-        if (quantita <= 0) return;
+        int bonusValido = Mathf.Max(0, nuovoBonus);
+        int curaValida = Mathf.Max(0, curaBonus);
+        if (bonusVitaMassima == bonusValido && curaValida == 0) return;
 
-        vitaMassima += quantita;
+        bonusVitaMassima = bonusValido;
         vitaCorrente = Mathf.Min(
-            vitaMassima,
-            vitaCorrente + Mathf.Max(0, curaBonus)
+            VitaMassimaFinale,
+            vitaCorrente + curaValida
         );
         AggiornaInterfaccia();
         VitaCambiata?.Invoke();
     }
 
+    public void AggiungiBonusVitaMassima(
+        int quantita,
+        int curaBonus = 1
+    )
+    {
+        if (quantita <= 0) return;
+        ImpostaBonusVitaMassima(
+            bonusVitaMassima + quantita,
+            curaBonus
+        );
+    }
+
+    [Obsolete("Usa AggiungiBonusVitaMassima.")]
+    public void AumentaVitaMassima(int quantita, int curaBonus = 1)
+    {
+        AggiungiBonusVitaMassima(quantita, curaBonus);
+    }
+
+    public void ImpostaBonusFrequenzaBlocco(int ogniQuantiColpi)
+    {
+        frequenzaBloccoBonus = Mathf.Max(0, ogniQuantiColpi);
+        colpiContati = 0;
+    }
+
+    [Obsolete("Usa ImpostaBonusFrequenzaBlocco.")]
     public void ImpostaFrequenzaBlocco(int ogniQuantiColpi)
     {
-        frequenzaBlocco = Mathf.Max(0, ogniQuantiColpi);
-        colpiContati = 0;
+        ImpostaBonusFrequenzaBlocco(ogniQuantiColpi);
     }
 
     void AggiornaInterfaccia()
     {
         if (testoVita != null)
         {
+            int vitaMassima = VitaMassimaFinale;
             float rapporto = vitaMassima > 0
                 ? (float)vitaCorrente / vitaMassima
                 : 0f;

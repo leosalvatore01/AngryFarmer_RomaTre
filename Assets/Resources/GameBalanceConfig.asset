@@ -1,0 +1,122 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71eb059f1b8bf85479410b9626b3361b, type: 3}
+  m_Name: GameBalanceConfig
+  m_EditorClassIdentifier: Assembly-CSharp::GameBalanceConfig
+  versioneRiferimento: Baseline 1 - 2026-07-15
+  giocatore:
+    velocitaMovimento: 8
+    accelerazione: 45
+    decelerazione: 60
+    moltiplicatoreInversione: 1.35
+    vitaMassima: 5
+    frequenzaBloccoBase: 0
+    intervalloSparo: 0.4
+    intervalloSparoMinimo: 0.12
+    velocitaProiettile: 10
+    dannoProiettile: 1
+    penetrazioneProiettile: 0
+    durataProiettile: 3
+    distanzaMinimaMira: 0.2
+    distanzaUscitaProiettile: 0.44
+    durataBoostVelocita: 5
+    moltiplicatoreBoostVelocita: 2
+    durataTriploSparo: 5
+    angoloLateraleTriploSparo: 10
+  volpe:
+    velocita: 2.4
+    accelerazione: 12
+    decelerazione: 18
+    moltiplicatoreInversione: 1.3
+    distanzaRipresaInseguimento: 0.95
+    distanzaAttacco: 0.8
+    danno: 1
+    intervalloAttacco: 1
+    moltiplicatoreRallentamento: 0.5
+    vitaPrimaOndata: 2
+    vitaAggiuntivaPerOndata: 1
+    monetePerEliminazione: 1
+    probabilitaDrop: 30
+    probabilitaDenteSulDrop: 0.5
+  maialino:
+    velocitaPasseggio: 1.45
+    velocitaFuga: 3.1
+    accelerazione: 10
+    decelerazione: 14
+    moltiplicatoreInversione: 1.25
+    raggioFuga: 2.6
+    durataSullaMappa: 14
+    vitaBase: 1
+    moneteBase: 3
+    cambioDirezioneMinimo: 1.4
+    cambioDirezioneMassimo: 2.8
+    ritardoDirezioneDopoFuga: 0.5
+  shop:
+    costiMovimento: 03000000060000000a000000
+    costiResistenza: 04000000080000000d000000
+    costiSalute: 05000000090000000e000000
+    costiDanno: 0900000010000000
+    costiCadenza: 04000000070000000b000000
+    costiPenetrazione: 060000000a0000000f000000
+    costoCura: 3
+    incrementoMovimento: 0.5
+    frequenzeBlocco: 050000000400000003000000
+    incrementoSaluteMassima: 1
+    curaSuIncrementoSalute: 1
+    quantitaCura: 2
+    incrementoDanno: 1
+    riduzioneIntervalloSparo: 0.04
+    incrementoPenetrazione: 1
+    moneteIniziali: 0
+  ondate:
+    distanzaSpawnVolpi: 10
+    distanzaSpawnMaialini: 5.2
+    durataBannerOndata: 0.85
+    intervalloControlloFineOndata: 0.2
+    durataMinimaDistribuzioneMaialini: 1
+    ondate:
+    - nomeOndata: Riscaldamento
+      numeroNemici: 3
+      intervalloTraNemici: 1.8
+      numeroMaialiniBonus: 0
+      vitaMaialinoBonus: 1
+      moneteMaialinoBonus: 0
+    - nomeOndata: Primi intrusi
+      numeroNemici: 4
+      intervalloTraNemici: 1.55
+      numeroMaialiniBonus: 1
+      vitaMaialinoBonus: 2
+      moneteMaialinoBonus: 3
+    - nomeOndata: Branco in arrivo
+      numeroNemici: 5
+      intervalloTraNemici: 1.35
+      numeroMaialiniBonus: 1
+      vitaMaialinoBonus: 2
+      moneteMaialinoBonus: 3
+    - nomeOndata: Assalto alla fattoria
+      numeroNemici: 6
+      intervalloTraNemici: 1.2
+      numeroMaialiniBonus: 1
+      vitaMaialinoBonus: 3
+      moneteMaialinoBonus: 4
+    - nomeOndata: Furia della campagna
+      numeroNemici: 7
+      intervalloTraNemici: 1.1
+      numeroMaialiniBonus: 2
+      vitaMaialinoBonus: 3
+      moneteMaialinoBonus: 4
+    - nomeOndata: Ultima difesa
+      numeroNemici: 8
+      intervalloTraNemici: 1.05
+      numeroMaialiniBonus: 2
+      vitaMaialinoBonus: 4
+      moneteMaialinoBonus: 5

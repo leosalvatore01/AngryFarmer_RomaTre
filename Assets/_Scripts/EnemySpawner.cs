@@ -29,15 +29,26 @@ public class EnemySpawner : MonoBehaviour
 
     public Wave[] ondate;
 
+    [Header("Diagnostica sviluppo")]
+    [SerializeField] private WaveRuntimeDiagnostics diagnostica;
+
     private int currentWaveIndex = 0;
     private int tokenOndata;
     private TMP_Text testoOndata;
     private TMP_Text messaggioOndata;
     private GameObject contenitoreMessaggio;
     private Transform giocatore;
+    private float durataBannerOndata = 0.85f;
+    private float intervalloControlloFineOndata = 0.2f;
+    private float durataMinimaDistribuzioneMaialini = 1f;
+
+    public WaveRuntimeDiagnostics Diagnostica => diagnostica;
 
     void Start()
     {
+        ApplicaConfigurazioneBilanciamento();
+        ConfiguraDiagnostica();
+
         testoOndata = GameManager.TrovaTestoInterfaccia("OndataText");
         messaggioOndata =
             GameManager.TrovaTestoInterfaccia("MessaggioOndataText");
@@ -64,20 +75,31 @@ public class EnemySpawner : MonoBehaviour
         {
             if (PartitaTerminata())
             {
+                diagnostica.TerminaOndata(
+                    EsitoDiagnosticaOndata.Sconfitta
+                );
                 PulisciEntitaTraOndate();
                 yield break;
             }
 
             int tokenCorrente = ++tokenOndata;
             Wave ondataCorrente = ondate[currentWaveIndex];
+            diagnostica.IniziaOndata(
+                currentWaveIndex + 1,
+                ondate.Length,
+                ondataCorrente.nomeOndata,
+                ondataCorrente.numeroNemici,
+                ondataCorrente.numeroMaialiniBonus
+            );
             AggiornaContatoreOndata();
 
             MostraMessaggio(
                 "Ondata " + (currentWaveIndex + 1) + " / " + ondate.Length +
                 "\n" + ondataCorrente.nomeOndata
             );
-            yield return new WaitForSeconds(0.85f);
+            yield return new WaitForSeconds(durataBannerOndata);
             NascondiMessaggio();
+            diagnostica.AvviaCombattimento();
 
             if (ondataCorrente.numeroMaialiniBonus > 0)
             {
@@ -90,11 +112,14 @@ public class EnemySpawner : MonoBehaviour
             {
                 if (PartitaTerminata())
                 {
+                    diagnostica.TerminaOndata(
+                        EsitoDiagnosticaOndata.Sconfitta
+                    );
                     PulisciEntitaTraOndate();
                     yield break;
                 }
 
-                SpawnEnemy();
+                diagnostica.RegistraSpawnNemico(SpawnEnemy());
                 if (i < ondataCorrente.numeroNemici - 1)
                 {
                     yield return new WaitForSeconds(
@@ -103,16 +128,28 @@ public class EnemySpawner : MonoBehaviour
                 }
             }
 
+            diagnostica.SegnaFineSpawn();
+
             while (GameObject.FindGameObjectWithTag("Nemico") != null)
             {
+                diagnostica.CampionaNemiciVivi();
                 if (PartitaTerminata())
                 {
+                    diagnostica.TerminaOndata(
+                        EsitoDiagnosticaOndata.Sconfitta
+                    );
                     PulisciEntitaTraOndate();
                     yield break;
                 }
 
-                yield return new WaitForSeconds(0.2f);
+                yield return new WaitForSeconds(
+                    intervalloControlloFineOndata
+                );
             }
+
+            diagnostica.TerminaOndata(
+                EsitoDiagnosticaOndata.Completata
+            );
 
             if (currentWaveIndex < ondate.Length - 1)
             {
@@ -158,7 +195,7 @@ public class EnemySpawner : MonoBehaviour
     {
         int quantita = Mathf.Max(0, ondata.numeroMaialiniBonus);
         float durataSpawnVolpi = Mathf.Max(
-            1f,
+            durataMinimaDistribuzioneMaialini,
             Mathf.Max(0, ondata.numeroNemici - 1) *
             ondata.intervalloTraNemici
         );
@@ -176,7 +213,58 @@ public class EnemySpawner : MonoBehaviour
                 yield break;
             }
 
-            SpawnMaialino(ondata);
+            diagnostica.RegistraSpawnMaialino(SpawnMaialino(ondata));
+        }
+    }
+
+    void ApplicaConfigurazioneBilanciamento()
+    {
+        GameBalanceConfig configurazione = GameBalanceConfig.Corrente;
+        if (configurazione == null) return;
+
+        FoxBalanceSettings volpe = configurazione.Volpe;
+        if (volpe != null)
+        {
+            vitaPrimaOndata = Mathf.Max(1, volpe.vitaPrimaOndata);
+            vitaAggiuntivaPerOndata = Mathf.Max(
+                0,
+                volpe.vitaAggiuntivaPerOndata
+            );
+        }
+
+        WaveBalanceSettings ritmo = configurazione.Ondate;
+        if (ritmo == null) return;
+
+        spawnDistance = Mathf.Max(0f, ritmo.distanzaSpawnVolpi);
+        distanzaSpawnMaialino = Mathf.Max(
+            0f,
+            ritmo.distanzaSpawnMaialini
+        );
+        durataBannerOndata = Mathf.Max(0f, ritmo.durataBannerOndata);
+        intervalloControlloFineOndata = Mathf.Max(
+            0.02f,
+            ritmo.intervalloControlloFineOndata
+        );
+        durataMinimaDistribuzioneMaialini = Mathf.Max(
+            0.05f,
+            ritmo.durataMinimaDistribuzioneMaialini
+        );
+
+        if (ritmo.ondate != null && ritmo.ondate.Length > 0)
+        {
+            ondate = ritmo.ondate;
+        }
+    }
+
+    void ConfiguraDiagnostica()
+    {
+        if (diagnostica == null)
+        {
+            diagnostica = GetComponent<WaveRuntimeDiagnostics>();
+        }
+        if (diagnostica == null)
+        {
+            diagnostica = gameObject.AddComponent<WaveRuntimeDiagnostics>();
         }
     }
 
@@ -304,9 +392,9 @@ public class EnemySpawner : MonoBehaviour
         }
     }
 
-    void SpawnEnemy()
+    bool SpawnEnemy()
     {
-        if (foxPrefab == null) return;
+        if (foxPrefab == null) return false;
 
         Vector2 spawnPos = DirezioneCasuale() * spawnDistance;
         GameObject nuovaVolpe =
@@ -320,7 +408,7 @@ public class EnemySpawner : MonoBehaviour
                 nuovaVolpe
             );
             Destroy(nuovaVolpe);
-            return;
+            return false;
         }
 
         int vitaOndata = Mathf.Max(
@@ -328,11 +416,12 @@ public class EnemySpawner : MonoBehaviour
             vitaPrimaOndata + currentWaveIndex * vitaAggiuntivaPerOndata
         );
         nemico.InizializzaVita(vitaOndata);
+        return true;
     }
 
-    void SpawnMaialino(Wave ondata)
+    bool SpawnMaialino(Wave ondata)
     {
-        if (pigPrefab == null) return;
+        if (pigPrefab == null) return false;
 
         Vector2 centro = giocatore != null
             ? (Vector2)giocatore.position
@@ -351,13 +440,14 @@ public class EnemySpawner : MonoBehaviour
                 nuovoMaialino
             );
             Destroy(nuovoMaialino);
-            return;
+            return false;
         }
 
         bonus.Inizializza(
             ondata.vitaMaialinoBonus,
             ondata.moneteMaialinoBonus
         );
+        return true;
     }
 
     bool PartitaTerminata()
@@ -391,6 +481,12 @@ public class EnemySpawner : MonoBehaviour
 
     void OnDisable()
     {
+        if (diagnostica != null)
+        {
+            diagnostica.TerminaOndata(
+                EsitoDiagnosticaOndata.Interrotta
+            );
+        }
         tokenOndata++;
     }
 }

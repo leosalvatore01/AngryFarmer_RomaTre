@@ -1,15 +1,23 @@
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
 using UnityEngine.Serialization;
 
 public class PlayerShooting : MonoBehaviour
 {
     public GameObject bulletPrefab;
-    [Min(0.12f)]
-    public float fireRate = 0.4f;
-    public float bulletSpeed = 10f;
-    [Min(1)] public int dannoProiettile = 1;
-    [Min(0)] public int penetrazioneProiettile = 0;
+
+    [Header("Statistiche di sparo")]
+    [FormerlySerializedAs("fireRate")]
+    [SerializeField, Min(0.01f)] private float intervalloSparoBase = 0.4f;
+
+    [FormerlySerializedAs("bulletSpeed")]
+    [SerializeField, Min(0f)] private float velocitaProiettileBase = 10f;
+
+    [FormerlySerializedAs("dannoProiettile")]
+    [SerializeField, Min(1)] private int dannoBase = 1;
+
+    [FormerlySerializedAs("penetrazioneProiettile")]
+    [SerializeField, Min(0)] private int penetrazioneBase;
 
     [Header("Mira")]
     [Min(0f)] public float distanzaMinimaMira = 0.2f;
@@ -18,17 +26,91 @@ public class PlayerShooting : MonoBehaviour
     [FormerlySerializedAs("durataDoppioSparo")]
     public float durataTriploSparo = 5f;
 
-    private float nextFire = 0f;
-    private bool triploSparoAttivo = false;
+    public float IntervalloSparoBase => intervalloSparoBase;
+    public float BonusRiduzioneIntervalloSparo =>
+        bonusRiduzioneIntervalloSparo;
+    public float IntervalloSparoFinale => Mathf.Max(
+        intervalloSparoMinimo,
+        intervalloSparoBase - bonusRiduzioneIntervalloSparo
+    );
+
+    public float VelocitaProiettileBase => velocitaProiettileBase;
+    public float BonusVelocitaProiettile => bonusVelocitaProiettile;
+    public float VelocitaProiettileFinale => Mathf.Max(
+        0f,
+        velocitaProiettileBase + bonusVelocitaProiettile
+    );
+
+    public int DannoBase => dannoBase;
+    public int BonusDanno => bonusDanno;
+    public int DannoFinale => Mathf.Max(1, dannoBase + bonusDanno);
+
+    public int PenetrazioneBase => penetrazioneBase;
+    public int BonusPenetrazione => bonusPenetrazione;
+    public int PenetrazioneFinale => Mathf.Max(
+        0,
+        penetrazioneBase + bonusPenetrazione
+    );
+
+    public float IntervalloSparoMinimo => intervalloSparoMinimo;
+    public Vector2 DirezioneMira { get; private set; } = Vector2.down;
+    public bool HaDirezioneMira { get; private set; }
+
+    [System.Obsolete("Usa IntervalloSparoFinale.")]
+    public float fireRate => IntervalloSparoFinale;
+    [System.Obsolete("Usa VelocitaProiettileFinale.")]
+    public float bulletSpeed => VelocitaProiettileFinale;
+    [System.Obsolete("Usa DannoFinale.")]
+    public int dannoProiettile => DannoFinale;
+    [System.Obsolete("Usa PenetrazioneFinale.")]
+    public int penetrazioneProiettile => PenetrazioneFinale;
+
+    private float bonusRiduzioneIntervalloSparo;
+    private float bonusVelocitaProiettile;
+    private int bonusDanno;
+    private int bonusPenetrazione;
+    private float intervalloSparoMinimo = 0.12f;
+    private float angoloLateraleTriploSparo = 10f;
+    private float nextFire;
+    private bool triploSparoAttivo;
     private Coroutine triploSparoRoutine;
     private Camera cameraPrincipale;
     private PlayerVisualController controllerVisivo;
 
-    public Vector2 DirezioneMira { get; private set; } = Vector2.down;
-    public bool HaDirezioneMira { get; private set; }
-
     void Awake()
     {
+        PlayerBalanceSettings configurazione =
+            GameBalanceConfig.Corrente.Giocatore;
+
+        intervalloSparoMinimo = Mathf.Max(
+            0.01f,
+            configurazione.intervalloSparoMinimo
+        );
+        intervalloSparoBase = Mathf.Max(
+            intervalloSparoMinimo,
+            configurazione.intervalloSparo
+        );
+        velocitaProiettileBase = Mathf.Max(
+            0f,
+            configurazione.velocitaProiettile
+        );
+        dannoBase = Mathf.Max(1, configurazione.dannoProiettile);
+        penetrazioneBase = Mathf.Max(0, configurazione.penetrazioneProiettile);
+        distanzaMinimaMira = Mathf.Max(0f, configurazione.distanzaMinimaMira);
+        distanzaUscitaProiettile = Mathf.Max(
+            0f,
+            configurazione.distanzaUscitaProiettile
+        );
+        durataTriploSparo = Mathf.Max(
+            0f,
+            configurazione.durataTriploSparo
+        );
+        angoloLateraleTriploSparo = Mathf.Clamp(
+            configurazione.angoloLateraleTriploSparo,
+            0f,
+            45f
+        );
+
         cameraPrincipale = Camera.main;
         controllerVisivo = GetComponent<PlayerVisualController>();
     }
@@ -49,7 +131,7 @@ public class PlayerShooting : MonoBehaviour
         {
             if (Shoot(DirezioneMira))
             {
-                nextFire = Time.time + fireRate;
+                nextFire = Time.time + IntervalloSparoFinale;
             }
         }
     }
@@ -109,8 +191,12 @@ public class PlayerShooting : MonoBehaviour
         if (triploSparoAttivo)
         {
             CreateBullet(direzione);
-            CreateBullet(Quaternion.Euler(0, 0, 10) * direzione);
-            CreateBullet(Quaternion.Euler(0, 0, -10) * direzione);
+            CreateBullet(
+                Quaternion.Euler(0f, 0f, angoloLateraleTriploSparo) * direzione
+            );
+            CreateBullet(
+                Quaternion.Euler(0f, 0f, -angoloLateraleTriploSparo) * direzione
+            );
         }
         else
         {
@@ -139,15 +225,15 @@ public class PlayerShooting : MonoBehaviour
         if (comportamento != null)
         {
             comportamento.Inizializza(
-                dannoProiettile,
-                penetrazioneProiettile
+                DannoFinale,
+                PenetrazioneFinale
             );
         }
 
         Rigidbody2D corpo = proiettile.GetComponent<Rigidbody2D>();
         if (corpo != null)
         {
-            corpo.linearVelocity = direzione * bulletSpeed;
+            corpo.linearVelocity = direzione * VelocitaProiettileFinale;
         }
     }
 
@@ -164,26 +250,50 @@ public class PlayerShooting : MonoBehaviour
     IEnumerator TriploSparoTimer()
     {
         triploSparoAttivo = true;
-        yield return new WaitForSeconds(Mathf.Max(0f, durataTriploSparo));
+        yield return new WaitForSeconds(durataTriploSparo);
         triploSparoAttivo = false;
         triploSparoRoutine = null;
     }
 
+    public void ImpostaBonusDanno(int valore)
+    {
+        bonusDanno = Mathf.Max(0, valore);
+    }
+
+    public void ImpostaBonusRiduzioneIntervalloSparo(float valore)
+    {
+        bonusRiduzioneIntervalloSparo = Mathf.Max(0f, valore);
+    }
+
+    public void ImpostaBonusPenetrazione(int valore)
+    {
+        bonusPenetrazione = Mathf.Max(0, valore);
+    }
+
+    public void ImpostaBonusVelocitaProiettile(float valore)
+    {
+        bonusVelocitaProiettile = Mathf.Max(0f, valore);
+    }
+
+    [System.Obsolete("Usa ImpostaBonusDanno.")]
     public void AumentaDanno(int quantita)
     {
-        dannoProiettile = Mathf.Max(1, dannoProiettile + Mathf.Max(0, quantita));
+        ImpostaBonusDanno(bonusDanno + Mathf.Max(0, quantita));
     }
 
+    [System.Obsolete("Usa ImpostaBonusRiduzioneIntervalloSparo.")]
     public void RiduciIntervalloSparo(float quantita)
     {
-        fireRate = Mathf.Max(0.12f, fireRate - Mathf.Max(0f, quantita));
+        ImpostaBonusRiduzioneIntervalloSparo(
+            bonusRiduzioneIntervalloSparo + Mathf.Max(0f, quantita)
+        );
     }
 
+    [System.Obsolete("Usa ImpostaBonusPenetrazione.")]
     public void AumentaPenetrazione(int quantita)
     {
-        penetrazioneProiettile = Mathf.Max(
-            0,
-            penetrazioneProiettile + Mathf.Max(0, quantita)
+        ImpostaBonusPenetrazione(
+            bonusPenetrazione + Mathf.Max(0, quantita)
         );
     }
 

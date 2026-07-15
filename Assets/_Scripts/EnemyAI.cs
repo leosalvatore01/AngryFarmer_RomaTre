@@ -52,6 +52,10 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     private Color coloreBase;
     private float faseMovimento;
     private float offsetVerticale;
+    private float moltiplicatoreInversione = 1.3f;
+    private float moltiplicatoreRallentamento = 0.5f;
+    private int monetePerEliminazione = 1;
+    private float probabilitaDenteSulDrop = 0.5f;
 
     private int vitaMassima;
     private int vitaCorrente;
@@ -79,6 +83,8 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
 
     void Awake()
     {
+        ApplicaBilanciamento();
+
         corpo = GetComponent<Rigidbody2D>();
         corpo.interpolation = RigidbodyInterpolation2D.Interpolate;
         colliderFisico = GetComponent<Collider2D>();
@@ -128,6 +134,43 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         AggiornaBarraVita();
     }
 
+    void ApplicaBilanciamento()
+    {
+        FoxBalanceSettings bilanciamento = GameBalanceConfig.Corrente.Volpe;
+
+        speed = Mathf.Max(0f, bilanciamento.velocita);
+        accelerazione = Mathf.Max(0f, bilanciamento.accelerazione);
+        decelerazione = Mathf.Max(0f, bilanciamento.decelerazione);
+        moltiplicatoreInversione = Mathf.Max(
+            1f,
+            bilanciamento.moltiplicatoreInversione
+        );
+        distanzaRipresaInseguimento = Mathf.Max(
+            0f,
+            bilanciamento.distanzaRipresaInseguimento
+        );
+        distanzaAttacco = Mathf.Max(0f, bilanciamento.distanzaAttacco);
+        danno = Mathf.Max(0, bilanciamento.danno);
+        intervalloAttacco = Mathf.Max(
+            0.01f,
+            bilanciamento.intervalloAttacco
+        );
+        moltiplicatoreRallentamento = Mathf.Clamp(
+            bilanciamento.moltiplicatoreRallentamento,
+            0.05f,
+            1f
+        );
+        vitaBase = Mathf.Max(1, bilanciamento.vitaPrimaOndata);
+        monetePerEliminazione = Mathf.Max(
+            0,
+            bilanciamento.monetePerEliminazione
+        );
+        dropChance = Mathf.Clamp(bilanciamento.probabilitaDrop, 0f, 100f);
+        probabilitaDenteSulDrop = Mathf.Clamp01(
+            bilanciamento.probabilitaDenteSulDrop
+        );
+    }
+
     void Start()
     {
         GameObject giocatore = GameObject.FindGameObjectWithTag("Player");
@@ -166,7 +209,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
 
         if (Vector2.Dot(velocitaAttuale, velocitaDesiderata) < 0f)
         {
-            rapiditaCambio *= 1.3f;
+            rapiditaCambio *= moltiplicatoreInversione;
         }
 
         velocitaAttuale = Vector2.MoveTowards(
@@ -206,7 +249,9 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
 
             if (staInseguendo)
             {
-                float velocitaCorrente = isSlowed ? speed / 2f : speed;
+                float velocitaCorrente = isSlowed
+                    ? speed * moltiplicatoreRallentamento
+                    : speed;
                 Vector2 direzione =
                     ((Vector2)target.position - corpo.position).normalized;
                 velocitaDesiderata = direzione * velocitaCorrente;
@@ -488,11 +533,12 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
 
         if (GameManager.instance != null)
         {
-            GameManager.instance.AggiungiMonete(1);
+            GameManager.instance.AggiungiMonete(monetePerEliminazione);
         }
         if (Random.Range(0f, 100f) < dropChance)
         {
-            if (Random.value > 0.5f && dentePrefab != null)
+            if (Random.value > 1f - probabilitaDenteSulDrop &&
+                dentePrefab != null)
                 Instantiate(dentePrefab, transform.position, Quaternion.identity);
             else if (codaPrefab != null)
                 Instantiate(codaPrefab, transform.position, Quaternion.identity);

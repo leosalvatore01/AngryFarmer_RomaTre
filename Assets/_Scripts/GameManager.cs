@@ -37,8 +37,18 @@ public class GameManager : MonoBehaviour
 
     void Awake()
     {
-        if (instance == null) instance = this;
-        else Destroy(gameObject);
+        if (instance == null)
+        {
+            instance = this;
+            monete = Mathf.Max(
+                0,
+                GameBalanceConfig.Corrente.Shop.moneteIniziali
+            );
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 
     void Start()
