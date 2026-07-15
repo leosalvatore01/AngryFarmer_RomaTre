@@ -103,7 +103,7 @@ public class PlayerHealth : MonoBehaviour
                 testoVita.color = new Color(1f, 0.28f, 0.2f, 1f);
             }
 
-            testoVita.text = "Salute   " + vitaCorrente + " / " + vitaMassima;
+            testoVita.text = vitaCorrente + " / " + vitaMassima;
         }
     }
 }

@@ -11,36 +11,100 @@ public class PlayerShooting : MonoBehaviour
     [Min(1)] public int dannoProiettile = 1;
     [Min(0)] public int penetrazioneProiettile = 0;
 
+    [Header("Mira")]
+    [Min(0f)] public float distanzaMinimaMira = 0.2f;
+    [Min(0f)] public float distanzaUscitaProiettile = 0.44f;
+
     [FormerlySerializedAs("durataDoppioSparo")]
     public float durataTriploSparo = 5f;
 
     private float nextFire = 0f;
     private bool triploSparoAttivo = false;
     private Coroutine triploSparoRoutine;
+    private Camera cameraPrincipale;
+    private PlayerVisualController controllerVisivo;
+
+    public Vector2 DirezioneMira { get; private set; } = Vector2.down;
+    public bool HaDirezioneMira { get; private set; }
+
+    void Awake()
+    {
+        cameraPrincipale = Camera.main;
+        controllerVisivo = GetComponent<PlayerVisualController>();
+    }
 
     void Update()
     {
+        bool miraValida = AggiornaDirezioneMira();
+
         if (GameManager.instance != null &&
             !GameManager.instance.GameplayAttivo)
         {
             return;
         }
 
-        if (Input.GetMouseButton(0) && Time.time >= nextFire)
+        if (miraValida &&
+            Input.GetMouseButton(0) &&
+            Time.time >= nextFire)
         {
-            nextFire = Time.time + fireRate;
-            Shoot();
+            if (Shoot(DirezioneMira))
+            {
+                nextFire = Time.time + fireRate;
+            }
         }
     }
 
-    void Shoot()
+    public bool ProvaOttieniDirezioneMira(out Vector2 direzione)
     {
-        Vector3 targetPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        targetPos.z = 0;
+        bool valida = AggiornaDirezioneMira();
+        direzione = DirezioneMira;
+        return valida;
+    }
 
-        if (Vector2.Distance(targetPos, transform.position) < 0.5f) return;
+    bool AggiornaDirezioneMira()
+    {
+        if (cameraPrincipale == null)
+        {
+            cameraPrincipale = Camera.main;
+        }
 
-        Vector2 direzione = (targetPos - transform.position).normalized;
+        if (cameraPrincipale == null)
+        {
+            HaDirezioneMira = false;
+            return false;
+        }
+
+        Vector3 posizioneSchermo = Input.mousePosition;
+        posizioneSchermo.z = Mathf.Abs(
+            transform.position.z - cameraPrincipale.transform.position.z
+        );
+
+        Vector3 posizioneMondo =
+            cameraPrincipale.ScreenToWorldPoint(posizioneSchermo);
+        Vector2 scarto =
+            (Vector2)posizioneMondo - (Vector2)transform.position;
+
+        float distanzaMinima = Mathf.Max(0f, distanzaMinimaMira);
+        if (scarto.sqrMagnitude < distanzaMinima * distanzaMinima)
+        {
+            HaDirezioneMira = false;
+            return false;
+        }
+
+        DirezioneMira = scarto.normalized;
+        HaDirezioneMira = true;
+        return true;
+    }
+
+    bool Shoot(Vector2 direzione)
+    {
+        if (bulletPrefab == null)
+        {
+            Debug.LogError("Prefab del proiettile non assegnato.", this);
+            return false;
+        }
+
+        direzione.Normalize();
 
         if (triploSparoAttivo)
         {
@@ -52,14 +116,22 @@ public class PlayerShooting : MonoBehaviour
         {
             CreateBullet(direzione);
         }
+
+        if (controllerVisivo != null)
+        {
+            controllerVisivo.RiproduciFeedbackSparo(direzione);
+        }
+        return true;
     }
 
     void CreateBullet(Vector2 direzione)
     {
         float angolo = Mathf.Atan2(direzione.y, direzione.x) * Mathf.Rad2Deg;
+        Vector3 posizioneUscita = transform.position +
+            (Vector3)(direzione.normalized * distanzaUscitaProiettile);
         GameObject proiettile = Instantiate(
             bulletPrefab,
-            transform.position,
+            posizioneUscita,
             Quaternion.Euler(0f, 0f, angolo)
         );
 

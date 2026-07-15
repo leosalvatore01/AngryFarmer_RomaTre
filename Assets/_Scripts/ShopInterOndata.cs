@@ -12,6 +12,7 @@ public class ShopInterOndata : MonoBehaviour
         public TMP_Text testoPulsante;
         public TMP_Text testoDescrizione;
         public TMP_Text testoStato;
+        public Image iconaCosto;
     }
 
     private static readonly TipoPotenziamento[] tipi =
@@ -198,12 +199,14 @@ public class ShopInterOndata : MonoBehaviour
                 riga.pulsante.interactable = false;
                 riga.testoPulsante.text = "NON DISPONIBILE";
                 riga.testoStato.text = string.Empty;
+                if (riga.iconaCosto != null) riga.iconaCosto.enabled = false;
                 continue;
             }
 
             bool disponibile = potenziamenti.PuoAcquistare(tipo);
             int costo = potenziamenti.OttieniCosto(tipo);
             riga.pulsante.interactable = disponibile && monete >= costo;
+            if (riga.iconaCosto != null) riga.iconaCosto.enabled = disponibile;
             riga.testoDescrizione.text =
                 potenziamenti.OttieniDescrizione(tipo);
             riga.testoStato.text = potenziamenti.OttieniStato(tipo);
@@ -238,7 +241,7 @@ public class ShopInterOndata : MonoBehaviour
         rootRect.offsetMax = Vector2.zero;
 
         Image velo = GetComponent<Image>();
-        velo.color = new Color(0.025f, 0.014f, 0.009f, 0.86f);
+        velo.color = new Color(0.055f, 0.035f, 0.02f, 0.84f);
         velo.raycastTarget = true;
 
         pannelloRiepilogo = CreaPannello(
@@ -264,6 +267,14 @@ public class ShopInterOndata : MonoBehaviour
 
     void CostruisciRiepilogo(Transform parent)
     {
+        FarmPixelUI.AggiungiIcona(
+            parent,
+            "IconaBottega",
+            FarmPixelIcon.Bottega,
+            new Vector2(-305f, 182f),
+            new Vector2(58f, 58f)
+        );
+
         CreaTesto(
             "Titolo",
             parent,
@@ -298,6 +309,13 @@ public class ShopInterOndata : MonoBehaviour
             new Color(1f, 0.86f, 0.22f, 1f),
             FontStyles.Bold,
             TextAlignmentOptions.Center
+        );
+        FarmPixelUI.AggiungiIcona(
+            parent,
+            "IconaMonete",
+            FarmPixelIcon.Moneta,
+            new Vector2(-125f, -5f),
+            new Vector2(34f, 34f)
         );
 
         CreaTesto(
@@ -334,6 +352,14 @@ public class ShopInterOndata : MonoBehaviour
 
     void CostruisciBottega(Transform parent)
     {
+        FarmPixelUI.AggiungiIcona(
+            parent,
+            "IconaBottega",
+            FarmPixelIcon.Bottega,
+            new Vector2(-400f, 397f),
+            new Vector2(52f, 52f)
+        );
+
         CreaTesto(
             "Titolo",
             parent,
@@ -356,6 +382,13 @@ public class ShopInterOndata : MonoBehaviour
             new Color(1f, 0.86f, 0.22f, 1f),
             FontStyles.Bold,
             TextAlignmentOptions.Center
+        );
+        FarmPixelUI.AggiungiIcona(
+            parent,
+            "IconaMonete",
+            FarmPixelIcon.Moneta,
+            new Vector2(315f, 397f),
+            new Vector2(34f, 34f)
         );
 
         for (int i = 0; i < tipi.Length; i++)
@@ -410,6 +443,14 @@ public class ShopInterOndata : MonoBehaviour
             false
         );
 
+        FarmPixelUI.AggiungiIcona(
+            riga.transform,
+            "IconaPotenziamento",
+            IconaPerTipo(tipo),
+            new Vector2(-486f, 0f),
+            new Vector2(48f, 48f)
+        );
+
         string titolo = TitoloPredefinito(tipo);
         string descrizione = DescrizionePredefinita(tipo);
 
@@ -417,7 +458,7 @@ public class ShopInterOndata : MonoBehaviour
             "Nome",
             riga.transform,
             titolo,
-            new Vector2(-360f, 12f),
+            new Vector2(-315f, 12f),
             new Vector2(300f, 30f),
             19f,
             new Color(1f, 0.78f, 0.32f, 1f),
@@ -428,7 +469,7 @@ public class ShopInterOndata : MonoBehaviour
             "Descrizione",
             riga.transform,
             descrizione,
-            new Vector2(-255f, -18f),
+            new Vector2(-210f, -18f),
             new Vector2(510f, 27f),
             16f,
             new Color(0.91f, 0.84f, 0.72f, 1f),
@@ -458,13 +499,28 @@ public class ShopInterOndata : MonoBehaviour
             new Color(0.68f, 0.33f, 0.075f, 1f),
             () => Acquista(tipoCatturato)
         );
+        Image iconaCosto = FarmPixelUI.AggiungiIcona(
+            bottone.transform,
+            "IconaCosto",
+            FarmPixelIcon.Moneta,
+            new Vector2(-68f, 0f),
+            new Vector2(25f, 25f)
+        );
+
+        TMP_Text testoCosto = bottone.GetComponentInChildren<TMP_Text>();
+        if (testoCosto != null)
+        {
+            testoCosto.rectTransform.anchoredPosition = new Vector2(16f, 0f);
+            testoCosto.rectTransform.sizeDelta = new Vector2(140f, 38f);
+        }
 
         righe[tipo] = new RigaShop
         {
             pulsante = bottone,
             testoPulsante = bottone.GetComponentInChildren<TMP_Text>(),
             testoDescrizione = descrizioneTesto,
-            testoStato = stato
+            testoStato = stato,
+            iconaCosto = iconaCosto
         };
     }
 
@@ -494,16 +550,18 @@ public class ShopInterOndata : MonoBehaviour
         rect.sizeDelta = dimensioni;
 
         Image immagine = oggetto.GetComponent<Image>();
-        immagine.color = colore;
-        immagine.raycastTarget = true;
+        FarmPixelUI.ApplicaPannello(immagine, !bordoMarcato, true);
+        immagine.color = Color.Lerp(
+            Color.white,
+            colore,
+            bordoMarcato ? 0.1f : 0.16f
+        );
 
         Outline bordo = oggetto.GetComponent<Outline>();
-        bordo.effectColor = bordoMarcato
-            ? new Color(0.75f, 0.39f, 0.11f, 0.96f)
-            : new Color(0.42f, 0.24f, 0.1f, 0.75f);
+        bordo.effectColor = new Color(0.12f, 0.055f, 0.025f, 0.72f);
         bordo.effectDistance = bordoMarcato
             ? new Vector2(3f, -3f)
-            : new Vector2(1f, -1f);
+            : new Vector2(2f, -2f);
         bordo.useGraphicAlpha = true;
         return oggetto;
     }
@@ -545,6 +603,7 @@ public class ShopInterOndata : MonoBehaviour
         testo.textWrappingMode = TextWrappingModes.Normal;
         testo.overflowMode = TextOverflowModes.Ellipsis;
         testo.raycastTarget = false;
+        FarmPixelUI.ApplicaTesto(testo, colore);
         return testo;
     }
 
@@ -579,19 +638,11 @@ public class ShopInterOndata : MonoBehaviour
         immagine.color = colore;
 
         Outline bordo = oggetto.GetComponent<Outline>();
-        bordo.effectColor = new Color(0.13f, 0.06f, 0.02f, 0.9f);
-        bordo.effectDistance = new Vector2(2f, -2f);
+        bordo.enabled = false;
 
         Button pulsante = oggetto.GetComponent<Button>();
         pulsante.targetGraphic = immagine;
-        ColorBlock colori = pulsante.colors;
-        colori.normalColor = Color.white;
-        colori.highlightedColor = new Color(1.14f, 1.08f, 0.91f, 1f);
-        colori.pressedColor = new Color(0.76f, 0.76f, 0.76f, 1f);
-        colori.selectedColor = Color.white;
-        colori.disabledColor = new Color(0.38f, 0.38f, 0.38f, 0.72f);
-        colori.colorMultiplier = 1f;
-        pulsante.colors = colori;
+        FarmPixelUI.ApplicaPulsante(pulsante, colore);
         pulsante.onClick.AddListener(azione);
 
         TMP_Text testo = CreaTesto(
@@ -607,6 +658,29 @@ public class ShopInterOndata : MonoBehaviour
         );
         testo.textWrappingMode = TextWrappingModes.NoWrap;
         return pulsante;
+    }
+
+    static FarmPixelIcon IconaPerTipo(TipoPotenziamento tipo)
+    {
+        switch (tipo)
+        {
+            case TipoPotenziamento.Movimento:
+                return FarmPixelIcon.Movimento;
+            case TipoPotenziamento.Resistenza:
+                return FarmPixelIcon.Resistenza;
+            case TipoPotenziamento.SaluteMassima:
+                return FarmPixelIcon.SaluteMassima;
+            case TipoPotenziamento.Cura:
+                return FarmPixelIcon.Cura;
+            case TipoPotenziamento.Danno:
+                return FarmPixelIcon.Danno;
+            case TipoPotenziamento.Cadenza:
+                return FarmPixelIcon.Cadenza;
+            case TipoPotenziamento.Penetrazione:
+                return FarmPixelIcon.Penetrazione;
+            default:
+                return FarmPixelIcon.Bottega;
+        }
     }
 
     static string TitoloPredefinito(TipoPotenziamento tipo)

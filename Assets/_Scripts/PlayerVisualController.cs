@@ -13,9 +13,15 @@ public class PlayerVisualController : MonoBehaviour
     [Min(0f)] public float frequenzaCamminata = 3f;
     [Min(0f)] public float velocitaTransizione = 12f;
 
+    [Header("Feedback sparo")]
+    [Min(0.01f)] public float durataFeedbackSparo = 0.1f;
+    [Min(0f)] public float distanzaRinculo = 0.08f;
+    [Range(0f, 0.1f)] public float compressioneSparo = 0.035f;
+
     private SpriteRenderer spriteRenderer;
     private Transform grafica;
     private PlayerMovement movimento;
+    private PlayerShooting sparo;
     private Sprite[] frameCamminata;
 
     private int direzioneCorrente = 0;
@@ -24,11 +30,14 @@ public class PlayerVisualController : MonoBehaviour
     private float faseCamminata;
     private float blendCamminata;
     private bool camminavaNelFramePrecedente;
+    private float tempoFeedbackSparo;
+    private Vector2 direzioneRinculo = Vector2.down;
 
     void Awake()
     {
         spriteRenderer = CreaRendererVisivo(GetComponent<SpriteRenderer>());
         movimento = GetComponent<PlayerMovement>();
+        sparo = GetComponent<PlayerShooting>();
 
         frameCamminata = Resources.LoadAll<Sprite>("FarmerWalk-v1");
 
@@ -49,7 +58,7 @@ public class PlayerVisualController : MonoBehaviour
         );
     }
 
-    void Update()
+    void LateUpdate()
     {
         if (frameCamminata.Length < 16 || movimento == null)
         {
@@ -60,9 +69,19 @@ public class PlayerVisualController : MonoBehaviour
         Vector2 direzione = movimento.VelocitaAttuale;
         bool staCamminando = movimento.StaCamminando;
 
-        if (staCamminando)
+        Vector2 direzioneMira;
+        if (sparo != null &&
+            sparo.ProvaOttieniDirezioneMira(out direzioneMira))
+        {
+            direzioneCorrente = OttieniDirezione(direzioneMira);
+        }
+        else if (staCamminando)
         {
             direzioneCorrente = OttieniDirezione(direzione.normalized);
+        }
+
+        if (staCamminando)
+        {
             float cadenza = Mathf.Clamp(
                 direzione.magnitude / Mathf.Max(0.01f, movimento.speed),
                 0.35f,
@@ -88,6 +107,15 @@ public class PlayerVisualController : MonoBehaviour
             2f
         );
         AggiornaMovimentoVisivo(staCamminando, fattoreCadenza);
+    }
+
+    public void RiproduciFeedbackSparo(Vector2 direzione)
+    {
+        if (direzione.sqrMagnitude <= 0.0001f) return;
+
+        direzioneRinculo = direzione.normalized;
+        direzioneCorrente = OttieniDirezione(direzioneRinculo);
+        tempoFeedbackSparo = Mathf.Max(0.01f, durataFeedbackSparo);
     }
 
     SpriteRenderer CreaRendererVisivo(SpriteRenderer rendererOriginale)
@@ -157,7 +185,32 @@ public class PlayerVisualController : MonoBehaviour
             blendCamminata
         );
 
-        grafica.localPosition = Vector3.up * offsetVerticale;
+        float forzaSparo = 0f;
+        if (tempoFeedbackSparo > 0f)
+        {
+            float durata = Mathf.Max(0.01f, durataFeedbackSparo);
+            forzaSparo = Mathf.Clamp01(tempoFeedbackSparo / durata);
+            forzaSparo *= forzaSparo;
+            tempoFeedbackSparo = Mathf.Max(
+                0f,
+                tempoFeedbackSparo - Time.unscaledDeltaTime
+            );
+        }
+
+        Vector2 offsetRinculo =
+            -direzioneRinculo * distanzaRinculo * forzaSparo;
+        grafica.localPosition = new Vector3(
+            offsetRinculo.x,
+            offsetVerticale + offsetRinculo.y,
+            0f
+        );
+
+        float compressione = compressioneSparo * forzaSparo;
+        grafica.localScale = new Vector3(
+            1f + compressione * 0.55f,
+            1f - compressione,
+            1f
+        );
         camminavaNelFramePrecedente = staCamminando;
     }
 
