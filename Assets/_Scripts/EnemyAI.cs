@@ -97,6 +97,10 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
             ? spriteRendererVisibile.color
             : Color.white;
 
+        CombatHitFeedback2D feedbackImpatto =
+            gameObject.AddComponent<CombatHitFeedback2D>();
+        feedbackImpatto.Configura(grafica, spriteRendererVisibile);
+
         if (cacheFrameCorsa == null)
         {
             cacheFrameCorsa = Resources.LoadAll<Sprite>("FoxRun");

@@ -77,6 +77,22 @@ MonoBehaviour:
     riduzioneIntervalloSparo: 0.04
     incrementoPenetrazione: 1
     moneteIniziali: 0
+  feedbackCombattimento:
+    mirinoPixelAttivo: 1
+    dimensioneMirino: 24
+    effettiVisiviAttivi: 1
+    particelleImpatto: 5
+    durataParticelle: 0.18
+    distanzaRinculoBersaglio: 0.12
+    durataRinculoBersaglio: 0.09
+    durataFlashBersaglio: 0.075
+    audioAttivo: 1
+    volumeSparo: 0.22
+    volumeImpatto: 0.28
+    variazioneIntonazione: 0.055
+    vibrazioneCameraAttiva: 1
+    intensitaVibrazione: 0.045
+    durataVibrazione: 0.075
   ondate:
     distanzaSpawnVolpi: 10
     distanzaSpawnMaialini: 5.2

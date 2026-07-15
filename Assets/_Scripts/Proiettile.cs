@@ -9,11 +9,21 @@ public class Proiettile : MonoBehaviour
 
     private readonly HashSet<int> bersagliColpiti = new HashSet<int>();
     private int penetrazioniRimaste;
+    private int penetrazioniIniziali;
     private Transform grafica;
+    private SpriteRenderer rendererGrafica;
     private float velocitaRotazioneVisiva;
     private float durataVita = 3f;
+    private bool colpoPotente;
+    private bool aspettoPerforante;
 
     private bool consumato;
+
+    public int PenetrazioniRimaste => penetrazioniRimaste;
+    public int NumeroBersagliColpiti => bersagliColpiti.Count;
+    public bool Consumato => consumato;
+    public bool ColpoPotente => colpoPotente;
+    public bool AspettoPerforante => aspettoPerforante;
 
     void Awake()
     {
@@ -24,6 +34,7 @@ public class Proiettile : MonoBehaviour
             0,
             bilanciamento.penetrazioneProiettile
         );
+        penetrazioniIniziali = penetrazioniRimaste;
         durataVita = Mathf.Max(0.05f, bilanciamento.durataProiettile);
 
         ConfiguraGraficaRotante();
@@ -36,8 +47,27 @@ public class Proiettile : MonoBehaviour
 
     public void Inizializza(int nuovoDanno, int penetrazioni)
     {
+        Inizializza(
+            nuovoDanno,
+            penetrazioni,
+            false,
+            penetrazioni > 0
+        );
+    }
+
+    public void Inizializza(
+        int nuovoDanno,
+        int penetrazioni,
+        bool potente,
+        bool perforante
+    )
+    {
         danno = Mathf.Max(1, nuovoDanno);
         penetrazioniRimaste = Mathf.Max(0, penetrazioni);
+        penetrazioniIniziali = penetrazioniRimaste;
+        colpoPotente = potente;
+        aspettoPerforante = perforante && penetrazioniIniziali > 0;
+        AggiornaAspettoColpo();
     }
 
     void Start()
@@ -72,6 +102,7 @@ public class Proiettile : MonoBehaviour
 
         if (!bersagliColpiti.Add(idBersaglio)) return;
 
+        Vector2 posizioneImpatto = other.ClosestPoint(transform.position);
         EsitoDanno esito = bersaglio.ProvaSubireDanno(danno);
         if (!esito.Applicato) return;
 
@@ -83,11 +114,40 @@ public class Proiettile : MonoBehaviour
         if (puoPenetrare)
         {
             penetrazioniRimaste--;
-            return;
+        }
+        else
+        {
+            consumato = true;
+            Destroy(gameObject);
         }
 
-        consumato = true;
-        Destroy(gameObject);
+        Vector2 direzioneColpo = OttieniDirezioneColpo();
+        CombatHitFeedback2D feedback = componenteBersaglio != null
+            ? componenteBersaglio.GetComponent<CombatHitFeedback2D>()
+            : null;
+        SpriteRenderer rendererBersaglio = feedback != null
+            ? feedback.RendererSorgente
+            : componenteBersaglio != null
+                ? componenteBersaglio.GetComponentInChildren<SpriteRenderer>()
+                : null;
+
+        if (feedback != null)
+        {
+            feedback.Riproduci(
+                direzioneColpo,
+                colpoPotente,
+                puoPenetrare
+            );
+        }
+
+        CombatFeedbackController.CreaOTrova().RegistraImpatto(
+            posizioneImpatto,
+            direzioneColpo,
+            rendererBersaglio,
+            colpoPotente,
+            puoPenetrare
+        );
+
     }
 
     void ConfiguraGraficaRotante()
@@ -97,6 +157,7 @@ public class Proiettile : MonoBehaviour
         {
             SpriteRenderer rendererFiglio =
                 GetComponentInChildren<SpriteRenderer>();
+            rendererGrafica = rendererFiglio;
             grafica = rendererFiglio != null
                 ? rendererFiglio.transform
                 : null;
@@ -123,5 +184,40 @@ public class Proiettile : MonoBehaviour
         renderer.enabled = rendererOriginale.enabled;
 
         rendererOriginale.enabled = false;
+        rendererGrafica = renderer;
+    }
+
+    private Vector2 OttieniDirezioneColpo()
+    {
+        Rigidbody2D corpo = GetComponent<Rigidbody2D>();
+        if (corpo != null && corpo.linearVelocity.sqrMagnitude > 0.0001f)
+        {
+            return corpo.linearVelocity.normalized;
+        }
+
+        Vector2 direzione = transform.right;
+        return direzione.sqrMagnitude > 0.0001f
+            ? direzione.normalized
+            : Vector2.right;
+    }
+
+    private void AggiornaAspettoColpo()
+    {
+        if (rendererGrafica == null) return;
+
+        if (aspettoPerforante)
+        {
+            rendererGrafica.color = new Color(1f, 0.78f, 0.25f, 1f);
+            rendererGrafica.transform.localScale = new Vector3(
+                1.18f,
+                0.86f,
+                1f
+            );
+        }
+        else if (colpoPotente)
+        {
+            rendererGrafica.color = new Color(1f, 0.9f, 0.62f, 1f);
+            rendererGrafica.transform.localScale = Vector3.one * 1.12f;
+        }
     }
 }

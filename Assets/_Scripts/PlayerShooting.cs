@@ -76,6 +76,9 @@ public class PlayerShooting : MonoBehaviour
     private Coroutine triploSparoRoutine;
     private Camera cameraPrincipale;
     private PlayerVisualController controllerVisivo;
+    private bool attendiRilascioMouse;
+
+    public bool InAttesaRilascioMouse => attendiRilascioMouse;
 
     void Awake()
     {
@@ -115,6 +118,11 @@ public class PlayerShooting : MonoBehaviour
         controllerVisivo = GetComponent<PlayerVisualController>();
     }
 
+    void OnEnable()
+    {
+        attendiRilascioMouse = Input.GetMouseButton(0);
+    }
+
     void Update()
     {
         bool miraValida = AggiornaDirezioneMira();
@@ -122,6 +130,16 @@ public class PlayerShooting : MonoBehaviour
         if (GameManager.instance != null &&
             !GameManager.instance.GameplayAttivo)
         {
+            attendiRilascioMouse = true;
+            return;
+        }
+
+        if (attendiRilascioMouse)
+        {
+            if (!Input.GetMouseButton(0))
+            {
+                attendiRilascioMouse = false;
+            }
             return;
         }
 
@@ -188,29 +206,52 @@ public class PlayerShooting : MonoBehaviour
 
         direzione.Normalize();
 
+        bool potente = bonusDanno > 0 || triploSparoAttivo;
+        bool perforante = PenetrazioneFinale > 0;
+
         if (triploSparoAttivo)
         {
-            CreateBullet(direzione);
+            CreateBullet(direzione, potente, perforante);
             CreateBullet(
-                Quaternion.Euler(0f, 0f, angoloLateraleTriploSparo) * direzione
+                Quaternion.Euler(0f, 0f, angoloLateraleTriploSparo) * direzione,
+                potente,
+                perforante
             );
             CreateBullet(
-                Quaternion.Euler(0f, 0f, -angoloLateraleTriploSparo) * direzione
+                Quaternion.Euler(0f, 0f, -angoloLateraleTriploSparo) * direzione,
+                potente,
+                perforante
             );
         }
         else
         {
-            CreateBullet(direzione);
+            CreateBullet(direzione, potente, perforante);
         }
 
         if (controllerVisivo != null)
         {
-            controllerVisivo.RiproduciFeedbackSparo(direzione);
+            controllerVisivo.RiproduciFeedbackSparo(
+                direzione,
+                potente,
+                perforante
+            );
         }
+
+        CombatFeedbackController.CreaOTrova().RegistraSparo(
+            (Vector2)transform.position +
+            direzione * distanzaUscitaProiettile,
+            direzione,
+            potente,
+            perforante
+        );
         return true;
     }
 
-    void CreateBullet(Vector2 direzione)
+    void CreateBullet(
+        Vector2 direzione,
+        bool potente,
+        bool perforante
+    )
     {
         float angolo = Mathf.Atan2(direzione.y, direzione.x) * Mathf.Rad2Deg;
         Vector3 posizioneUscita = transform.position +
@@ -226,7 +267,9 @@ public class PlayerShooting : MonoBehaviour
         {
             comportamento.Inizializza(
                 DannoFinale,
-                PenetrazioneFinale
+                PenetrazioneFinale,
+                potente,
+                perforante
             );
         }
 
@@ -273,6 +316,14 @@ public class PlayerShooting : MonoBehaviour
     public void ImpostaBonusVelocitaProiettile(float valore)
     {
         bonusVelocitaProiettile = Mathf.Max(0f, valore);
+    }
+
+    void OnApplicationFocus(bool attiva)
+    {
+        if (!attiva)
+        {
+            attendiRilascioMouse = true;
+        }
     }
 
     [System.Obsolete("Usa ImpostaBonusDanno.")]

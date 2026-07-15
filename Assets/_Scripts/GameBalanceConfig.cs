@@ -169,6 +169,33 @@ public sealed class WaveBalanceSettings
     }
 }
 
+[Serializable]
+public sealed class CombatFeedbackSettings
+{
+    [Header("Mirino")]
+    public bool mirinoPixelAttivo = true;
+    [Range(14f, 48f)] public float dimensioneMirino = 24f;
+
+    [Header("Effetti visivi")]
+    public bool effettiVisiviAttivi = true;
+    [Range(3, 8)] public int particelleImpatto = 5;
+    [Range(0.08f, 0.35f)] public float durataParticelle = 0.18f;
+    [Range(0f, 0.3f)] public float distanzaRinculoBersaglio = 0.12f;
+    [Range(0.03f, 0.25f)] public float durataRinculoBersaglio = 0.09f;
+    [Range(0.03f, 0.2f)] public float durataFlashBersaglio = 0.075f;
+
+    [Header("Audio")]
+    public bool audioAttivo = true;
+    [Range(0f, 1f)] public float volumeSparo = 0.22f;
+    [Range(0f, 1f)] public float volumeImpatto = 0.28f;
+    [Range(0f, 0.2f)] public float variazioneIntonazione = 0.055f;
+
+    [Header("Vibrazione camera")]
+    public bool vibrazioneCameraAttiva = true;
+    [Range(0f, 0.15f)] public float intensitaVibrazione = 0.045f;
+    [Range(0.02f, 0.25f)] public float durataVibrazione = 0.075f;
+}
+
 [CreateAssetMenu(
     fileName = "GameBalanceConfig",
     menuName = "Angry Farmer/Bilanciamento di riferimento"
@@ -190,6 +217,8 @@ public sealed class GameBalanceConfig : ScriptableObject
         new ShopBalanceSettings();
     [SerializeField] private WaveBalanceSettings ondate =
         new WaveBalanceSettings();
+    [SerializeField] private CombatFeedbackSettings feedbackCombattimento =
+        new CombatFeedbackSettings();
 
     private static GameBalanceConfig corrente;
     private static bool avvisoFallbackMostrato;
@@ -200,6 +229,9 @@ public sealed class GameBalanceConfig : ScriptableObject
     public PigBalanceSettings Maialino => maialino;
     public ShopBalanceSettings Shop => shop;
     public WaveBalanceSettings Ondate => ondate;
+    public CombatFeedbackSettings FeedbackCombattimento =>
+        feedbackCombattimento ??
+        (feedbackCombattimento = new CombatFeedbackSettings());
 
     public static GameBalanceConfig Corrente
     {
@@ -240,6 +272,11 @@ public sealed class GameBalanceConfig : ScriptableObject
             versioneRiferimento = "Baseline senza nome";
         }
 
+        if (feedbackCombattimento == null)
+        {
+            feedbackCombattimento = new CombatFeedbackSettings();
+        }
+
         giocatore.intervalloSparoMinimo = Mathf.Max(
             0.01f,
             giocatore.intervalloSparoMinimo
@@ -259,6 +296,17 @@ public sealed class GameBalanceConfig : ScriptableObject
         NormalizzaArrayNonNegativo(shop.costiDanno);
         NormalizzaArrayNonNegativo(shop.costiCadenza);
         NormalizzaArrayNonNegativo(shop.costiPenetrazione);
+
+        feedbackCombattimento.dimensioneMirino = Mathf.Clamp(
+            feedbackCombattimento.dimensioneMirino,
+            14f,
+            48f
+        );
+        feedbackCombattimento.particelleImpatto = Mathf.Clamp(
+            feedbackCombattimento.particelleImpatto,
+            3,
+            8
+        );
 
         if (shop.frequenzeBlocco != null)
         {
