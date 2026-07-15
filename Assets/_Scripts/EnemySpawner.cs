@@ -9,6 +9,8 @@ public class Wave
 {
     public string nomeOndata;
     [Min(0)] public int numeroNemici;
+    [Tooltip("Ordine deterministico dei tipi. Se assente, usa volpi comuni.")]
+    public TipoVolpe[] sequenzaVolpi;
     [Header("Ritmo gruppi")]
     [Min(0.05f)] public float intervalloTraNemici = 1f;
     [Range(1, 4)] public int dimensioneMassimaGruppo = 2;
@@ -27,6 +29,8 @@ public readonly struct AnteprimaOndata
     public string Nome { get; }
     public int NumeroVolpi { get; }
     public int VitaVolpi { get; }
+    public int VitaBaseVolpi => VitaVolpi;
+    public ComposizioneVolpi Composizione { get; }
     public int NumeroMaialini { get; }
     public int VitaMaialino { get; }
     public int MoneteMaialino { get; }
@@ -39,6 +43,7 @@ public readonly struct AnteprimaOndata
         string nome,
         int numeroVolpi,
         int vitaVolpi,
+        ComposizioneVolpi composizione,
         int numeroMaialini,
         int vitaMaialino,
         int moneteMaialino,
@@ -50,6 +55,7 @@ public readonly struct AnteprimaOndata
         Nome = nome;
         NumeroVolpi = numeroVolpi;
         VitaVolpi = vitaVolpi;
+        Composizione = composizione;
         NumeroMaialini = numeroMaialini;
         VitaMaialino = vitaMaialino;
         MoneteMaialino = moneteMaialino;
@@ -67,6 +73,8 @@ public readonly struct ProgressoOndata
     public int VolpiDaSpawnare { get; }
     public int MinacceAttive { get; }
     public int VolpiRimaste => VolpiDaSpawnare + MinacceAttive;
+    public ComposizioneVolpi ComposizioneTotale { get; }
+    public ComposizioneVolpi ComposizioneRimasta { get; }
     public int GruppoCorrente { get; }
     public int TotaleGruppi { get; }
     public bool SpawnTerminato { get; }
@@ -80,6 +88,8 @@ public readonly struct ProgressoOndata
         int volpiTotali,
         int volpiDaSpawnare,
         int minacceAttive,
+        ComposizioneVolpi composizioneTotale,
+        ComposizioneVolpi composizioneRimasta,
         int gruppoCorrente,
         int totaleGruppi,
         bool spawnTerminato,
@@ -93,6 +103,8 @@ public readonly struct ProgressoOndata
         VolpiTotali = volpiTotali;
         VolpiDaSpawnare = volpiDaSpawnare;
         MinacceAttive = minacceAttive;
+        ComposizioneTotale = composizioneTotale;
+        ComposizioneRimasta = composizioneRimasta;
         GruppoCorrente = gruppoCorrente;
         TotaleGruppi = totaleGruppi;
         SpawnTerminato = spawnTerminato;
@@ -133,6 +145,8 @@ public class EnemySpawner : MonoBehaviour
     private int totaleNemiciOnda;
     private int gruppoCorrente;
     private int totaleGruppi;
+    private ComposizioneVolpi composizioneTotaleOnda;
+    private ComposizioneVolpi composizioneDaSpawnare;
     private bool spawnTerminato;
     private bool ondaAttiva;
     private bool avvioRapidoRichiesto;
@@ -145,6 +159,10 @@ public class EnemySpawner : MonoBehaviour
     public int MinacceAttive => minacceAttive.Count;
     public int NemiciRimasti => nemiciDaSpawnare + minacceAttive.Count;
     public int TotaleNemiciOnda => totaleNemiciOnda;
+    public ComposizioneVolpi ComposizioneTotaleOnda =>
+        composizioneTotaleOnda;
+    public ComposizioneVolpi ComposizioneRimasta =>
+        composizioneDaSpawnare + ContaComposizioneAttiva();
     public bool SpawnTerminato => spawnTerminato;
     public bool OndaAttiva => ondaAttiva;
     public IEnumerable<EnemyAI> MinacceOnda => minacceAttive;
@@ -158,6 +176,7 @@ public class EnemySpawner : MonoBehaviour
     void Start()
     {
         ApplicaConfigurazioneBilanciamento();
+        VerificaSequenzeConfigurate();
         ConfiguraDiagnostica();
 
         testoOndata = GameManager.TrovaTestoInterfaccia("OndataText");
@@ -265,6 +284,10 @@ public class EnemySpawner : MonoBehaviour
                     Vector2 posizioneSpawn =
                         DirezioneCasuale() * spawnDistance;
                     int slotSpawn = indiceSpawn + 1;
+                    TipoVolpe tipoSpawn = OttieniTipoVolpe(
+                        ondataCorrente,
+                        indiceSpawn
+                    );
 
                     if (leggibilita != null)
                     {
@@ -272,7 +295,8 @@ public class EnemySpawner : MonoBehaviour
                             tokenCorrente,
                             slotSpawn,
                             posizioneSpawn,
-                            durataPreavvisoSpawn
+                            durataPreavvisoSpawn,
+                            tipoSpawn
                         );
                     }
 
@@ -299,8 +323,17 @@ public class EnemySpawner : MonoBehaviour
                         yield break;
                     }
 
-                    EnemyAI nemico = SpawnEnemy(posizioneSpawn);
+                    bool riproduciVerso =
+                        tipoSpawn != TipoVolpe.Comune || membro == 0;
+                    EnemyAI nemico = SpawnEnemy(
+                        posizioneSpawn,
+                        tipoSpawn,
+                        indiceSpawn,
+                        riproduciVerso
+                    );
                     nemiciDaSpawnare = Mathf.Max(0, nemiciDaSpawnare - 1);
+                    composizioneDaSpawnare =
+                        composizioneDaSpawnare.Rimuovi(tipoSpawn);
                     if (nemico != null)
                     {
                         RegistraMinaccia(nemico);
@@ -330,6 +363,7 @@ public class EnemySpawner : MonoBehaviour
             }
 
             nemiciDaSpawnare = 0;
+            composizioneDaSpawnare = default;
             spawnTerminato = true;
             NotificaProgresso();
             diagnostica.SegnaFineSpawn();
@@ -490,6 +524,26 @@ public class EnemySpawner : MonoBehaviour
         }
     }
 
+    void VerificaSequenzeConfigurate()
+    {
+        if (ondate == null) return;
+        for (int i = 0; i < ondate.Length; i++)
+        {
+            Wave onda = ondate[i];
+            if (onda == null || onda.sequenzaVolpi == null) continue;
+            if (onda.sequenzaVolpi.Length == Mathf.Max(0, onda.numeroNemici))
+            {
+                continue;
+            }
+            Debug.LogWarning(
+                "La sequenza tipi dell'onda " + (i + 1) +
+                " non coincide con numeroNemici: gli slot mancanti " +
+                "saranno volpi comuni e quelli extra verranno ignorati.",
+                this
+            );
+        }
+    }
+
     void ConfiguraLeggibilita()
     {
         if (leggibilita == null)
@@ -526,6 +580,7 @@ public class EnemySpawner : MonoBehaviour
             vitaPrimaOndata +
             indiceZeroBased * vitaAggiuntivaPerOndata
         );
+        ComposizioneVolpi composizione = CalcolaComposizione(onda);
 
         return new AnteprimaOndata(
             indiceZeroBased + 1,
@@ -535,6 +590,7 @@ public class EnemySpawner : MonoBehaviour
                 : onda.nomeOndata,
             numeroVolpi,
             vitaVolpi,
+            composizione,
             Mathf.Max(0, onda.numeroMaialiniBonus),
             Mathf.Max(1, onda.vitaMaialinoBonus),
             Mathf.Max(0, onda.moneteMaialinoBonus),
@@ -552,6 +608,8 @@ public class EnemySpawner : MonoBehaviour
         SganciaMinacce();
         totaleNemiciOnda = anteprima.NumeroVolpi;
         nemiciDaSpawnare = anteprima.NumeroVolpi;
+        composizioneTotaleOnda = anteprima.Composizione;
+        composizioneDaSpawnare = anteprima.Composizione;
         gruppoCorrente = 0;
         totaleGruppi = anteprima.NumeroGruppi;
         spawnTerminato = totaleNemiciOnda == 0;
@@ -566,6 +624,7 @@ public class EnemySpawner : MonoBehaviour
             minacceAttive.Count > 0;
         ondaAttiva = false;
         nemiciDaSpawnare = 0;
+        composizioneDaSpawnare = default;
         spawnTerminato = true;
         gruppoCorrente = totaleGruppi;
         SganciaMinacce();
@@ -611,6 +670,19 @@ public class EnemySpawner : MonoBehaviour
         minacceAttive.Clear();
     }
 
+    ComposizioneVolpi ContaComposizioneAttiva()
+    {
+        ComposizioneVolpi composizione = default;
+        foreach (EnemyAI nemico in minacceAttive)
+        {
+            if (nemico != null && !nemico.IsDead)
+            {
+                composizione = composizione.Aggiungi(nemico.Tipo);
+            }
+        }
+        return composizione;
+    }
+
     ProgressoOndata CreaProgressoCorrente()
     {
         string nome = string.Empty;
@@ -635,6 +707,8 @@ public class EnemySpawner : MonoBehaviour
             totaleNemiciOnda,
             nemiciDaSpawnare,
             minacceAttive.Count,
+            composizioneTotaleOnda,
+            ComposizioneRimasta,
             gruppoCorrente,
             totaleGruppi,
             spawnTerminato,
@@ -647,6 +721,54 @@ public class EnemySpawner : MonoBehaviour
         ProgressoCambiato?.Invoke(CreaProgressoCorrente());
     }
 
+    public TipoVolpe OttieniTipoConfigurato(
+        int indiceOndaZeroBased,
+        int indiceSpawnZeroBased
+    )
+    {
+        if (ondate == null ||
+            indiceOndaZeroBased < 0 ||
+            indiceOndaZeroBased >= ondate.Length)
+        {
+            return TipoVolpe.Comune;
+        }
+        return OttieniTipoVolpe(
+            ondate[indiceOndaZeroBased],
+            indiceSpawnZeroBased
+        );
+    }
+
+    public static TipoVolpe OttieniTipoVolpe(
+        Wave onda,
+        int indiceSpawnZeroBased
+    )
+    {
+        if (onda == null ||
+            indiceSpawnZeroBased < 0 ||
+            indiceSpawnZeroBased >= Mathf.Max(0, onda.numeroNemici) ||
+            onda.sequenzaVolpi == null ||
+            indiceSpawnZeroBased >= onda.sequenzaVolpi.Length)
+        {
+            return TipoVolpe.Comune;
+        }
+        return FoxVariantStyle.Normalizza(
+            onda.sequenzaVolpi[indiceSpawnZeroBased]
+        );
+    }
+
+    public static ComposizioneVolpi CalcolaComposizione(Wave onda)
+    {
+        ComposizioneVolpi composizione = default;
+        int totale = onda != null ? Mathf.Max(0, onda.numeroNemici) : 0;
+        for (int i = 0; i < totale; i++)
+        {
+            composizione = composizione.Aggiungi(
+                OttieniTipoVolpe(onda, i)
+            );
+        }
+        return composizione;
+    }
+
     string CreaTestoBanner(AnteprimaOndata anteprima)
     {
         string bonus = anteprima.NumeroMaialini > 0
@@ -656,8 +778,8 @@ public class EnemySpawner : MonoBehaviour
         return
             "ONDATA " + anteprima.Indice + " / " + anteprima.Totale +
             "\n" + anteprima.Nome.ToUpperInvariant() +
-            "\n" + anteprima.NumeroVolpi +
-            " VOLPI COMUNI  •  " + bonus;
+            "\n" + anteprima.Composizione.FormattaCompatta() +
+            "\n" + bonus;
     }
 
     IEnumerator AttendiConToken(float durata, int tokenCorrente)
@@ -845,7 +967,12 @@ public class EnemySpawner : MonoBehaviour
         }
     }
 
-    EnemyAI SpawnEnemy(Vector2 spawnPos)
+    EnemyAI SpawnEnemy(
+        Vector2 spawnPos,
+        TipoVolpe tipo,
+        int indiceSpawn,
+        bool riproduciVerso
+    )
     {
         if (foxPrefab == null) return null;
 
@@ -867,7 +994,12 @@ public class EnemySpawner : MonoBehaviour
             1,
             vitaPrimaOndata + currentWaveIndex * vitaAggiuntivaPerOndata
         );
-        nemico.InizializzaVita(vitaOndata);
+        nemico.InizializzaVariante(
+            tipo,
+            vitaOndata,
+            indiceSpawn,
+            riproduciVerso
+        );
         return nemico;
     }
 

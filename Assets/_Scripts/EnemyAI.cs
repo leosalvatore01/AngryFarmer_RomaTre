@@ -4,6 +4,14 @@ using System.Collections;
 [RequireComponent(typeof(Rigidbody2D))]
 public class EnemyAI : MonoBehaviour, IDanneggiabile
 {
+    private enum StatoAttaccoAlfa
+    {
+        Inseguimento,
+        Preparazione,
+        Scatto,
+        Recupero
+    }
+
     public float speed = 2.4f;
 
     [Header("Fluidita inseguimento")]
@@ -42,6 +50,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     private Vector2 velocitaDesiderata;
     private bool staInseguendo;
     private float prossimoAttacco;
+    private float prossimaRicercaGiocatore;
     private Transform grafica;
     private SpriteRenderer spriteRendererVisibile;
     private SpriteRenderer ombraRenderer;
@@ -56,6 +65,25 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     private float moltiplicatoreRallentamento = 0.5f;
     private int monetePerEliminazione = 1;
     private float probabilitaDenteSulDrop = 0.5f;
+    private TipoVolpe tipo = TipoVolpe.Comune;
+    private FoxVariantStats profiloVariante;
+    private FoxVariantsBalanceSettings varianti;
+    private FoxVariantPresentation presentazioneVariante;
+    private CombatHitFeedback2D feedbackImpatto;
+    private Vector3 scalaPrefab = Vector3.one;
+    private int indiceSpawn;
+    private float faseSerpentina;
+
+    private Gallina gallinaBersaglio;
+    private bool trasportaGallina;
+    private bool fugaLadraCompletata;
+    private float prossimoControlloGallina;
+    private Vector2 direzioneFugaLadra;
+
+    private StatoAttaccoAlfa statoAlfa;
+    private float timerStatoAlfa;
+    private Vector2 direzioneScattoAlfa;
+    private bool scattoAlfaHaColpito;
 
     private int vitaMassima;
     private int vitaCorrente;
@@ -80,12 +108,28 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     public SpriteRenderer RendererVisibile => spriteRendererVisibile;
     public int VitaMassima => vitaMassima;
     public int VitaCorrente => vitaCorrente;
+    public int MonetePerEliminazione => monetePerEliminazione;
     public bool IsDead => morto;
+    public TipoVolpe Tipo => tipo;
+    public string NomeTipo => FoxVariantStyle.Nome(tipo);
+    public bool TrasportaGallina => trasportaGallina;
+    public Gallina GallinaBersaglio => gallinaBersaglio;
+    public Transform BersaglioCorrente =>
+        tipo == TipoVolpe.Ladra && gallinaBersaglio != null && !trasportaGallina
+            ? gallinaBersaglio.transform
+            : target;
+    public bool StaPreparandoAttaccoAlfa =>
+        statoAlfa == StatoAttaccoAlfa.Preparazione;
+    public bool StaScattandoAlfa =>
+        statoAlfa == StatoAttaccoAlfa.Scatto;
+    public FoxVariantPresentation PresentazioneVariante =>
+        presentazioneVariante;
     public event System.Action<EnemyAI> NonPiuMinaccia;
 
     void Awake()
     {
         ApplicaBilanciamento();
+        scalaPrefab = transform.localScale;
 
         corpo = GetComponent<Rigidbody2D>();
         corpo.interpolation = RigidbodyInterpolation2D.Interpolate;
@@ -99,8 +143,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
             ? spriteRendererVisibile.color
             : Color.white;
 
-        CombatHitFeedback2D feedbackImpatto =
-            gameObject.AddComponent<CombatHitFeedback2D>();
+        feedbackImpatto = gameObject.AddComponent<CombatHitFeedback2D>();
         feedbackImpatto.Configura(grafica, spriteRendererVisibile);
 
         if (cacheFrameCorsa == null)
@@ -179,13 +222,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
 
     void Start()
     {
-        GameObject giocatore = GameObject.FindGameObjectWithTag("Player");
-
-        if (giocatore != null)
-        {
-            target = giocatore.transform;
-            playerHealth = giocatore.GetComponent<PlayerHealth>();
-        }
+        ProvaAcquisireGiocatore(true);
     }
 
     void Update()
@@ -208,6 +245,14 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     void FixedUpdate()
     {
         if (morto || corpo == null) return;
+        if (GameManager.instance != null &&
+            !GameManager.instance.GameplayAttivo)
+        {
+            velocitaAttuale = Vector2.zero;
+            velocitaDesiderata = Vector2.zero;
+            corpo.linearVelocity = Vector2.zero;
+            return;
+        }
 
         float rapiditaCambio = velocitaDesiderata.sqrMagnitude > 0.001f
             ? accelerazione
@@ -216,6 +261,11 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         if (Vector2.Dot(velocitaAttuale, velocitaDesiderata) < 0f)
         {
             rapiditaCambio *= moltiplicatoreInversione;
+        }
+        if (tipo == TipoVolpe.Alfa &&
+            statoAlfa == StatoAttaccoAlfa.Scatto)
+        {
+            rapiditaCambio *= 8f;
         }
 
         velocitaAttuale = Vector2.MoveTowards(
@@ -233,47 +283,366 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     {
         velocitaDesiderata = Vector2.zero;
 
-        if (GameManager.instance != null && GameManager.instance.isGameOver)
+        if (GameManager.instance != null &&
+            !GameManager.instance.GameplayAttivo)
         {
-            staInseguendo = false;
+            SospendiComportamento();
             return;
         }
 
-        if (target != null && playerHealth != null)
+        if (tipo == TipoVolpe.Ladra && GestisciLadra()) return;
+        if (!ProvaAcquisireGiocatore())
         {
-            float distanzaDalGiocatore = Vector2.Distance(transform.position, target.position);
+            InterrompiAttaccoAlfa();
+            staInseguendo = false;
+            return;
+        }
+        if (tipo == TipoVolpe.Alfa)
+        {
+            GestisciAlfa();
+            return;
+        }
 
-            if (staInseguendo && distanzaDalGiocatore <= distanzaAttacco)
+        GestisciInseguimentoGiocatore(tipo == TipoVolpe.Agile);
+    }
+
+    void GestisciInseguimentoGiocatore(bool usaSerpentina)
+    {
+        if (target == null || playerHealth == null) return;
+
+        float distanzaDalGiocatore = Vector2.Distance(
+            transform.position,
+            target.position
+        );
+
+        if (staInseguendo && distanzaDalGiocatore <= distanzaAttacco)
+        {
+            staInseguendo = false;
+        }
+        else if (!staInseguendo &&
+                 distanzaDalGiocatore > distanzaRipresaInseguimento)
+        {
+            staInseguendo = true;
+        }
+
+        if (staInseguendo)
+        {
+            ImpostaMovimentoVerso(target.position, speed, usaSerpentina);
+        }
+        else if (distanzaDalGiocatore <= distanzaAttacco &&
+                 Time.time >= prossimoAttacco)
+        {
+            playerHealth.SubisciDanno(danno);
+            prossimoAttacco = Time.time + intervalloAttacco;
+        }
+    }
+
+    bool GestisciLadra()
+    {
+        if (trasportaGallina)
+        {
+            float velocitaFuga = speed * varianti.moltiplicatoreFugaLadra;
+            ImpostaMovimentoDirezione(direzioneFugaLadra, velocitaFuga);
+            if (((Vector2)transform.position).magnitude >=
+                varianti.distanzaFugaLadra)
             {
-                staInseguendo = false;
+                CompletaFugaLadra();
             }
-            else if (!staInseguendo &&
-                     distanzaDalGiocatore > distanzaRipresaInseguimento)
+            return true;
+        }
+
+        if (gallinaBersaglio != null &&
+            !gallinaBersaglio.PrenotataDa(this))
+        {
+            gallinaBersaglio = null;
+        }
+
+        if (gallinaBersaglio == null && Time.time >= prossimoControlloGallina)
+        {
+            prossimoControlloGallina =
+                Time.time + varianti.intervalloRicercaGallina;
+            gallinaBersaglio = TrovaGallinaDaRubare();
+        }
+
+        if (gallinaBersaglio == null) return false;
+
+        float distanza = Vector2.Distance(
+            transform.position,
+            gallinaBersaglio.transform.position
+        );
+        if (distanza <= varianti.distanzaPrelievoGallina)
+        {
+            if (gallinaBersaglio.ProvaPrelevare(this))
             {
+                trasportaGallina = true;
                 staInseguendo = true;
-            }
-
-            if (staInseguendo)
-            {
-                float velocitaCorrente = isSlowed
-                    ? speed * moltiplicatoreRallentamento
-                    : speed;
-                Vector2 direzione =
-                    ((Vector2)target.position - corpo.position).normalized;
-                velocitaDesiderata = direzione * velocitaCorrente;
-
-                float direzioneOrizzontale = target.position.x - transform.position.x;
-                if (spriteRendererVisibile != null && Mathf.Abs(direzioneOrizzontale) > 0.01f)
+                direzioneFugaLadra = CalcolaDirezioneFuga();
+                if (presentazioneVariante != null)
                 {
-                    spriteRendererVisibile.flipX = direzioneOrizzontale < 0f;
+                    presentazioneVariante.ImpostaTrasportoGallina(true);
+                    presentazioneVariante.RiproduciPredazione();
                 }
             }
-            else if (distanzaDalGiocatore <= distanzaAttacco &&
-                     Time.time >= prossimoAttacco)
+            else
             {
-                playerHealth.SubisciDanno(danno);
-                prossimoAttacco = Time.time + intervalloAttacco;
+                gallinaBersaglio = null;
             }
+            return true;
+        }
+
+        staInseguendo = true;
+        ImpostaMovimentoVerso(
+            gallinaBersaglio.transform.position,
+            speed,
+            false
+        );
+        return true;
+    }
+
+    Gallina TrovaGallinaDaRubare()
+    {
+        Gallina migliore = null;
+        float distanzaMigliore = float.PositiveInfinity;
+        foreach (Gallina gallina in Gallina.Attive)
+        {
+            if (gallina == null || !gallina.Disponibile) continue;
+            float distanza = ((Vector2)gallina.transform.position -
+                              (Vector2)transform.position).sqrMagnitude;
+            if (distanza >= distanzaMigliore) continue;
+            migliore = gallina;
+            distanzaMigliore = distanza;
+        }
+        return migliore != null && migliore.ProvaPrenotare(this)
+            ? migliore
+            : null;
+    }
+
+    Vector2 CalcolaDirezioneFuga()
+    {
+        Vector2 direzione = transform.position;
+        if (direzione.sqrMagnitude > 0.25f) return direzione.normalized;
+
+        float angolo = Mathf.Repeat(
+            indiceSpawn * 137.5f + 31f,
+            360f
+        ) * Mathf.Deg2Rad;
+        return new Vector2(Mathf.Cos(angolo), Mathf.Sin(angolo));
+    }
+
+    void CompletaFugaLadra()
+    {
+        if (morto || fugaLadraCompletata) return;
+        Gallina gallinaRubata = gallinaBersaglio;
+        if (gallinaRubata == null ||
+            !gallinaRubata.ConfermaPerdita(this))
+        {
+            if (gallinaRubata != null) gallinaRubata.Rilascia(this);
+            NotificaGallinaNonDisponibile(gallinaRubata);
+            prossimoControlloGallina =
+                Time.time + varianti.intervalloRicercaGallina;
+            return;
+        }
+
+        fugaLadraCompletata = true;
+        trasportaGallina = false;
+        gallinaBersaglio = null;
+        morto = true;
+        SegnalaNeutralizzazione();
+        Destroy(gameObject);
+    }
+
+    public void NotificaGallinaNonDisponibile(Gallina gallina)
+    {
+        if (gallina != null && gallinaBersaglio != gallina) return;
+
+        gallinaBersaglio = null;
+        trasportaGallina = false;
+        staInseguendo = false;
+        velocitaAttuale = Vector2.zero;
+        velocitaDesiderata = Vector2.zero;
+        if (presentazioneVariante != null)
+        {
+            presentazioneVariante.ImpostaTrasportoGallina(false);
+        }
+    }
+
+    private bool ProvaAcquisireGiocatore(bool forzaRicerca = false)
+    {
+        if (target != null && playerHealth != null &&
+            target.gameObject.activeInHierarchy)
+        {
+            return true;
+        }
+
+        // Un'Alfa non deve terminare una carica preparata contro un Player
+        // precedente dopo che il bersaglio e stato rimpiazzato.
+        InterrompiAttaccoAlfa();
+        target = null;
+        playerHealth = null;
+        if (!forzaRicerca && Time.time < prossimaRicercaGiocatore)
+        {
+            return false;
+        }
+
+        prossimaRicercaGiocatore = Time.time + 0.5f;
+        GameObject giocatore = GameObject.FindGameObjectWithTag("Player");
+        if (giocatore == null) return false;
+
+        PlayerHealth salute = giocatore.GetComponent<PlayerHealth>();
+        if (salute == null) return false;
+        target = giocatore.transform;
+        playerHealth = salute;
+        return true;
+    }
+
+    private void SospendiComportamento()
+    {
+        staInseguendo = false;
+        velocitaAttuale = Vector2.zero;
+        velocitaDesiderata = Vector2.zero;
+        if (corpo != null) corpo.linearVelocity = Vector2.zero;
+        InterrompiAttaccoAlfa();
+    }
+
+    private void InterrompiAttaccoAlfa()
+    {
+        if (tipo != TipoVolpe.Alfa) return;
+        statoAlfa = StatoAttaccoAlfa.Inseguimento;
+        timerStatoAlfa = 0f;
+        scattoAlfaHaColpito = false;
+        if (presentazioneVariante != null)
+        {
+            presentazioneVariante.ImpostaTelegraphAlfa(false, 0f);
+        }
+    }
+
+    void GestisciAlfa()
+    {
+        if (target == null || playerHealth == null) return;
+
+        float distanza = Vector2.Distance(transform.position, target.position);
+        switch (statoAlfa)
+        {
+            case StatoAttaccoAlfa.Preparazione:
+                timerStatoAlfa -= Time.deltaTime;
+                staInseguendo = false;
+                if (presentazioneVariante != null)
+                {
+                    float progresso = 1f - timerStatoAlfa /
+                        Mathf.Max(0.01f, varianti.durataPreparazioneAlfa);
+                    presentazioneVariante.ImpostaTelegraphAlfa(
+                        true,
+                        progresso
+                    );
+                }
+                if (timerStatoAlfa <= 0f)
+                {
+                    statoAlfa = StatoAttaccoAlfa.Scatto;
+                    timerStatoAlfa = varianti.durataScattoAlfa;
+                    scattoAlfaHaColpito = false;
+                    if (presentazioneVariante != null)
+                    {
+                        presentazioneVariante.ImpostaTelegraphAlfa(false, 0f);
+                        presentazioneVariante.RiproduciScattoAlfa();
+                    }
+                }
+                return;
+
+            case StatoAttaccoAlfa.Scatto:
+                timerStatoAlfa -= Time.deltaTime;
+                staInseguendo = true;
+                ImpostaMovimentoDirezione(
+                    direzioneScattoAlfa,
+                    speed * varianti.moltiplicatoreScattoAlfa
+                );
+                if (!scattoAlfaHaColpito &&
+                    distanza <= distanzaAttacco * 1.18f)
+                {
+                    scattoAlfaHaColpito = true;
+                    playerHealth.SubisciDanno(danno);
+                }
+                if (timerStatoAlfa <= 0f)
+                {
+                    statoAlfa = StatoAttaccoAlfa.Recupero;
+                    timerStatoAlfa = 0.34f;
+                    prossimoAttacco = Time.time + varianti.recuperoScattoAlfa;
+                }
+                return;
+
+            case StatoAttaccoAlfa.Recupero:
+                timerStatoAlfa -= Time.deltaTime;
+                staInseguendo = false;
+                if (timerStatoAlfa <= 0f)
+                {
+                    statoAlfa = StatoAttaccoAlfa.Inseguimento;
+                }
+                return;
+        }
+
+        if (distanza <= varianti.distanzaPreparazioneAlfa &&
+            Time.time >= prossimoAttacco)
+        {
+            direzioneScattoAlfa =
+                ((Vector2)target.position - (Vector2)transform.position)
+                .normalized;
+            if (direzioneScattoAlfa.sqrMagnitude < 0.001f)
+            {
+                direzioneScattoAlfa = Vector2.right;
+            }
+            statoAlfa = StatoAttaccoAlfa.Preparazione;
+            timerStatoAlfa = varianti.durataPreparazioneAlfa;
+            velocitaAttuale = Vector2.zero;
+            staInseguendo = false;
+            if (presentazioneVariante != null)
+            {
+                presentazioneVariante.ImpostaTelegraphAlfa(true, 0f);
+                presentazioneVariante.RiproduciCaricaAlfa();
+            }
+            return;
+        }
+
+        staInseguendo = true;
+        ImpostaMovimentoVerso(target.position, speed, false);
+    }
+
+    void ImpostaMovimentoVerso(
+        Vector2 posizione,
+        float velocita,
+        bool usaSerpentina
+    )
+    {
+        Vector2 direzione = posizione - corpo.position;
+        if (direzione.sqrMagnitude < 0.0001f) return;
+        direzione.Normalize();
+
+        if (usaSerpentina && profiloVariante != null)
+        {
+            Vector2 laterale = new Vector2(-direzione.y, direzione.x);
+            float onda = Mathf.Sin(
+                Time.time * profiloVariante.frequenzaSerpentina *
+                Mathf.PI * 2f + faseSerpentina
+            );
+            direzione = (direzione +
+                laterale * onda * profiloVariante.ampiezzaSerpentina)
+                .normalized;
+        }
+        ImpostaMovimentoDirezione(direzione, velocita);
+    }
+
+    void ImpostaMovimentoDirezione(Vector2 direzione, float velocita)
+    {
+        float velocitaCorrente = isSlowed
+            ? velocita * moltiplicatoreRallentamento
+            : velocita;
+        Vector2 direzioneNormalizzata = direzione.sqrMagnitude > 0.0001f
+            ? direzione.normalized
+            : Vector2.zero;
+        velocitaDesiderata = direzioneNormalizzata * velocitaCorrente;
+
+        if (spriteRendererVisibile != null &&
+            Mathf.Abs(direzioneNormalizzata.x) > 0.01f)
+        {
+            spriteRendererVisibile.flipX = direzioneNormalizzata.x < 0f;
         }
     }
 
@@ -295,6 +664,87 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         int indice = Mathf.FloorToInt(timerAnimazione * frameCorsaAlSecondo) %
                      frameCorsa.Length;
         spriteRendererVisibile.sprite = frameCorsa[indice];
+    }
+
+    public void InizializzaVariante(
+        TipoVolpe nuovoTipo,
+        int vitaBaseOndata,
+        int nuovoIndiceSpawn,
+        bool riproduciVerso = true
+    )
+    {
+        if (morto) return;
+
+        ApplicaBilanciamento();
+        tipo = FoxVariantStyle.Normalizza(nuovoTipo);
+        indiceSpawn = Mathf.Max(0, nuovoIndiceSpawn);
+        faseSerpentina = indiceSpawn * 1.618034f;
+        varianti = GameBalanceConfig.Corrente.VariantiVolpe;
+        profiloVariante = varianti.Ottieni(tipo);
+
+        speed *= profiloVariante.moltiplicatoreVelocita;
+        accelerazione *= profiloVariante.moltiplicatoreAccelerazione;
+        decelerazione *= profiloVariante.moltiplicatoreDecelerazione;
+        intervalloAttacco *=
+            profiloVariante.moltiplicatoreIntervalloAttacco;
+
+        if (tipo != TipoVolpe.Comune)
+        {
+            monetePerEliminazione = Mathf.Max(
+                0,
+                profiloVariante.monetePerEliminazione
+            );
+        }
+
+        float scala = Mathf.Max(0.1f, profiloVariante.scala);
+        transform.localScale = new Vector3(
+            scalaPrefab.x * scala,
+            scalaPrefab.y * scala,
+            scalaPrefab.z
+        );
+
+        float vitaCalcolata = Mathf.Max(1, vitaBaseOndata) *
+            profiloVariante.moltiplicatoreVita;
+        int vitaVariante = Mathf.Max(
+            1,
+            tipo == TipoVolpe.Agile
+                ? Mathf.RoundToInt(vitaCalcolata)
+                : Mathf.CeilToInt(vitaCalcolata)
+        );
+        InizializzaVita(vitaVariante);
+
+        if (feedbackImpatto != null)
+        {
+            feedbackImpatto.ConfiguraMoltiplicatoreRinculo(
+                profiloVariante.moltiplicatoreRinculo
+            );
+        }
+
+        if (presentazioneVariante == null)
+        {
+            presentazioneVariante = GetComponent<FoxVariantPresentation>();
+        }
+        if (presentazioneVariante == null)
+        {
+            presentazioneVariante = gameObject.AddComponent<
+                FoxVariantPresentation
+            >();
+        }
+        presentazioneVariante.Configura(
+            tipo,
+            spriteRendererVisibile,
+            grafica,
+            riproduciVerso
+        );
+        coloreBase = spriteRendererVisibile != null
+            ? spriteRendererVisibile.color
+            : FoxVariantStyle.ColoreCorpo(tipo);
+
+        statoAlfa = StatoAttaccoAlfa.Inseguimento;
+        prossimoAttacco = tipo == TipoVolpe.Alfa
+            ? Time.time + 0.35f
+            : Time.time;
+        gameObject.name = "Volpe_" + FoxVariantStyle.Nome(tipo);
     }
 
     public void InizializzaVita(int nuovaVitaMassima)
@@ -512,6 +962,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     public void Die()
     {
         if (morto) return;
+        RilasciaGallinaSeNecessario();
         morto = true;
         SegnalaNeutralizzazione();
 
@@ -536,6 +987,10 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         {
             StopCoroutine(flashDannoRoutine);
             flashDannoRoutine = null;
+        }
+        if (presentazioneVariante != null)
+        {
+            presentazioneVariante.NascondiPerMorte();
         }
 
         if (GameManager.instance != null)
@@ -627,6 +1082,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
 
     void OnDisable()
     {
+        RilasciaGallinaSeNecessario();
         SegnalaNeutralizzazione();
         flashDannoRoutine = null;
         velocitaAttuale = Vector2.zero;
@@ -635,6 +1091,21 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         if (spriteRendererVisibile != null)
         {
             spriteRendererVisibile.color = coloreBase;
+        }
+    }
+
+    private void RilasciaGallinaSeNecessario()
+    {
+        if (!fugaLadraCompletata && gallinaBersaglio != null)
+        {
+            gallinaBersaglio.Rilascia(this);
+        }
+        gallinaBersaglio = null;
+        trasportaGallina = false;
+        if (presentazioneVariante != null)
+        {
+            presentazioneVariante.ImpostaTrasportoGallina(false);
+            presentazioneVariante.ImpostaTelegraphAlfa(false, 0f);
         }
     }
 

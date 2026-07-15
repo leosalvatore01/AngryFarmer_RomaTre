@@ -593,10 +593,17 @@ public sealed class CombatHitFeedback2D : MonoBehaviour
     private float tempoFlash;
     private float durataFlash;
     private bool effettoPerforante;
+    private float moltiplicatoreRinculo = 1f;
 
     public SpriteRenderer RendererSorgente => rendererSorgente;
     public bool FeedbackAttivo => tempoRinculo > 0f || tempoFlash > 0f;
     public Vector2 UltimaDirezioneRinculo => direzioneRinculo;
+    public float MoltiplicatoreRinculo => moltiplicatoreRinculo;
+
+    public void ConfiguraMoltiplicatoreRinculo(float valore)
+    {
+        moltiplicatoreRinculo = Mathf.Clamp(valore, 0f, 2f);
+    }
 
     public void Configura(
         Transform trasformazioneGrafica,
@@ -646,7 +653,7 @@ public sealed class CombatHitFeedback2D : MonoBehaviour
             ? direzioneColpo.normalized
             : Vector2.right;
         distanzaRinculo = impostazioni.distanzaRinculoBersaglio *
-            (potente ? 1.2f : 1f);
+            (potente ? 1.2f : 1f) * moltiplicatoreRinculo;
         durataRinculo = Mathf.Max(
             0.03f,
             impostazioni.durataRinculoBersaglio

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71eb059f1b8bf85479410b9626b3361b, type: 3}
   m_Name: GameBalanceConfig
   m_EditorClassIdentifier: Assembly-CSharp::GameBalanceConfig
-  versioneRiferimento: Baseline 1 - 2026-07-15
+  versioneRiferimento: Blocco 3 - Tipologie volpe - 2026-07-15
   giocatore:
     velocitaMovimento: 8
     accelerazione: 45
@@ -47,6 +47,72 @@ MonoBehaviour:
     monetePerEliminazione: 1
     probabilitaDrop: 30
     probabilitaDenteSulDrop: 0.5
+  variantiVolpe:
+    comune:
+      moltiplicatoreVelocita: 1
+      moltiplicatoreAccelerazione: 1
+      moltiplicatoreDecelerazione: 1
+      moltiplicatoreVita: 1
+      moltiplicatoreIntervalloAttacco: 1
+      scala: 1
+      moltiplicatoreRinculo: 1
+      monetePerEliminazione: 1
+      ampiezzaSerpentina: 0
+      frequenzaSerpentina: 0
+    agile:
+      moltiplicatoreVelocita: 1.45
+      moltiplicatoreAccelerazione: 1.55
+      moltiplicatoreDecelerazione: 1.3
+      moltiplicatoreVita: 0.7
+      moltiplicatoreIntervalloAttacco: 0.82
+      scala: 0.88
+      moltiplicatoreRinculo: 1.2
+      monetePerEliminazione: 1
+      ampiezzaSerpentina: 0.34
+      frequenzaSerpentina: 2.15
+    robusta:
+      moltiplicatoreVelocita: 0.7
+      moltiplicatoreAccelerazione: 0.74
+      moltiplicatoreDecelerazione: 0.82
+      moltiplicatoreVita: 1.6
+      moltiplicatoreIntervalloAttacco: 1.2
+      scala: 1.2
+      moltiplicatoreRinculo: 0.2
+      monetePerEliminazione: 2
+      ampiezzaSerpentina: 0
+      frequenzaSerpentina: 0
+    ladra:
+      moltiplicatoreVelocita: 1.12
+      moltiplicatoreAccelerazione: 1.2
+      moltiplicatoreDecelerazione: 1.15
+      moltiplicatoreVita: 0.9
+      moltiplicatoreIntervalloAttacco: 1
+      scala: 0.96
+      moltiplicatoreRinculo: 0.9
+      monetePerEliminazione: 2
+      ampiezzaSerpentina: 0
+      frequenzaSerpentina: 0
+    alfa:
+      moltiplicatoreVelocita: 0.86
+      moltiplicatoreAccelerazione: 1.05
+      moltiplicatoreDecelerazione: 1.1
+      moltiplicatoreVita: 2
+      moltiplicatoreIntervalloAttacco: 1.15
+      scala: 1.4
+      moltiplicatoreRinculo: 0.12
+      monetePerEliminazione: 5
+      ampiezzaSerpentina: 0
+      frequenzaSerpentina: 0
+    intervalloRicercaGallina: 0.3
+    distanzaPrelievoGallina: 0.58
+    distanzaFugaLadra: 11.6
+    moltiplicatoreFugaLadra: 1.34
+    distanzaPreparazioneAlfa: 2.65
+    durataPreparazioneAlfa: 0.72
+    durataScattoAlfa: 0.32
+    moltiplicatoreScattoAlfa: 3.15
+    recuperoScattoAlfa: 2.25
+    volumeVersi: 0.16
   maialino:
     velocitaPasseggio: 1.45
     velocitaFuga: 3.1
@@ -105,6 +171,7 @@ MonoBehaviour:
     ondate:
     - nomeOndata: Riscaldamento
       numeroNemici: 3
+      sequenzaVolpi: 000000000000000000000000
       intervalloTraNemici: 0.7
       dimensioneMassimaGruppo: 2
       intervalloTraGruppi: 2.9
@@ -113,6 +180,7 @@ MonoBehaviour:
       moneteMaialinoBonus: 0
     - nomeOndata: Primi intrusi
       numeroNemici: 4
+      sequenzaVolpi: 00000000000000000000000001000000
       intervalloTraNemici: 0.7
       dimensioneMassimaGruppo: 2
       intervalloTraGruppi: 3.25
@@ -121,6 +189,7 @@ MonoBehaviour:
       moneteMaialinoBonus: 3
     - nomeOndata: Branco in arrivo
       numeroNemici: 5
+      sequenzaVolpi: 0000000001000000000000000100000002000000
       intervalloTraNemici: 0.7
       dimensioneMassimaGruppo: 2
       intervalloTraGruppi: 2
@@ -129,6 +198,7 @@ MonoBehaviour:
       moneteMaialinoBonus: 3
     - nomeOndata: Assalto alla fattoria
       numeroNemici: 6
+      sequenzaVolpi: 000000000100000002000000000000000200000003000000
       intervalloTraNemici: 0.65
       dimensioneMassimaGruppo: 3
       intervalloTraGruppi: 3.4
@@ -137,6 +207,7 @@ MonoBehaviour:
       moneteMaialinoBonus: 4
     - nomeOndata: Furia della campagna
       numeroNemici: 7
+      sequenzaVolpi: 01000000020000000300000001000000020000000000000004000000
       intervalloTraNemici: 0.6
       dimensioneMassimaGruppo: 3
       intervalloTraGruppi: 2.1
@@ -145,6 +216,7 @@ MonoBehaviour:
       moneteMaialinoBonus: 4
     - nomeOndata: Ultima difesa
       numeroNemici: 8
+      sequenzaVolpi: 0000000001000000020000000100000003000000020000000300000004000000
       intervalloTraNemici: 0.55
       dimensioneMassimaGruppo: 3
       intervalloTraGruppi: 2.3

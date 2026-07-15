@@ -23,6 +23,7 @@ public sealed class WaveReadabilityController : MonoBehaviour
         public int token;
         public int slotId;
         public Vector2 posizione;
+        public TipoVolpe tipo;
         public float scadenza;
         public WaveSpawnTelegraph telegraph;
     }
@@ -34,6 +35,9 @@ public sealed class WaveReadabilityController : MonoBehaviour
         public RectTransform freccia;
         public Image immagineFreccia;
         public TMP_Text testoQuantita;
+        public int quantitaVisualizzata = -1;
+        public TipoVolpe tipoVisualizzato = (TipoVolpe)(-1);
+        public bool contieneMinacceVisualizzato;
     }
 
     private readonly Dictionary<long, PreavvisoAttivo> preavvisi =
@@ -42,6 +46,10 @@ public sealed class WaveReadabilityController : MonoBehaviour
     private readonly int[] conteggiSettori = new int[NumeroSettori];
     private readonly int[] conteggiTelegraphSettori = new int[NumeroSettori];
     private readonly int[] conteggiMinacceSettori = new int[NumeroSettori];
+    private readonly TipoVolpe[] tipiPrioritariSettori =
+        new TipoVolpe[NumeroSettori];
+    private readonly int[] prioritaTipiSettori = new int[NumeroSettori];
+    private readonly int[] conteggiTipiVisualizzati = new int[5];
 
     private EnemySpawner spawner;
     private AnteprimaOndata anteprimaCorrente;
@@ -54,6 +62,8 @@ public sealed class WaveReadabilityController : MonoBehaviour
     private TMP_Text testoRimasti;
     private TMP_Text testoGruppo;
     private Image[] segmentiBarra;
+    private TMP_Text[] chipTipi;
+    private Image[] sfondiChipTipi;
     private GameObject pannelloSegnale;
     private CanvasGroup gruppoSegnale;
     private TMP_Text testoSegnale;
@@ -105,6 +115,19 @@ public sealed class WaveReadabilityController : MonoBehaviour
         return settore >= 0 && settore < NumeroSettori
             ? conteggiSettori[settore]
             : 0;
+    }
+
+    public int QuantitaTipoVisualizzata(TipoVolpe tipo)
+    {
+        int indice = (int)FoxVariantStyle.Normalizza(tipo);
+        return conteggiTipiVisualizzati[indice];
+    }
+
+    public TipoVolpe TipoPrioritarioNelSettore(int settore)
+    {
+        return settore >= 0 && settore < NumeroSettori
+            ? tipiPrioritariSettori[settore]
+            : TipoVolpe.Comune;
     }
 
     public int PreavvisiNelSettore(int settore)
@@ -214,6 +237,7 @@ public sealed class WaveReadabilityController : MonoBehaviour
             0,
             Mathf.Max(0, anteprima.NumeroGruppi)
         );
+        AggiornaChipTipi(anteprima.Composizione);
         AggiornaDaSpawner();
         AggiornaVisibilitaGenerale();
     }
@@ -222,7 +246,8 @@ public sealed class WaveReadabilityController : MonoBehaviour
         int token,
         int slotId,
         Vector2 posizione,
-        float durata
+        float durata,
+        TipoVolpe tipo = TipoVolpe.Comune
     )
     {
         PreavvisiRichiesti++;
@@ -251,7 +276,13 @@ public sealed class WaveReadabilityController : MonoBehaviour
         WaveSpawnTelegraph telegraph = OttieniTelegraph();
         if (telegraph != null)
         {
-            telegraph.Attiva(token, slotId, posizione, durataSicura);
+            telegraph.Attiva(
+                token,
+                slotId,
+                posizione,
+                durataSicura,
+                tipo
+            );
             TelegraphAttivati++;
         }
 
@@ -260,6 +291,7 @@ public sealed class WaveReadabilityController : MonoBehaviour
             token = token,
             slotId = slotId,
             posizione = posizione,
+            tipo = FoxVariantStyle.Normalizza(tipo),
             scadenza = Time.time + durataSicura + MargineScadenzaPreavviso,
             telegraph = telegraph
         };
@@ -328,6 +360,7 @@ public sealed class WaveReadabilityController : MonoBehaviour
             progresso.GruppoCorrente,
             progresso.TotaleGruppi
         );
+        AggiornaChipTipi(progresso.ComposizioneRimasta);
         rimastiPrecedenti = rimasti;
     }
 
@@ -493,6 +526,34 @@ public sealed class WaveReadabilityController : MonoBehaviour
         }
     }
 
+    private void AggiornaChipTipi(ComposizioneVolpi composizione)
+    {
+        if (chipTipi == null || sfondiChipTipi == null) return;
+
+        for (int i = 0; i < chipTipi.Length; i++)
+        {
+            TipoVolpe tipo = (TipoVolpe)i;
+            int quantita = composizione.Ottieni(tipo);
+            if (conteggiTipiVisualizzati[i] == quantita) continue;
+            conteggiTipiVisualizzati[i] = quantita;
+            if (chipTipi[i] != null)
+            {
+                chipTipi[i].SetText(
+                    FoxVariantStyle.Abbreviazione(tipo) + "  " + quantita
+                );
+                chipTipi[i].color = quantita > 0
+                    ? new Color32(255, 247, 216, 255)
+                    : new Color32(139, 117, 96, 210);
+            }
+            if (sfondiChipTipi[i] != null)
+            {
+                Color colore = FoxVariantStyle.ColoreUi(tipo);
+                colore.a = quantita > 0 ? 0.82f : 0.22f;
+                sfondiChipTipi[i].color = colore;
+            }
+        }
+    }
+
     private void AggiornaIndicatoriBordo()
     {
         if (indicatori == null) return;
@@ -520,6 +581,12 @@ public sealed class WaveReadabilityController : MonoBehaviour
             0,
             conteggiMinacceSettori.Length
         );
+        Array.Clear(prioritaTipiSettori, 0, prioritaTipiSettori.Length);
+        Array.Clear(
+            tipiPrioritariSettori,
+            0,
+            tipiPrioritariSettori.Length
+        );
         PreavvisiFuoriSchermo = 0;
         MinacceFuoriSchermo = 0;
 
@@ -535,6 +602,7 @@ public sealed class WaveReadabilityController : MonoBehaviour
                 continue;
             }
             conteggiTelegraphSettori[settore]++;
+            RegistraTipoSettore(settore, preavviso.tipo);
             PreavvisiFuoriSchermo++;
         }
 
@@ -554,6 +622,7 @@ public sealed class WaveReadabilityController : MonoBehaviour
                     continue;
                 }
                 conteggiMinacceSettori[settore]++;
+                RegistraTipoSettore(settore, minaccia.Tipo);
                 MinacceFuoriSchermo++;
             }
         }
@@ -577,16 +646,40 @@ public sealed class WaveReadabilityController : MonoBehaviour
             settoriAccesi++;
             bool contieneMinacce = minacceSettore > 0;
             if (contieneMinacce) settoriConMinacce++;
-            indicatore.testoQuantita.text = "x" + quantita;
-            indicatore.testoQuantita.color = contieneMinacce
-                ? new Color32(255, 239, 194, 255)
-                : new Color32(255, 229, 169, 255);
-            indicatore.immagineFreccia.color = contieneMinacce
-                ? new Color32(255, 106, 48, 255)
-                : new Color32(255, 190, 65, 255);
-            indicatore.sfondo.color = contieneMinacce
-                ? new Color32(255, 164, 104, 255)
-                : new Color32(255, 216, 151, 255);
+            TipoVolpe tipoPrioritario = tipiPrioritariSettori[i];
+            Color coloreTipo = FoxVariantStyle.ColoreUi(tipoPrioritario);
+            bool primoAggiornamento = indicatore.quantitaVisualizzata < 0;
+            bool quantitaCambiata =
+                indicatore.quantitaVisualizzata != quantita;
+            bool tipoCambiato = indicatore.tipoVisualizzato != tipoPrioritario;
+            bool statoCambiato =
+                indicatore.contieneMinacceVisualizzato != contieneMinacce;
+
+            if (primoAggiornamento || quantitaCambiata || tipoCambiato)
+            {
+                indicatore.testoQuantita.text =
+                    FoxVariantStyle.Abbreviazione(tipoPrioritario) +
+                    " x" + quantita;
+            }
+            if (primoAggiornamento || statoCambiato)
+            {
+                indicatore.testoQuantita.color = contieneMinacce
+                    ? new Color32(255, 239, 194, 255)
+                    : new Color32(255, 229, 169, 255);
+            }
+            if (primoAggiornamento || tipoCambiato || statoCambiato)
+            {
+                indicatore.immagineFreccia.color = contieneMinacce
+                    ? coloreTipo
+                    : Color.Lerp(coloreTipo, Color.white, 0.34f);
+                indicatore.sfondo.color = contieneMinacce
+                    ? Color.Lerp(coloreTipo, Color.white, 0.24f)
+                    : Color.Lerp(coloreTipo, Color.white, 0.62f);
+            }
+
+            indicatore.quantitaVisualizzata = quantita;
+            indicatore.tipoVisualizzato = tipoPrioritario;
+            indicatore.contieneMinacceVisualizzato = contieneMinacce;
         }
 
         SettoriAttivi = settoriAccesi;
@@ -595,6 +688,16 @@ public sealed class WaveReadabilityController : MonoBehaviour
             MassimoSettoriContemporanei,
             SettoriAttivi
         );
+    }
+
+    private void RegistraTipoSettore(int settore, TipoVolpe tipo)
+    {
+        if (settore < 0 || settore >= NumeroSettori) return;
+        int priorita = FoxVariantStyle.Priorita(tipo);
+        if (priorita <= prioritaTipiSettori[settore]) return;
+        prioritaTipiSettori[settore] = priorita;
+        tipiPrioritariSettori[settore] =
+            FoxVariantStyle.Normalizza(tipo);
     }
 
     private static bool ProvaOttieniSettoreFuoriSchermo(
@@ -886,7 +989,7 @@ public sealed class WaveReadabilityController : MonoBehaviour
             new Vector2(1f, 1f),
             new Vector2(1f, 1f),
             new Vector2(-18f, -18f),
-            new Vector2(278f, 116f),
+            new Vector2(350f, 154f),
             false
         );
 
@@ -894,7 +997,7 @@ public sealed class WaveReadabilityController : MonoBehaviour
             schedaHud.transform,
             "IconaVolpe",
             FarmPixelIcon.Volpe,
-            new Vector2(-104f, 14f),
+            new Vector2(-139f, 27f),
             new Vector2(54f, 54f)
         );
 
@@ -903,8 +1006,8 @@ public sealed class WaveReadabilityController : MonoBehaviour
             schedaHud.transform,
             "VOLPI RIMASTE",
             font,
-            new Vector2(34f, 33f),
-            new Vector2(182f, 25f),
+            new Vector2(38f, 49f),
+            new Vector2(244f, 25f),
             18f,
             new Color32(255, 220, 143, 255),
             TextAlignmentOptions.Center,
@@ -915,8 +1018,8 @@ public sealed class WaveReadabilityController : MonoBehaviour
             schedaHud.transform,
             "RIMASTE  0 / 0",
             font,
-            new Vector2(34f, 8f),
-            new Vector2(182f, 28f),
+            new Vector2(38f, 23f),
+            new Vector2(244f, 28f),
             23f,
             new Color32(255, 181, 67, 255),
             TextAlignmentOptions.Center,
@@ -927,7 +1030,7 @@ public sealed class WaveReadabilityController : MonoBehaviour
             schedaHud.transform,
             string.Empty,
             font,
-            new Vector2(-104f, -32f),
+            new Vector2(-139f, -17f),
             new Vector2(70f, 18f),
             11f,
             new Color32(242, 211, 157, 255),
@@ -941,8 +1044,8 @@ public sealed class WaveReadabilityController : MonoBehaviour
             new Vector2(0.5f, 0.5f),
             new Vector2(0.5f, 0.5f),
             new Vector2(0.5f, 0.5f),
-            new Vector2(35f, -29f),
-            new Vector2(180f, 22f),
+            new Vector2(38f, -17f),
+            new Vector2(244f, 22f),
             true
         );
 
@@ -972,7 +1075,52 @@ public sealed class WaveReadabilityController : MonoBehaviour
             immagine.color = new Color32(76, 42, 27, 210);
             segmentiBarra[i] = immagine;
         }
+        CreaChipTipi(schedaHud.transform, font);
         schedaHud.SetActive(false);
+    }
+
+    private void CreaChipTipi(Transform parent, TMP_FontAsset font)
+    {
+        chipTipi = new TMP_Text[5];
+        sfondiChipTipi = new Image[5];
+        const float larghezza = 58f;
+        const float spazio = 7f;
+        float totale = chipTipi.Length * larghezza +
+                       (chipTipi.Length - 1) * spazio;
+        float primoX = -totale * 0.5f + larghezza * 0.5f;
+
+        for (int i = 0; i < chipTipi.Length; i++)
+        {
+            TipoVolpe tipo = (TipoVolpe)i;
+            conteggiTipiVisualizzati[i] = -1;
+            GameObject pannello = CreaPannello(
+                "ChipTipo_" + tipo,
+                parent,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(primoX + i * (larghezza + spazio), -57f),
+                new Vector2(larghezza, 25f),
+                true
+            );
+            Image sfondo = pannello.GetComponent<Image>();
+            sfondo.raycastTarget = false;
+            sfondiChipTipi[i] = sfondo;
+
+            chipTipi[i] = CreaTesto(
+                "TestoChip_" + tipo,
+                pannello.transform,
+                FoxVariantStyle.Abbreviazione(tipo) + "  0",
+                font,
+                Vector2.zero,
+                new Vector2(larghezza - 5f, 21f),
+                12f,
+                new Color32(255, 247, 216, 255),
+                TextAlignmentOptions.Center,
+                FontStyles.Bold
+            );
+        }
+        AggiornaChipTipi(default);
     }
 
     private void CostruisciIndicatori(Transform parent, TMP_FontAsset font)
@@ -1291,11 +1439,13 @@ internal sealed class WaveSpawnTelegraph : MonoBehaviour
     private SpriteRenderer[] particelle;
     private int token;
     private int slotId;
+    private TipoVolpe tipo;
     private float durata;
     private float tempo;
 
     public int Token => token;
     public int SlotId => slotId;
+    public TipoVolpe Tipo => tipo;
     public bool Attivo => gameObject.activeSelf;
 
     public void Inizializza(Sprite spritePixel)
@@ -1310,7 +1460,7 @@ internal sealed class WaveSpawnTelegraph : MonoBehaviour
             SpriteRenderer renderer = pixel.AddComponent<SpriteRenderer>();
             renderer.sprite = spritePixel;
             renderer.sortingOrder = -1;
-            renderer.color = ColoreBase(i, 1f);
+            renderer.color = ColoreBase(i, 1f, TipoVolpe.Comune);
             particelle[i] = renderer;
         }
     }
@@ -1319,11 +1469,13 @@ internal sealed class WaveSpawnTelegraph : MonoBehaviour
         int nuovoToken,
         int nuovoSlotId,
         Vector2 posizione,
-        float nuovaDurata
+        float nuovaDurata,
+        TipoVolpe nuovoTipo
     )
     {
         token = nuovoToken;
         slotId = nuovoSlotId;
+        tipo = FoxVariantStyle.Normalizza(nuovoTipo);
         durata = Mathf.Max(0.05f, nuovaDurata);
         tempo = 0f;
         transform.position = new Vector3(posizione.x, posizione.y, 0f);
@@ -1372,11 +1524,15 @@ internal sealed class WaveSpawnTelegraph : MonoBehaviour
                 ? Mathf.Lerp(1.3f, 0.82f, curva)
                 : Mathf.Lerp(0.72f, 1.05f, curva);
             renderer.transform.localScale = Vector3.one * scala;
-            renderer.color = ColoreBase(i, alpha);
+            renderer.color = ColoreBase(i, alpha, tipo);
         }
     }
 
-    private static Color ColoreBase(int indice, float alpha)
+    private static Color ColoreBase(
+        int indice,
+        float alpha,
+        TipoVolpe tipo
+    )
     {
         Color colore;
         switch (indice % 4)
@@ -1393,6 +1549,14 @@ internal sealed class WaveSpawnTelegraph : MonoBehaviour
             default:
                 colore = new Color32(145, 88, 39, 255);
                 break;
+        }
+        if (indice % 4 == 0)
+        {
+            colore = Color.Lerp(
+                colore,
+                FoxVariantStyle.ColoreUi(tipo),
+                tipo == TipoVolpe.Comune ? 0.18f : 0.68f
+            );
         }
         colore.a = Mathf.Clamp01(alpha);
         return colore;

@@ -186,11 +186,11 @@ public class ShopInterOndata : MonoBehaviour
             : anteprima.NumeroGruppi + " GRUPPI";
 
         return
-            "PROSSIMA: ONDATA " + anteprima.Indice + " / " +
-            anteprima.Totale + "  -  " + anteprima.Nome.ToUpperInvariant() +
-            "\n" + anteprima.NumeroVolpi +
-            " VOLPI COMUNI  •  VITA " + anteprima.VitaVolpi +
-            "  •  " + gruppi + "  •  " + bonus;
+            "PROSSIMA: ONDATA " + anteprima.Indice + " / " + anteprima.Totale +
+            "  -  " + anteprima.Nome.ToUpperInvariant() + "  -  " +
+            anteprima.NumeroVolpi + " VOLPI  -  " + gruppi +
+            "  -  " + bonus +
+            "\n" + anteprima.Composizione.FormattaCompatta();
     }
 
     void Acquista(TipoPotenziamento tipo)
@@ -366,6 +366,7 @@ public class ShopInterOndata : MonoBehaviour
             FontStyles.Bold,
             TextAlignmentOptions.Center
         );
+        testoAnteprimaRiepilogo.overflowMode = TextOverflowModes.Overflow;
 
         testoMoneteRiepilogo = CreaTesto(
             "Monete",
@@ -468,7 +469,7 @@ public class ShopInterOndata : MonoBehaviour
             "Messaggio",
             parent,
             string.Empty,
-            new Vector2(0f, -302f),
+            new Vector2(0f, -294f),
             new Vector2(950f, 44f),
             18f,
             new Color(1f, 0.84f, 0.51f, 1f),
@@ -480,13 +481,14 @@ public class ShopInterOndata : MonoBehaviour
             "AnteprimaProssimaOnda",
             parent,
             string.Empty,
-            new Vector2(0f, -344f),
-            new Vector2(980f, 46f),
+            new Vector2(0f, -342f),
+            new Vector2(980f, 50f),
             16f,
             new Color(1f, 0.74f, 0.28f, 1f),
             FontStyles.Bold,
             TextAlignmentOptions.Center
         );
+        testoAnteprimaBottega.overflowMode = TextOverflowModes.Overflow;
 
         CreaPulsante(
             "Indietro",

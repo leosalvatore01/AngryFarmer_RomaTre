@@ -120,6 +120,12 @@ public sealed class WaveBalanceSettings
             {
                 nomeOndata = "Riscaldamento",
                 numeroNemici = 3,
+                sequenzaVolpi = new[]
+                {
+                    TipoVolpe.Comune,
+                    TipoVolpe.Comune,
+                    TipoVolpe.Comune
+                },
                 intervalloTraNemici = 0.7f,
                 dimensioneMassimaGruppo = 2,
                 intervalloTraGruppi = 2.9f,
@@ -131,6 +137,13 @@ public sealed class WaveBalanceSettings
             {
                 nomeOndata = "Primi intrusi",
                 numeroNemici = 4,
+                sequenzaVolpi = new[]
+                {
+                    TipoVolpe.Comune,
+                    TipoVolpe.Comune,
+                    TipoVolpe.Comune,
+                    TipoVolpe.Agile
+                },
                 intervalloTraNemici = 0.7f,
                 dimensioneMassimaGruppo = 2,
                 intervalloTraGruppi = 3.25f,
@@ -142,6 +155,14 @@ public sealed class WaveBalanceSettings
             {
                 nomeOndata = "Branco in arrivo",
                 numeroNemici = 5,
+                sequenzaVolpi = new[]
+                {
+                    TipoVolpe.Comune,
+                    TipoVolpe.Agile,
+                    TipoVolpe.Comune,
+                    TipoVolpe.Agile,
+                    TipoVolpe.Robusta
+                },
                 intervalloTraNemici = 0.7f,
                 dimensioneMassimaGruppo = 2,
                 intervalloTraGruppi = 2f,
@@ -153,6 +174,15 @@ public sealed class WaveBalanceSettings
             {
                 nomeOndata = "Assalto alla fattoria",
                 numeroNemici = 6,
+                sequenzaVolpi = new[]
+                {
+                    TipoVolpe.Comune,
+                    TipoVolpe.Agile,
+                    TipoVolpe.Robusta,
+                    TipoVolpe.Comune,
+                    TipoVolpe.Robusta,
+                    TipoVolpe.Ladra
+                },
                 intervalloTraNemici = 0.65f,
                 dimensioneMassimaGruppo = 3,
                 intervalloTraGruppi = 3.4f,
@@ -164,6 +194,16 @@ public sealed class WaveBalanceSettings
             {
                 nomeOndata = "Furia della campagna",
                 numeroNemici = 7,
+                sequenzaVolpi = new[]
+                {
+                    TipoVolpe.Agile,
+                    TipoVolpe.Robusta,
+                    TipoVolpe.Ladra,
+                    TipoVolpe.Agile,
+                    TipoVolpe.Robusta,
+                    TipoVolpe.Comune,
+                    TipoVolpe.Alfa
+                },
                 intervalloTraNemici = 0.6f,
                 dimensioneMassimaGruppo = 3,
                 intervalloTraGruppi = 2.1f,
@@ -175,6 +215,17 @@ public sealed class WaveBalanceSettings
             {
                 nomeOndata = "Ultima difesa",
                 numeroNemici = 8,
+                sequenzaVolpi = new[]
+                {
+                    TipoVolpe.Comune,
+                    TipoVolpe.Agile,
+                    TipoVolpe.Robusta,
+                    TipoVolpe.Agile,
+                    TipoVolpe.Ladra,
+                    TipoVolpe.Robusta,
+                    TipoVolpe.Ladra,
+                    TipoVolpe.Alfa
+                },
                 intervalloTraNemici = 0.55f,
                 dimensioneMassimaGruppo = 3,
                 intervalloTraGruppi = 2.3f,
@@ -222,12 +273,14 @@ public sealed class GameBalanceConfig : ScriptableObject
     public const string PercorsoResources = "GameBalanceConfig";
 
     [SerializeField]
-    private string versioneRiferimento = "Baseline 1 - 2026-07-15";
+    private string versioneRiferimento = "Blocco 3 - Tipologie volpe - 2026-07-15";
 
     [SerializeField] private PlayerBalanceSettings giocatore =
         new PlayerBalanceSettings();
     [SerializeField] private FoxBalanceSettings volpe =
         new FoxBalanceSettings();
+    [SerializeField] private FoxVariantsBalanceSettings variantiVolpe =
+        new FoxVariantsBalanceSettings();
     [SerializeField] private PigBalanceSettings maialino =
         new PigBalanceSettings();
     [SerializeField] private ShopBalanceSettings shop =
@@ -243,6 +296,9 @@ public sealed class GameBalanceConfig : ScriptableObject
     public string VersioneRiferimento => versioneRiferimento;
     public PlayerBalanceSettings Giocatore => giocatore;
     public FoxBalanceSettings Volpe => volpe;
+    public FoxVariantsBalanceSettings VariantiVolpe =>
+        variantiVolpe ??
+        (variantiVolpe = new FoxVariantsBalanceSettings());
     public PigBalanceSettings Maialino => maialino;
     public ShopBalanceSettings Shop => shop;
     public WaveBalanceSettings Ondate => ondate;
@@ -293,6 +349,10 @@ public sealed class GameBalanceConfig : ScriptableObject
         {
             feedbackCombattimento = new CombatFeedbackSettings();
         }
+        if (variantiVolpe == null)
+        {
+            variantiVolpe = new FoxVariantsBalanceSettings();
+        }
 
         giocatore.intervalloSparoMinimo = Mathf.Max(
             0.01f,
@@ -338,6 +398,51 @@ public sealed class GameBalanceConfig : ScriptableObject
             ondate.volumeSegnaleUltimiNemici
         );
 
+        NormalizzaVariante(variantiVolpe.comune);
+        NormalizzaVariante(variantiVolpe.agile);
+        NormalizzaVariante(variantiVolpe.robusta);
+        NormalizzaVariante(variantiVolpe.ladra);
+        NormalizzaVariante(variantiVolpe.alfa);
+        variantiVolpe.intervalloRicercaGallina = Mathf.Max(
+            0.05f,
+            variantiVolpe.intervalloRicercaGallina
+        );
+        variantiVolpe.distanzaPrelievoGallina = Mathf.Max(
+            0.1f,
+            variantiVolpe.distanzaPrelievoGallina
+        );
+        variantiVolpe.distanzaFugaLadra = Mathf.Max(
+            2f,
+            variantiVolpe.distanzaFugaLadra
+        );
+        variantiVolpe.moltiplicatoreFugaLadra = Mathf.Max(
+            1f,
+            variantiVolpe.moltiplicatoreFugaLadra
+        );
+        variantiVolpe.distanzaPreparazioneAlfa = Mathf.Max(
+            0.5f,
+            variantiVolpe.distanzaPreparazioneAlfa
+        );
+        variantiVolpe.durataPreparazioneAlfa = Mathf.Max(
+            0.1f,
+            variantiVolpe.durataPreparazioneAlfa
+        );
+        variantiVolpe.durataScattoAlfa = Mathf.Max(
+            0.1f,
+            variantiVolpe.durataScattoAlfa
+        );
+        variantiVolpe.moltiplicatoreScattoAlfa = Mathf.Max(
+            1f,
+            variantiVolpe.moltiplicatoreScattoAlfa
+        );
+        variantiVolpe.recuperoScattoAlfa = Mathf.Max(
+            0.1f,
+            variantiVolpe.recuperoScattoAlfa
+        );
+        variantiVolpe.volumeVersi = Mathf.Clamp01(
+            variantiVolpe.volumeVersi
+        );
+
         if (shop.frequenzeBlocco != null)
         {
             for (int i = 0; i < shop.frequenzeBlocco.Length; i++)
@@ -354,6 +459,15 @@ public sealed class GameBalanceConfig : ScriptableObject
         {
             if (onda == null) continue;
             onda.numeroNemici = Mathf.Max(0, onda.numeroNemici);
+            if (onda.sequenzaVolpi != null)
+            {
+                for (int i = 0; i < onda.sequenzaVolpi.Length; i++)
+                {
+                    onda.sequenzaVolpi[i] = FoxVariantStyle.Normalizza(
+                        onda.sequenzaVolpi[i]
+                    );
+                }
+            }
             onda.intervalloTraNemici = Mathf.Max(
                 0.05f,
                 onda.intervalloTraNemici
@@ -386,5 +500,49 @@ public sealed class GameBalanceConfig : ScriptableObject
         {
             valori[i] = Mathf.Max(0, valori[i]);
         }
+    }
+
+    private static void NormalizzaVariante(FoxVariantStats variante)
+    {
+        if (variante == null) return;
+        variante.moltiplicatoreVelocita = Mathf.Max(
+            0.1f,
+            variante.moltiplicatoreVelocita
+        );
+        variante.moltiplicatoreAccelerazione = Mathf.Max(
+            0.1f,
+            variante.moltiplicatoreAccelerazione
+        );
+        variante.moltiplicatoreDecelerazione = Mathf.Max(
+            0.1f,
+            variante.moltiplicatoreDecelerazione
+        );
+        variante.moltiplicatoreVita = Mathf.Max(
+            0.1f,
+            variante.moltiplicatoreVita
+        );
+        variante.moltiplicatoreIntervalloAttacco = Mathf.Max(
+            0.1f,
+            variante.moltiplicatoreIntervalloAttacco
+        );
+        variante.scala = Mathf.Max(0.1f, variante.scala);
+        variante.moltiplicatoreRinculo = Mathf.Clamp(
+            variante.moltiplicatoreRinculo,
+            0f,
+            2f
+        );
+        variante.monetePerEliminazione = Mathf.Max(
+            0,
+            variante.monetePerEliminazione
+        );
+        variante.ampiezzaSerpentina = Mathf.Clamp(
+            variante.ampiezzaSerpentina,
+            0f,
+            0.8f
+        );
+        variante.frequenzaSerpentina = Mathf.Max(
+            0f,
+            variante.frequenzaSerpentina
+        );
     }
 }
