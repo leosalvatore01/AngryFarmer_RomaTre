@@ -2579,7 +2579,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 674e0d0278cee4e8aa53efe4c3ca45e7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
-  speed: 8
+  velocitaBase: 8
   durataBoost: 5
   accelerazione: 45
   decelerazione: 60
@@ -2670,9 +2670,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerShooting
   bulletPrefab: {fileID: 2816885290978022999, guid: c4e60d5e961bc42a587cf54e478ddc8a, type: 3}
-  fireRate: 0.4
-  bulletSpeed: 10
-  durataDoppioSparo: 5
+  intervalloSparoBase: 0.4
+  velocitaProiettileBase: 10
+  dannoBase: 1
+  penetrazioneBase: 0
+  distanzaMinimaMira: 0.2
+  distanzaUscitaProiettile: 0.44
+  durataTriploSparo: 5
 --- !u!114 &1813665477
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2685,7 +2689,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4d16fe6ca6cefe44a853b927ba71149f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHealth
-  vitaMassima: 5
+  vitaMassimaBase: 5
 --- !u!58 &1813665478
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -2762,6 +2766,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerVisualController
   frameAlSecondo: 6
+  ampiezzaIdle: 0.02
+  frequenzaIdle: 1.2
+  ampiezzaCamminata: 0.08
+  frequenzaCamminata: 3
+  velocitaTransizione: 12
+  durataFeedbackSparo: 0.1
+  distanzaRinculo: 0.08
+  compressioneSparo: 0.035
 --- !u!1 &1841433052
 GameObject:
   m_ObjectHideFlags: 0
@@ -2834,7 +2846,7 @@ MonoBehaviour:
     numeroMaialiniBonus: 2
     vitaMaialinoBonus: 4
     moneteMaialinoBonus: 5
-  tempoTraOndate: 3
+  diagnostica: {fileID: 0}
 --- !u!4 &1841433054
 Transform:
   m_ObjectHideFlags: 0
