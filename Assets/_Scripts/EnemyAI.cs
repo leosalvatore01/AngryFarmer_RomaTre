@@ -60,6 +60,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     private int vitaMassima;
     private int vitaCorrente;
     private bool morto;
+    private bool neutralizzazioneSegnalata;
     private Coroutine flashDannoRoutine;
 
     private Transform barraVita;
@@ -80,6 +81,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     public int VitaMassima => vitaMassima;
     public int VitaCorrente => vitaCorrente;
     public bool IsDead => morto;
+    public event System.Action<EnemyAI> NonPiuMinaccia;
 
     void Awake()
     {
@@ -511,6 +513,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     {
         if (morto) return;
         morto = true;
+        SegnalaNeutralizzazione();
 
         velocitaAttuale = Vector2.zero;
         velocitaDesiderata = Vector2.zero;
@@ -624,6 +627,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
 
     void OnDisable()
     {
+        SegnalaNeutralizzazione();
         flashDannoRoutine = null;
         velocitaAttuale = Vector2.zero;
         velocitaDesiderata = Vector2.zero;
@@ -632,5 +636,12 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         {
             spriteRendererVisibile.color = coloreBase;
         }
+    }
+
+    private void SegnalaNeutralizzazione()
+    {
+        if (neutralizzazioneSegnalata) return;
+        neutralizzazioneSegnalata = true;
+        NonPiuMinaccia?.Invoke(this);
     }
 }

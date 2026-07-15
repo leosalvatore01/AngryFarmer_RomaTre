@@ -461,6 +461,19 @@ public class GameManager : MonoBehaviour
 
     public void IniziaIntervallo(int ondaCompletata, int totaleOndate)
     {
+        IniziaIntervallo(
+            ondaCompletata,
+            totaleOndate,
+            default
+        );
+    }
+
+    public void IniziaIntervallo(
+        int ondaCompletata,
+        int totaleOndate,
+        AnteprimaOndata prossimaOnda
+    )
+    {
         if (isGameOver) return;
 
         if (shopInterOndata == null)
@@ -478,12 +491,22 @@ public class GameManager : MonoBehaviour
         }
 
         ImpostaStatoPartita(StatoPartita.Intervallo);
-        shopInterOndata.Mostra(ondaCompletata, totaleOndate);
+        shopInterOndata.Mostra(
+            ondaCompletata,
+            totaleOndate,
+            prossimaOnda
+        );
     }
 
     public void ContinuaConOndataSuccessiva()
     {
         if (isGameOver || StatoCorrente != StatoPartita.Intervallo) return;
+
+        EnemySpawner spawner = FindFirstObjectByType<EnemySpawner>();
+        if (spawner != null)
+        {
+            spawner.RichiediAvvioRapido();
+        }
 
         if (shopInterOndata != null)
         {

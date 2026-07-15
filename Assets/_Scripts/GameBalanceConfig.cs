@@ -104,6 +104,11 @@ public sealed class WaveBalanceSettings
     [Min(0.02f)] public float intervalloControlloFineOndata = 0.2f;
     [Min(0.05f)] public float durataMinimaDistribuzioneMaialini = 1f;
 
+    [Header("Leggibilita e gruppi")]
+    [Range(0.15f, 1f)] public float durataPreavvisoSpawn = 0.5f;
+    [Range(1, 4)] public int sogliaUltimiNemici = 2;
+    [Range(0f, 1f)] public float volumeSegnaleUltimiNemici = 0.26f;
+
     [Header("Sequenza di riferimento")]
     public Wave[] ondate = CreaOndateRiferimento();
 
@@ -115,7 +120,9 @@ public sealed class WaveBalanceSettings
             {
                 nomeOndata = "Riscaldamento",
                 numeroNemici = 3,
-                intervalloTraNemici = 1.8f,
+                intervalloTraNemici = 0.7f,
+                dimensioneMassimaGruppo = 2,
+                intervalloTraGruppi = 2.9f,
                 numeroMaialiniBonus = 0,
                 vitaMaialinoBonus = 1,
                 moneteMaialinoBonus = 0
@@ -124,7 +131,9 @@ public sealed class WaveBalanceSettings
             {
                 nomeOndata = "Primi intrusi",
                 numeroNemici = 4,
-                intervalloTraNemici = 1.55f,
+                intervalloTraNemici = 0.7f,
+                dimensioneMassimaGruppo = 2,
+                intervalloTraGruppi = 3.25f,
                 numeroMaialiniBonus = 1,
                 vitaMaialinoBonus = 2,
                 moneteMaialinoBonus = 3
@@ -133,7 +142,9 @@ public sealed class WaveBalanceSettings
             {
                 nomeOndata = "Branco in arrivo",
                 numeroNemici = 5,
-                intervalloTraNemici = 1.35f,
+                intervalloTraNemici = 0.7f,
+                dimensioneMassimaGruppo = 2,
+                intervalloTraGruppi = 2f,
                 numeroMaialiniBonus = 1,
                 vitaMaialinoBonus = 2,
                 moneteMaialinoBonus = 3
@@ -142,7 +153,9 @@ public sealed class WaveBalanceSettings
             {
                 nomeOndata = "Assalto alla fattoria",
                 numeroNemici = 6,
-                intervalloTraNemici = 1.2f,
+                intervalloTraNemici = 0.65f,
+                dimensioneMassimaGruppo = 3,
+                intervalloTraGruppi = 3.4f,
                 numeroMaialiniBonus = 1,
                 vitaMaialinoBonus = 3,
                 moneteMaialinoBonus = 4
@@ -151,7 +164,9 @@ public sealed class WaveBalanceSettings
             {
                 nomeOndata = "Furia della campagna",
                 numeroNemici = 7,
-                intervalloTraNemici = 1.1f,
+                intervalloTraNemici = 0.6f,
+                dimensioneMassimaGruppo = 3,
+                intervalloTraGruppi = 2.1f,
                 numeroMaialiniBonus = 2,
                 vitaMaialinoBonus = 3,
                 moneteMaialinoBonus = 4
@@ -160,7 +175,9 @@ public sealed class WaveBalanceSettings
             {
                 nomeOndata = "Ultima difesa",
                 numeroNemici = 8,
-                intervalloTraNemici = 1.05f,
+                intervalloTraNemici = 0.55f,
+                dimensioneMassimaGruppo = 3,
+                intervalloTraGruppi = 2.3f,
                 numeroMaialiniBonus = 2,
                 vitaMaialinoBonus = 4,
                 moneteMaialinoBonus = 5
@@ -307,6 +324,19 @@ public sealed class GameBalanceConfig : ScriptableObject
             3,
             8
         );
+        ondate.durataPreavvisoSpawn = Mathf.Clamp(
+            ondate.durataPreavvisoSpawn,
+            0.15f,
+            1f
+        );
+        ondate.sogliaUltimiNemici = Mathf.Clamp(
+            ondate.sogliaUltimiNemici,
+            1,
+            4
+        );
+        ondate.volumeSegnaleUltimiNemici = Mathf.Clamp01(
+            ondate.volumeSegnaleUltimiNemici
+        );
 
         if (shop.frequenzeBlocco != null)
         {
@@ -327,6 +357,15 @@ public sealed class GameBalanceConfig : ScriptableObject
             onda.intervalloTraNemici = Mathf.Max(
                 0.05f,
                 onda.intervalloTraNemici
+            );
+            onda.dimensioneMassimaGruppo = Mathf.Clamp(
+                onda.dimensioneMassimaGruppo,
+                1,
+                4
+            );
+            onda.intervalloTraGruppi = Mathf.Max(
+                onda.intervalloTraNemici,
+                onda.intervalloTraGruppi
             );
             onda.numeroMaialiniBonus = Mathf.Max(
                 0,

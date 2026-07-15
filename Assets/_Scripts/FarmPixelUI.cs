@@ -17,7 +17,8 @@ public enum FarmPixelIcon
     Cura,
     Danno,
     Cadenza,
-    Penetrazione
+    Penetrazione,
+    Volpe
 }
 
 /// <summary>
@@ -335,6 +336,9 @@ public static class FarmPixelUI
             case FarmPixelIcon.Penetrazione:
                 DisegnaPatata(pixel, true);
                 break;
+            case FarmPixelIcon.Volpe:
+                DisegnaVolpe(pixel);
+                break;
         }
 
         return CreaSprite(
@@ -372,6 +376,39 @@ public static class FarmPixelUI
             Rettangolo(pixel, 14, 3, 16, 7, Crema);
             ContornaRettangolo(pixel, 12, 2, 18, 8, Contorno);
         }
+    }
+
+    private static void DisegnaVolpe(Color32[] pixel)
+    {
+        Color32 arancioScuro = new Color32(139, 55, 25, 255);
+        Color32 arancio = new Color32(221, 91, 29, 255);
+        Color32 arancioLuce = new Color32(244, 137, 45, 255);
+        Color32 muso = new Color32(247, 211, 157, 255);
+
+        // Orecchie con contorno scuro.
+        Linea(pixel, 3, 16, 6, 19, Contorno, 2);
+        Linea(pixel, 6, 19, 8, 14, Contorno, 2);
+        Linea(pixel, 16, 16, 13, 19, Contorno, 2);
+        Linea(pixel, 13, 19, 11, 14, Contorno, 2);
+        Rettangolo(pixel, 5, 15, 7, 17, arancioScuro);
+        Rettangolo(pixel, 12, 15, 14, 17, arancioScuro);
+
+        // Testa e guance.
+        Rettangolo(pixel, 4, 8, 15, 15, Contorno);
+        Rettangolo(pixel, 5, 7, 14, 14, arancio);
+        Rettangolo(pixel, 6, 12, 13, 15, arancioLuce);
+        Rettangolo(pixel, 6, 7, 9, 10, muso);
+        Rettangolo(pixel, 10, 7, 13, 10, muso);
+        Rettangolo(pixel, 8, 5, 11, 9, muso);
+
+        // Occhi e naso.
+        Rettangolo(pixel, 6, 11, 7, 12, Contorno);
+        Rettangolo(pixel, 12, 11, 13, 12, Contorno);
+        Rettangolo(pixel, 9, 5, 10, 6, Contorno);
+        Imposta(pixel, DimensioneIcona, DimensioneIcona,
+            9, 8, arancioScuro);
+        Imposta(pixel, DimensioneIcona, DimensioneIcona,
+            10, 8, arancioScuro);
     }
 
     private static void DisegnaMoneta(Color32[] pixel)

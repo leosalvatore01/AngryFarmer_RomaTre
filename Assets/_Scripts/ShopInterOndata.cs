@@ -32,6 +32,8 @@ public class ShopInterOndata : MonoBehaviour
     private GameObject pannelloRiepilogo;
     private GameObject pannelloBottega;
     private TMP_Text testoRiepilogo;
+    private TMP_Text testoAnteprimaRiepilogo;
+    private TMP_Text testoAnteprimaBottega;
     private TMP_Text testoMoneteRiepilogo;
     private TMP_Text testoMoneteBottega;
     private TMP_Text testoMessaggioBottega;
@@ -86,7 +88,30 @@ public class ShopInterOndata : MonoBehaviour
         }
     }
 
+    void Update()
+    {
+        if (GameManager.instance == null ||
+            GameManager.instance.StatoCorrente != StatoPartita.Intervallo)
+        {
+            return;
+        }
+
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            AvviaOndataSuccessiva();
+        }
+    }
+
     public void Mostra(int ondaCompletata, int totaleOndate)
+    {
+        Mostra(ondaCompletata, totaleOndate, default);
+    }
+
+    public void Mostra(
+        int ondaCompletata,
+        int totaleOndate,
+        AnteprimaOndata prossimaOnda
+    )
     {
         if (!costruito) CostruisciInterfaccia();
 
@@ -94,6 +119,15 @@ public class ShopInterOndata : MonoBehaviour
         testoRiepilogo.text =
             "Ondata " + ondaCompletata + " di " + totaleOndate +
             " superata\nLa fattoria ha un momento per riorganizzarsi.";
+        string anteprima = FormattaAnteprima(prossimaOnda);
+        if (testoAnteprimaRiepilogo != null)
+        {
+            testoAnteprimaRiepilogo.text = anteprima;
+        }
+        if (testoAnteprimaBottega != null)
+        {
+            testoAnteprimaBottega.text = anteprima;
+        }
         testoMessaggioBottega.text =
             "Scegli con cura: i potenziamenti durano per tutta la partita.";
 
@@ -135,6 +169,28 @@ public class ShopInterOndata : MonoBehaviour
         {
             GameManager.instance.ContinuaConOndataSuccessiva();
         }
+    }
+
+    static string FormattaAnteprima(AnteprimaOndata anteprima)
+    {
+        if (!anteprima.Valida)
+        {
+            return "PROSSIMA ONDATA PRONTA";
+        }
+
+        string bonus = anteprima.NumeroMaialini > 0
+            ? anteprima.NumeroMaialini + " MAIALINI BONUS"
+            : "NESSUN MAIALINO BONUS";
+        string gruppi = anteprima.NumeroGruppi == 1
+            ? "1 GRUPPO"
+            : anteprima.NumeroGruppi + " GRUPPI";
+
+        return
+            "PROSSIMA: ONDATA " + anteprima.Indice + " / " +
+            anteprima.Totale + "  -  " + anteprima.Nome.ToUpperInvariant() +
+            "\n" + anteprima.NumeroVolpi +
+            " VOLPI COMUNI  •  VITA " + anteprima.VitaVolpi +
+            "  •  " + gruppi + "  •  " + bonus;
     }
 
     void Acquista(TipoPotenziamento tipo)
@@ -291,11 +347,23 @@ public class ShopInterOndata : MonoBehaviour
             "Riepilogo",
             parent,
             string.Empty,
-            new Vector2(0f, 82f),
-            new Vector2(700f, 100f),
+            new Vector2(0f, 106f),
+            new Vector2(700f, 82f),
             25f,
             new Color(1f, 0.91f, 0.71f, 1f),
             FontStyles.Normal,
+            TextAlignmentOptions.Center
+        );
+
+        testoAnteprimaRiepilogo = CreaTesto(
+            "AnteprimaProssimaOnda",
+            parent,
+            string.Empty,
+            new Vector2(0f, 35f),
+            new Vector2(710f, 64f),
+            18f,
+            new Color(1f, 0.76f, 0.32f, 1f),
+            FontStyles.Bold,
             TextAlignmentOptions.Center
         );
 
@@ -303,7 +371,7 @@ public class ShopInterOndata : MonoBehaviour
             "Monete",
             parent,
             "MONETE  0",
-            new Vector2(0f, -5f),
+            new Vector2(0f, -35f),
             new Vector2(400f, 50f),
             29f,
             new Color(1f, 0.86f, 0.22f, 1f),
@@ -314,15 +382,15 @@ public class ShopInterOndata : MonoBehaviour
             parent,
             "IconaMonete",
             FarmPixelIcon.Moneta,
-            new Vector2(-125f, -5f),
+            new Vector2(-125f, -35f),
             new Vector2(34f, 34f)
         );
 
         CreaTesto(
             "Suggerimento",
             parent,
-            "Puoi ripartire subito oppure spendere le monete nella bottega.",
-            new Vector2(0f, -70f),
+            "Spazio: riparti subito. Oppure usa le monete nella bottega.",
+            new Vector2(0f, -91f),
             new Vector2(690f, 54f),
             20f,
             new Color(0.86f, 0.78f, 0.65f, 1f),
@@ -342,7 +410,7 @@ public class ShopInterOndata : MonoBehaviour
         CreaPulsante(
             "OndataSuccessiva",
             parent,
-            "ONDATA SUCCESSIVA",
+            "PARTI SUBITO  [SPAZIO]",
             new Vector2(190f, -166f),
             new Vector2(330f, 64f),
             new Color(0.24f, 0.55f, 0.2f, 1f),
@@ -408,11 +476,23 @@ public class ShopInterOndata : MonoBehaviour
             TextAlignmentOptions.Center
         );
 
+        testoAnteprimaBottega = CreaTesto(
+            "AnteprimaProssimaOnda",
+            parent,
+            string.Empty,
+            new Vector2(0f, -344f),
+            new Vector2(980f, 46f),
+            16f,
+            new Color(1f, 0.74f, 0.28f, 1f),
+            FontStyles.Bold,
+            TextAlignmentOptions.Center
+        );
+
         CreaPulsante(
             "Indietro",
             parent,
             "INDIETRO",
-            new Vector2(-205f, -377f),
+            new Vector2(-205f, -403f),
             new Vector2(330f, 58f),
             new Color(0.39f, 0.24f, 0.13f, 1f),
             TornaAlRiepilogo
@@ -420,8 +500,8 @@ public class ShopInterOndata : MonoBehaviour
         CreaPulsante(
             "OndataSuccessiva",
             parent,
-            "ONDATA SUCCESSIVA",
-            new Vector2(205f, -377f),
+            "PARTI SUBITO  [SPAZIO]",
+            new Vector2(205f, -403f),
             new Vector2(330f, 58f),
             new Color(0.24f, 0.55f, 0.2f, 1f),
             AvviaOndataSuccessiva

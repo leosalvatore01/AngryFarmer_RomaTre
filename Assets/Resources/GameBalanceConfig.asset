@@ -99,40 +99,55 @@ MonoBehaviour:
     durataBannerOndata: 0.85
     intervalloControlloFineOndata: 0.2
     durataMinimaDistribuzioneMaialini: 1
+    durataPreavvisoSpawn: 0.5
+    sogliaUltimiNemici: 2
+    volumeSegnaleUltimiNemici: 0.26
     ondate:
     - nomeOndata: Riscaldamento
       numeroNemici: 3
-      intervalloTraNemici: 1.8
+      intervalloTraNemici: 0.7
+      dimensioneMassimaGruppo: 2
+      intervalloTraGruppi: 2.9
       numeroMaialiniBonus: 0
       vitaMaialinoBonus: 1
       moneteMaialinoBonus: 0
     - nomeOndata: Primi intrusi
       numeroNemici: 4
-      intervalloTraNemici: 1.55
+      intervalloTraNemici: 0.7
+      dimensioneMassimaGruppo: 2
+      intervalloTraGruppi: 3.25
       numeroMaialiniBonus: 1
       vitaMaialinoBonus: 2
       moneteMaialinoBonus: 3
     - nomeOndata: Branco in arrivo
       numeroNemici: 5
-      intervalloTraNemici: 1.35
+      intervalloTraNemici: 0.7
+      dimensioneMassimaGruppo: 2
+      intervalloTraGruppi: 2
       numeroMaialiniBonus: 1
       vitaMaialinoBonus: 2
       moneteMaialinoBonus: 3
     - nomeOndata: Assalto alla fattoria
       numeroNemici: 6
-      intervalloTraNemici: 1.2
+      intervalloTraNemici: 0.65
+      dimensioneMassimaGruppo: 3
+      intervalloTraGruppi: 3.4
       numeroMaialiniBonus: 1
       vitaMaialinoBonus: 3
       moneteMaialinoBonus: 4
     - nomeOndata: Furia della campagna
       numeroNemici: 7
-      intervalloTraNemici: 1.1
+      intervalloTraNemici: 0.6
+      dimensioneMassimaGruppo: 3
+      intervalloTraGruppi: 2.1
       numeroMaialiniBonus: 2
       vitaMaialinoBonus: 3
       moneteMaialinoBonus: 4
     - nomeOndata: Ultima difesa
       numeroNemici: 8
-      intervalloTraNemici: 1.05
+      intervalloTraNemici: 0.55
+      dimensioneMassimaGruppo: 3
+      intervalloTraGruppi: 2.3
       numeroMaialiniBonus: 2
       vitaMaialinoBonus: 4
       moneteMaialinoBonus: 5
