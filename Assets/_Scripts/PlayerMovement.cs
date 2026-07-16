@@ -23,7 +23,14 @@ public class PlayerMovement : MonoBehaviour
     public float VelocitaFinale => Mathf.Max(0f, velocitaBase + bonusVelocita);
     public float VelocitaEffettiva =>
         VelocitaFinale * MoltiplicatoreVelocitaCorrente;
-    public float MoltiplicatoreVelocitaCorrente => moltiplicatoreVelocita;
+    public float MoltiplicatoreBoostCorrente => moltiplicatoreVelocita;
+    public float MoltiplicatoreTerrenoCorrente =>
+        tempoRallentamentoTerreno > 0f
+            ? moltiplicatoreRallentamentoTerreno
+            : 1f;
+    public float MoltiplicatoreVelocitaCorrente =>
+        MoltiplicatoreBoostCorrente * MoltiplicatoreTerrenoCorrente;
+    public bool NelFango => tempoRallentamentoTerreno > 0f;
     public bool StaCamminando => VelocitaAttuale.sqrMagnitude > 0.01f;
 
     [System.Obsolete("Usa VelocitaFinale.")]
@@ -34,6 +41,8 @@ public class PlayerMovement : MonoBehaviour
     private float moltiplicatoreVelocita = 1f;
     private float moltiplicatoreBoost = 2f;
     private float moltiplicatoreInversione = 1.35f;
+    private float tempoRallentamentoTerreno;
+    private float moltiplicatoreRallentamentoTerreno = 1f;
     private Coroutine boostRoutine;
 
     void Awake()
@@ -60,6 +69,8 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
+        AggiornaRallentamentoTerreno();
+
         if (GameManager.instance != null &&
             !GameManager.instance.GameplayAttivo)
         {
@@ -119,6 +130,30 @@ public class PlayerMovement : MonoBehaviour
         ImpostaBonusVelocita(bonusVelocita + Mathf.Max(0f, quantita));
     }
 
+    public void ApplicaRallentamentoTerreno(
+        float moltiplicatore,
+        float durata
+    )
+    {
+        float valore = Mathf.Clamp(moltiplicatore, 0.2f, 1f);
+        float tempo = Mathf.Max(0.02f, durata);
+        if (tempoRallentamentoTerreno <= 0f)
+        {
+            moltiplicatoreRallentamentoTerreno = valore;
+        }
+        else
+        {
+            moltiplicatoreRallentamentoTerreno = Mathf.Min(
+                moltiplicatoreRallentamentoTerreno,
+                valore
+            );
+        }
+        tempoRallentamentoTerreno = Mathf.Max(
+            tempoRallentamentoTerreno,
+            tempo
+        );
+    }
+
     [System.Obsolete("Usa AggiungiBonusVelocita.")]
     public void AumentaVelocitaBase(float quantita)
     {
@@ -131,5 +166,33 @@ public class PlayerMovement : MonoBehaviour
         yield return new WaitForSeconds(durataBoost);
         moltiplicatoreVelocita = 1f;
         boostRoutine = null;
+    }
+
+    private void AggiornaRallentamentoTerreno()
+    {
+        if (tempoRallentamentoTerreno <= 0f) return;
+
+        tempoRallentamentoTerreno = Mathf.Max(
+            0f,
+            tempoRallentamentoTerreno - Time.deltaTime
+        );
+        if (tempoRallentamentoTerreno <= 0f)
+        {
+            moltiplicatoreRallentamentoTerreno = 1f;
+        }
+    }
+
+    void OnDisable()
+    {
+        if (boostRoutine != null)
+        {
+            StopCoroutine(boostRoutine);
+            boostRoutine = null;
+        }
+        tempoRallentamentoTerreno = 0f;
+        moltiplicatoreRallentamentoTerreno = 1f;
+        moltiplicatoreVelocita = 1f;
+        DirezioneMovimento = Vector2.zero;
+        VelocitaAttuale = Vector2.zero;
     }
 }

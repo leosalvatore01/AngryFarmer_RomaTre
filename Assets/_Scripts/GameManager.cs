@@ -76,6 +76,7 @@ public class GameManager : MonoBehaviour
         }
 
         shopInterOndata = ShopInterOndata.CreaOTrova();
+        FarmInteractiveArena.CreaOTrova();
     }
 
     public static TMP_Text TrovaTestoInterfaccia(string nome)

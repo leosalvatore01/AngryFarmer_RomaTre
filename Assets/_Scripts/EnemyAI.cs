@@ -76,6 +76,8 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     private float faseSerpentina;
     private float tempoRallentamentoBuild;
     private float moltiplicatoreRallentamentoBuild = 1f;
+    private float tempoRallentamentoTerreno;
+    private float moltiplicatoreRallentamentoTerreno = 1f;
 
     private Gallina gallinaBersaglio;
     private bool trasportaGallina;
@@ -128,6 +130,9 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     public bool RallentataDaBuild => tempoRallentamentoBuild > 0f;
     public float MoltiplicatoreRallentamentoBuild =>
         RallentataDaBuild ? moltiplicatoreRallentamentoBuild : 1f;
+    public bool RallentataDaTerreno => tempoRallentamentoTerreno > 0f;
+    public float MoltiplicatoreRallentamentoTerreno =>
+        RallentataDaTerreno ? moltiplicatoreRallentamentoTerreno : 1f;
     public Vector2 VelocitaSpinta => velocitaSpinta;
     public FoxVariantPresentation PresentazioneVariante =>
         presentazioneVariante;
@@ -245,6 +250,17 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
             if (tempoRallentamentoBuild <= 0f)
             {
                 moltiplicatoreRallentamentoBuild = 1f;
+            }
+        }
+        if (tempoRallentamentoTerreno > 0f)
+        {
+            tempoRallentamentoTerreno = Mathf.Max(
+                0f,
+                tempoRallentamentoTerreno - Time.deltaTime
+            );
+            if (tempoRallentamentoTerreno <= 0f)
+            {
+                moltiplicatoreRallentamentoTerreno = 1f;
             }
         }
 
@@ -672,6 +688,13 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
                 moltiplicatoreRallentamentoBuild
             );
         }
+        if (tempoRallentamentoTerreno > 0f)
+        {
+            fattoreRallentamento = Mathf.Min(
+                fattoreRallentamento,
+                moltiplicatoreRallentamentoTerreno
+            );
+        }
         float velocitaCorrente = velocita * fattoreRallentamento;
         Vector2 direzioneNormalizzata = direzione.sqrMagnitude > 0.0001f
             ? direzione.normalized
@@ -822,6 +845,32 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         tempoRallentamentoBuild = Mathf.Max(
             tempoRallentamentoBuild,
             durata
+        );
+    }
+
+    public void ApplicaRallentamentoTerreno(
+        float moltiplicatore,
+        float durata
+    )
+    {
+        if (morto) return;
+
+        float valore = Mathf.Clamp(moltiplicatore, 0.2f, 1f);
+        float tempo = Mathf.Max(0.02f, durata);
+        if (tempoRallentamentoTerreno <= 0f)
+        {
+            moltiplicatoreRallentamentoTerreno = valore;
+        }
+        else
+        {
+            moltiplicatoreRallentamentoTerreno = Mathf.Min(
+                moltiplicatoreRallentamentoTerreno,
+                valore
+            );
+        }
+        tempoRallentamentoTerreno = Mathf.Max(
+            tempoRallentamentoTerreno,
+            tempo
         );
     }
 
@@ -1170,6 +1219,8 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         velocitaSpinta = Vector2.zero;
         tempoRallentamentoBuild = 0f;
         moltiplicatoreRallentamentoBuild = 1f;
+        tempoRallentamentoTerreno = 0f;
+        moltiplicatoreRallentamentoTerreno = 1f;
 
         if (spriteRendererVisibile != null)
         {

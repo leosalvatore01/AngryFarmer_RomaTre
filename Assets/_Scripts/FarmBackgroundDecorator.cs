@@ -39,6 +39,14 @@ public class FarmBackgroundDecorator : MonoBehaviour
     private Sprite zucche;
     private Sprite staccionata;
 
+    public Sprite SpriteFangoInterattivo =>
+        macchieTerra != null && macchieTerra.Length > 0
+            ? macchieTerra[0]
+            : null;
+    public Sprite SpritePagliaInterattiva => paglia;
+    public Sprite SpriteCassaInterattiva => cassetta;
+    public Sprite SpriteZuccheInterattive => zucche;
+
     void Awake()
     {
         rendererPrato = GetComponent<SpriteRenderer>();

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71eb059f1b8bf85479410b9626b3361b, type: 3}
   m_Name: GameBalanceConfig
   m_EditorClassIdentifier: Assembly-CSharp::GameBalanceConfig
-  versioneRiferimento: Blocco 4 - Shop e sistema di build - 2026-07-16
+  versioneRiferimento: Blocco 5 - Fattoria interattiva - 2026-07-16
   giocatore:
     velocitaMovimento: 8
     accelerazione: 45
@@ -170,6 +170,31 @@ MonoBehaviour:
     durataRallentamentoBase: 1.1
     durataRallentamentoPerLivello: 0.35
     forzaSpintaPerLivello: 0.85
+  fattoria:
+    seedArena: 51027
+    numeroZoneFango: 3
+    numeroBallePaglia: 2
+    numeroZuccheEsplosive: 2
+    numeroCasseMonete: 1
+    numeroCasseCura: 1
+    raggioMinimoArena: 4.1
+    raggioMassimoArena: 8
+    scalaVerticaleArena: 0.68
+    distanzaMinimaElementi: 2.15
+    raggioLiberoGiocatore: 2.8
+    raggioLiberoGalline: 1.6
+    raggioFango: 1.35
+    velocitaGiocatoreNelFango: 0.72
+    velocitaVolpiNelFango: 0.52
+    vitaBallaPaglia: 2
+    vitaZucca: 1
+    raggioEsplosioneZucca: 2.15
+    dannoEsplosioneZucca: 3
+    spintaEsplosioneZucca: 2.4
+    vitaCassa: 1
+    moneteCassa: 2
+    curaCassa: 2
+    durataSuggerimentoIniziale: 5.5
   feedbackCombattimento:
     mirinoPixelAttivo: 1
     dimensioneMirino: 24
