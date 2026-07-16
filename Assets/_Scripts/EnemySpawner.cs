@@ -401,6 +401,12 @@ public class EnemySpawner : MonoBehaviour
                 EsitoDiagnosticaOndata.Completata
             );
             ConcludiStatoOnda();
+            if (GameManager.instance != null)
+            {
+                GameManager.instance.RegistraCompletamentoOnda(
+                    currentWaveIndex + 1
+                );
+            }
 
             if (currentWaveIndex < ondate.Length - 1)
             {
@@ -771,9 +777,22 @@ public class EnemySpawner : MonoBehaviour
 
     string CreaTestoBanner(AnteprimaOndata anteprima)
     {
-        string bonus = anteprima.NumeroMaialini > 0
-            ? anteprima.NumeroMaialini + " MAIALINI BONUS"
-            : "NESSUN MAIALINO BONUS";
+        string bonus;
+        if (anteprima.NumeroMaialini > 0)
+        {
+            int moneteMassime =
+                anteprima.NumeroMaialini * anteprima.MoneteMaialino;
+            bonus =
+                anteprima.NumeroMaialini +
+                (anteprima.NumeroMaialini == 1
+                    ? " MAIALINO BONUS"
+                    : " MAIALINI BONUS") +
+                "  (FINO A +" + moneteMassime + ")";
+        }
+        else
+        {
+            bonus = "NESSUN MAIALINO BONUS";
+        }
 
         return
             "ONDATA " + anteprima.Indice + " / " + anteprima.Totale +

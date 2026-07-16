@@ -22,11 +22,15 @@ public class GameManager : MonoBehaviour
     private TMP_Text testoUova;
     private TMP_Text testoMonete;
     private TMP_Text titoloFinePartita;
+    private TMP_Text riepilogoFinePartita;
     private Button pulsanteRiprova;
     private ShopInterOndata shopInterOndata;
     private GameObject schedaUovaHud;
 
     public int monete = 0;
+    public int MoneteRaccolte { get; private set; }
+    public int MoneteSpese { get; private set; }
+    public int UltimoBonusCompletamento { get; private set; }
     public StatoPartita StatoCorrente { get; private set; } = StatoPartita.Onda;
     public bool GameplayAttivo =>
         !isGameOver && StatoCorrente == StatoPartita.Onda;
@@ -44,6 +48,9 @@ public class GameManager : MonoBehaviour
                 0,
                 GameBalanceConfig.Corrente.Shop.moneteIniziali
             );
+            MoneteRaccolte = monete;
+            MoneteSpese = 0;
+            UltimoBonusCompletamento = 0;
         }
         else
         {
@@ -300,6 +307,49 @@ public class GameManager : MonoBehaviour
             sfondo.color = new Color(0.035f, 0.018f, 0.012f, 0.72f);
         }
 
+        Transform pannelloRiepilogo =
+            gameOverPanel.transform.Find("PannelloRiepilogoFinale");
+        GameObject pannelloRiepilogoOggetto;
+        if (pannelloRiepilogo == null)
+        {
+            pannelloRiepilogoOggetto = new GameObject(
+                "PannelloRiepilogoFinale",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image),
+                typeof(Shadow)
+            );
+            pannelloRiepilogoOggetto.transform.SetParent(
+                gameOverPanel.transform,
+                false
+            );
+        }
+        else
+        {
+            pannelloRiepilogoOggetto = pannelloRiepilogo.gameObject;
+        }
+
+        RectTransform pannelloRiepilogoRect =
+            pannelloRiepilogoOggetto.GetComponent<RectTransform>();
+        pannelloRiepilogoRect.anchorMin = new Vector2(0.5f, 0.5f);
+        pannelloRiepilogoRect.anchorMax = new Vector2(0.5f, 0.5f);
+        pannelloRiepilogoRect.pivot = new Vector2(0.5f, 0.5f);
+        pannelloRiepilogoRect.anchoredPosition = Vector2.zero;
+        pannelloRiepilogoRect.sizeDelta = new Vector2(920f, 450f);
+
+        FarmPixelUI.ApplicaPannello(
+            pannelloRiepilogoOggetto.GetComponent<Image>(),
+            false,
+            false
+        );
+        Shadow ombraPannello =
+            pannelloRiepilogoOggetto.GetComponent<Shadow>();
+        ombraPannello.effectColor =
+            new Color(0.04f, 0.015f, 0.008f, 0.9f);
+        ombraPannello.effectDistance = new Vector2(8f, -8f);
+        ombraPannello.useGraphicAlpha = true;
+        pannelloRiepilogoOggetto.transform.SetAsFirstSibling();
+
         Transform titoloTransform = gameOverPanel.transform.Find("Text");
         titoloFinePartita = titoloTransform != null
             ? titoloTransform.GetComponent<TMP_Text>()
@@ -311,7 +361,7 @@ public class GameManager : MonoBehaviour
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.anchoredPosition = new Vector2(0f, 65f);
+            rect.anchoredPosition = new Vector2(0f, 128f);
             rect.sizeDelta = new Vector2(620f, 90f);
 
             titoloFinePartita.fontSize = 50f;
@@ -319,6 +369,58 @@ public class GameManager : MonoBehaviour
             titoloFinePartita.alignment = TextAlignmentOptions.Center;
             titoloFinePartita.color = new Color(1f, 0.83f, 0.34f, 1f);
             titoloFinePartita.raycastTarget = false;
+            FarmPixelUI.ApplicaTesto(
+                titoloFinePartita,
+                titoloFinePartita.color
+            );
+        }
+
+        Transform riepilogoEsistente =
+            gameOverPanel.transform.Find("RiepilogoPartita");
+        if (riepilogoEsistente == null)
+        {
+            GameObject oggetto = new GameObject(
+                "RiepilogoPartita",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(TextMeshProUGUI)
+            );
+            oggetto.transform.SetParent(gameOverPanel.transform, false);
+            riepilogoFinePartita =
+                oggetto.GetComponent<TextMeshProUGUI>();
+        }
+        else
+        {
+            riepilogoFinePartita =
+                riepilogoEsistente.GetComponent<TMP_Text>();
+        }
+
+        if (riepilogoFinePartita != null)
+        {
+            RectTransform rect = riepilogoFinePartita.rectTransform;
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = new Vector2(0f, 12f);
+            rect.sizeDelta = new Vector2(820f, 170f);
+
+            if (titoloFinePartita != null)
+            {
+                riepilogoFinePartita.font = titoloFinePartita.font;
+            }
+            riepilogoFinePartita.fontSize = 19f;
+            riepilogoFinePartita.fontStyle = FontStyles.Bold;
+            riepilogoFinePartita.alignment =
+                TextAlignmentOptions.Center;
+            riepilogoFinePartita.color =
+                new Color(1f, 0.9f, 0.66f, 1f);
+            riepilogoFinePartita.textWrappingMode =
+                TextWrappingModes.Normal;
+            riepilogoFinePartita.raycastTarget = false;
+            FarmPixelUI.ApplicaTesto(
+                riepilogoFinePartita,
+                riepilogoFinePartita.color
+            );
         }
 
         pulsanteRiprova = gameOverPanel.GetComponentInChildren<Button>(true);
@@ -328,7 +430,7 @@ public class GameManager : MonoBehaviour
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.anchoredPosition = new Vector2(0f, -42f);
+            rect.anchoredPosition = new Vector2(0f, -132f);
             rect.sizeDelta = new Vector2(220f, 54f);
 
             TMP_Text testoPulsante =
@@ -338,8 +440,16 @@ public class GameManager : MonoBehaviour
                 testoPulsante.text = "RIPROVA";
                 testoPulsante.fontSize = 25f;
                 testoPulsante.fontStyle = FontStyles.Bold;
+                FarmPixelUI.ApplicaTesto(
+                    testoPulsante,
+                    new Color(1f, 0.94f, 0.77f, 1f)
+                );
             }
 
+            FarmPixelUI.ApplicaPulsante(
+                pulsanteRiprova,
+                new Color(0.52f, 0.24f, 0.07f, 1f)
+            );
             pulsanteRiprova.onClick.AddListener(Riprova);
         }
     }
@@ -411,6 +521,7 @@ public class GameManager : MonoBehaviour
         {
             titoloFinePartita.text = titolo;
         }
+        AggiornaRiepilogoFinale();
         if (gameOverPanel != null)
         {
             gameOverPanel.SetActive(true);
@@ -431,6 +542,7 @@ public class GameManager : MonoBehaviour
         if (quantitaValida == 0) return;
 
         monete += quantitaValida;
+        MoneteRaccolte += quantitaValida;
         AggiornaContatoreMonete();
         MoneteCambiate?.Invoke(monete);
     }
@@ -440,6 +552,7 @@ public class GameManager : MonoBehaviour
         if (costo < 0 || monete < costo) return false;
 
         monete -= costo;
+        MoneteSpese += costo;
         AggiornaContatoreMonete();
         MoneteCambiate?.Invoke(monete);
         return true;
@@ -457,6 +570,43 @@ public class GameManager : MonoBehaviour
     {
         if (isGameOver) return;
         MostraFinePartita("FATTORIA SALVA!");
+    }
+
+    public int RegistraCompletamentoOnda(int indiceOnda)
+    {
+        if (isGameOver)
+        {
+            UltimoBonusCompletamento = 0;
+            return 0;
+        }
+
+        int bonus = Mathf.Max(
+            0,
+            GameBalanceConfig.Corrente.Shop.bonusCompletamentoOnda
+        );
+        UltimoBonusCompletamento = bonus;
+        if (bonus > 0)
+        {
+            AggiungiMonete(bonus);
+        }
+        return bonus;
+    }
+
+    private void AggiornaRiepilogoFinale()
+    {
+        if (riepilogoFinePartita == null) return;
+
+        PlayerUpgrades potenziamenti =
+            FindFirstObjectByType<PlayerUpgrades>();
+        string build = potenziamenti != null
+            ? potenziamenti.DescriviBuildCompatta()
+            : "NESSUNA BUILD";
+        riepilogoFinePartita.text =
+            "MONETE RACCOLTE  " + MoneteRaccolte +
+            "     •     SPESE  " + MoneteSpese +
+            "     •     RIMASTE  " + monete +
+            "\nGALLINE SALVE  " + Mathf.Max(0, gallineRimaste) +
+            "\nBUILD FINALE\n" + build;
     }
 
     public void IniziaIntervallo(int ondaCompletata, int totaleOndate)

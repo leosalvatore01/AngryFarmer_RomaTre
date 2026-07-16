@@ -73,14 +73,30 @@ public sealed class PigBalanceSettings
 [Serializable]
 public sealed class ShopBalanceSettings
 {
+    [Header("Offerte e ritmo della bottega")]
+    [Range(3, 4)] public int numeroOfferte = 4;
+    [Min(0)] public int costoRerollBase = 1;
+    [Min(0)] public int incrementoCostoReroll = 1;
+    [Min(0)] public int bonusCompletamentoOnda = 1;
+
     [Header("Prezzi per livello")]
-    public int[] costiMovimento = { 3, 6, 10 };
-    public int[] costiResistenza = { 4, 8, 13 };
-    public int[] costiSalute = { 5, 9, 14 };
-    public int[] costiDanno = { 9, 16 };
-    public int[] costiCadenza = { 4, 7, 11 };
-    public int[] costiPenetrazione = { 6, 10, 15 };
-    [Min(0)] public int costoCura = 3;
+    public int[] costiMovimento = { 3, 5, 8 };
+    public int[] costiResistenza = { 4, 7, 10 };
+    public int[] costiSalute = { 4, 7, 10 };
+    public int[] costiDanno = { 8, 14 };
+    public int[] costiCadenza = { 3, 6, 9 };
+    public int[] costiPenetrazione = { 5, 8, 12 };
+    [Min(0)] public int costoCura = 2;
+
+    [Header("Prezzi modificatori speciali")]
+    public int[] costiColpoAggiuntivo = { 6, 10 };
+    public int[] costiRafficaRaccolto = { 11 };
+    public int[] costiPatataGigante = { 4, 7 };
+    public int[] costiPatataEsplosiva = { 12 };
+    public int[] costiCritico = { 4, 7, 10 };
+    public int[] costiRimbalzo = { 6, 10 };
+    public int[] costiRallentamento = { 3, 6 };
+    public int[] costiSpinta = { 3, 6, 9 };
 
     [Header("Effetti")]
     [Min(0f)] public float incrementoMovimento = 0.5f;
@@ -92,6 +108,29 @@ public sealed class ShopBalanceSettings
     [Min(0f)] public float riduzioneIntervalloSparo = 0.04f;
     [Min(0)] public int incrementoPenetrazione = 1;
     [Min(0)] public int moneteIniziali;
+
+    [Header("Effetti build Raffica")]
+    [Range(0f, 1f)] public float probabilitaColpoAggiuntivoPerLivello = 0.18f;
+    [Min(2)] public int colpiPerRafficaRaccolto = 5;
+    [Range(0f, 30f)] public float angoloColpoAggiuntivo = 7f;
+
+    [Header("Effetti build Artiglieria")]
+    [Range(0f, 1f)] public float incrementoScalaPatataGigante = 0.2f;
+    [Range(0f, 0.4f)] public float riduzioneVelocitaPatataGigante = 0.06f;
+    [Min(0.2f)] public float raggioEsplosione = 1.25f;
+    [Range(0.1f, 2f)] public float moltiplicatoreDannoEsplosione = 0.5f;
+
+    [Header("Effetti build Perforazione")]
+    [Range(0f, 1f)] public float probabilitaCriticoPerLivello = 0.12f;
+    [Min(1f)] public float moltiplicatoreDannoCritico = 2f;
+    [Min(0.5f)] public float raggioRicercaRimbalzo = 3.8f;
+
+    [Header("Effetti build Controllo")]
+    [Range(0.1f, 0.95f)] public float rallentamentoPrimoLivello = 0.72f;
+    [Range(0f, 0.4f)] public float riduzioneRallentamentoPerLivello = 0.12f;
+    [Min(0.1f)] public float durataRallentamentoBase = 1.1f;
+    [Min(0f)] public float durataRallentamentoPerLivello = 0.35f;
+    [Min(0f)] public float forzaSpintaPerLivello = 0.85f;
 }
 
 [Serializable]
@@ -149,7 +188,7 @@ public sealed class WaveBalanceSettings
                 intervalloTraGruppi = 3.25f,
                 numeroMaialiniBonus = 1,
                 vitaMaialinoBonus = 2,
-                moneteMaialinoBonus = 3
+                moneteMaialinoBonus = 2
             },
             new Wave
             {
@@ -168,7 +207,7 @@ public sealed class WaveBalanceSettings
                 intervalloTraGruppi = 2f,
                 numeroMaialiniBonus = 1,
                 vitaMaialinoBonus = 2,
-                moneteMaialinoBonus = 3
+                moneteMaialinoBonus = 2
             },
             new Wave
             {
@@ -188,7 +227,7 @@ public sealed class WaveBalanceSettings
                 intervalloTraGruppi = 3.4f,
                 numeroMaialiniBonus = 1,
                 vitaMaialinoBonus = 3,
-                moneteMaialinoBonus = 4
+                moneteMaialinoBonus = 3
             },
             new Wave
             {
@@ -209,7 +248,7 @@ public sealed class WaveBalanceSettings
                 intervalloTraGruppi = 2.1f,
                 numeroMaialiniBonus = 2,
                 vitaMaialinoBonus = 3,
-                moneteMaialinoBonus = 4
+                moneteMaialinoBonus = 3
             },
             new Wave
             {
@@ -273,7 +312,8 @@ public sealed class GameBalanceConfig : ScriptableObject
     public const string PercorsoResources = "GameBalanceConfig";
 
     [SerializeField]
-    private string versioneRiferimento = "Blocco 3 - Tipologie volpe - 2026-07-15";
+    private string versioneRiferimento =
+        "Blocco 4 - Shop e sistema di build - 2026-07-16";
 
     [SerializeField] private PlayerBalanceSettings giocatore =
         new PlayerBalanceSettings();
@@ -373,6 +413,49 @@ public sealed class GameBalanceConfig : ScriptableObject
         NormalizzaArrayNonNegativo(shop.costiDanno);
         NormalizzaArrayNonNegativo(shop.costiCadenza);
         NormalizzaArrayNonNegativo(shop.costiPenetrazione);
+        NormalizzaArrayNonNegativo(shop.costiColpoAggiuntivo);
+        NormalizzaArrayNonNegativo(shop.costiRafficaRaccolto);
+        NormalizzaArrayNonNegativo(shop.costiPatataGigante);
+        NormalizzaArrayNonNegativo(shop.costiPatataEsplosiva);
+        NormalizzaArrayNonNegativo(shop.costiCritico);
+        NormalizzaArrayNonNegativo(shop.costiRimbalzo);
+        NormalizzaArrayNonNegativo(shop.costiRallentamento);
+        NormalizzaArrayNonNegativo(shop.costiSpinta);
+        shop.numeroOfferte = Mathf.Clamp(shop.numeroOfferte, 3, 4);
+        shop.costoRerollBase = Mathf.Max(0, shop.costoRerollBase);
+        shop.incrementoCostoReroll = Mathf.Max(
+            0,
+            shop.incrementoCostoReroll
+        );
+        shop.bonusCompletamentoOnda = Mathf.Max(
+            0,
+            shop.bonusCompletamentoOnda
+        );
+        shop.colpiPerRafficaRaccolto = Mathf.Max(
+            2,
+            shop.colpiPerRafficaRaccolto
+        );
+        shop.raggioEsplosione = Mathf.Max(0.2f, shop.raggioEsplosione);
+        shop.moltiplicatoreDannoCritico = Mathf.Max(
+            1f,
+            shop.moltiplicatoreDannoCritico
+        );
+        shop.raggioRicercaRimbalzo = Mathf.Max(
+            0.5f,
+            shop.raggioRicercaRimbalzo
+        );
+        shop.durataRallentamentoBase = Mathf.Max(
+            0.1f,
+            shop.durataRallentamentoBase
+        );
+        shop.durataRallentamentoPerLivello = Mathf.Max(
+            0f,
+            shop.durataRallentamentoPerLivello
+        );
+        shop.forzaSpintaPerLivello = Mathf.Max(
+            0f,
+            shop.forzaSpintaPerLivello
+        );
 
         feedbackCombattimento.dimensioneMirino = Mathf.Clamp(
             feedbackCombattimento.dimensioneMirino,

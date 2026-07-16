@@ -48,6 +48,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     private Collider2D colliderFisico;
     private Vector2 velocitaAttuale;
     private Vector2 velocitaDesiderata;
+    private Vector2 velocitaSpinta;
     private bool staInseguendo;
     private float prossimoAttacco;
     private float prossimaRicercaGiocatore;
@@ -73,6 +74,8 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     private Vector3 scalaPrefab = Vector3.one;
     private int indiceSpawn;
     private float faseSerpentina;
+    private float tempoRallentamentoBuild;
+    private float moltiplicatoreRallentamentoBuild = 1f;
 
     private Gallina gallinaBersaglio;
     private bool trasportaGallina;
@@ -122,6 +125,10 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         statoAlfa == StatoAttaccoAlfa.Preparazione;
     public bool StaScattandoAlfa =>
         statoAlfa == StatoAttaccoAlfa.Scatto;
+    public bool RallentataDaBuild => tempoRallentamentoBuild > 0f;
+    public float MoltiplicatoreRallentamentoBuild =>
+        RallentataDaBuild ? moltiplicatoreRallentamentoBuild : 1f;
+    public Vector2 VelocitaSpinta => velocitaSpinta;
     public FoxVariantPresentation PresentazioneVariante =>
         presentazioneVariante;
     public event System.Action<EnemyAI> NonPiuMinaccia;
@@ -229,6 +236,18 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     {
         if (morto) return;
 
+        if (tempoRallentamentoBuild > 0f)
+        {
+            tempoRallentamentoBuild = Mathf.Max(
+                0f,
+                tempoRallentamentoBuild - Time.deltaTime
+            );
+            if (tempoRallentamentoBuild <= 0f)
+            {
+                moltiplicatoreRallentamentoBuild = 1f;
+            }
+        }
+
         CalcolaMovimentoEAttacco();
 
         bool staCamminando = velocitaAttuale.sqrMagnitude > 0.01f;
@@ -275,7 +294,13 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         );
 
         corpo.MovePosition(
-            corpo.position + velocitaAttuale * Time.fixedDeltaTime
+            corpo.position +
+            (velocitaAttuale + velocitaSpinta) * Time.fixedDeltaTime
+        );
+        velocitaSpinta = Vector2.MoveTowards(
+            velocitaSpinta,
+            Vector2.zero,
+            7.5f * Time.fixedDeltaTime
         );
     }
 
@@ -500,6 +525,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         staInseguendo = false;
         velocitaAttuale = Vector2.zero;
         velocitaDesiderata = Vector2.zero;
+        velocitaSpinta = Vector2.zero;
         if (corpo != null) corpo.linearVelocity = Vector2.zero;
         InterrompiAttaccoAlfa();
     }
@@ -631,9 +657,22 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
 
     void ImpostaMovimentoDirezione(Vector2 direzione, float velocita)
     {
-        float velocitaCorrente = isSlowed
-            ? velocita * moltiplicatoreRallentamento
-            : velocita;
+        float fattoreRallentamento = 1f;
+        if (isSlowed)
+        {
+            fattoreRallentamento = Mathf.Min(
+                fattoreRallentamento,
+                moltiplicatoreRallentamento
+            );
+        }
+        if (tempoRallentamentoBuild > 0f)
+        {
+            fattoreRallentamento = Mathf.Min(
+                fattoreRallentamento,
+                moltiplicatoreRallentamentoBuild
+            );
+        }
+        float velocitaCorrente = velocita * fattoreRallentamento;
         Vector2 direzioneNormalizzata = direzione.sqrMagnitude > 0.0001f
             ? direzione.normalized
             : Vector2.zero;
@@ -759,6 +798,46 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     public void SubisciDanno(int quantita)
     {
         ProvaSubireDanno(quantita);
+    }
+
+    public void ApplicaRallentamento(
+        float moltiplicatore,
+        float durata
+    )
+    {
+        if (morto || durata <= 0f || moltiplicatore >= 1f) return;
+
+        float valore = Mathf.Clamp(moltiplicatore, 0.1f, 0.95f);
+        if (tempoRallentamentoBuild <= 0f)
+        {
+            moltiplicatoreRallentamentoBuild = valore;
+        }
+        else
+        {
+            moltiplicatoreRallentamentoBuild = Mathf.Min(
+                moltiplicatoreRallentamentoBuild,
+                valore
+            );
+        }
+        tempoRallentamentoBuild = Mathf.Max(
+            tempoRallentamentoBuild,
+            durata
+        );
+    }
+
+    public void ApplicaSpinta(Vector2 direzione, float forza)
+    {
+        if (morto || forza <= 0f || direzione.sqrMagnitude < 0.0001f)
+        {
+            return;
+        }
+
+        float resistenza = profiloVariante != null
+            ? Mathf.Clamp(profiloVariante.moltiplicatoreRinculo, 0f, 2f)
+            : 1f;
+        velocitaSpinta +=
+            direzione.normalized * forza * resistenza;
+        velocitaSpinta = Vector2.ClampMagnitude(velocitaSpinta, 5.5f);
     }
 
     public EsitoDanno ProvaSubireDanno(int quantita)
@@ -968,6 +1047,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
 
         velocitaAttuale = Vector2.zero;
         velocitaDesiderata = Vector2.zero;
+        velocitaSpinta = Vector2.zero;
         staInseguendo = false;
 
         if (colliderFisico != null)
@@ -1087,6 +1167,9 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         flashDannoRoutine = null;
         velocitaAttuale = Vector2.zero;
         velocitaDesiderata = Vector2.zero;
+        velocitaSpinta = Vector2.zero;
+        tempoRallentamentoBuild = 0f;
+        moltiplicatoreRallentamentoBuild = 1f;
 
         if (spriteRendererVisibile != null)
         {

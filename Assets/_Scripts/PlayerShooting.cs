@@ -1,4 +1,5 @@
 using System.Collections;
+using System;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -76,9 +77,15 @@ public class PlayerShooting : MonoBehaviour
     private Coroutine triploSparoRoutine;
     private Camera cameraPrincipale;
     private PlayerVisualController controllerVisivo;
+    private PlayerUpgrades potenziamenti;
+    private System.Random casualitaBuild;
     private bool attendiRilascioMouse;
+    private int colpiContatiPerRaffica;
+    private int segnoColpoAggiuntivo = 1;
 
     public bool InAttesaRilascioMouse => attendiRilascioMouse;
+    public int UltimoNumeroProiettiliCreati { get; private set; }
+    public int CriticiGenerati { get; private set; }
 
     void Awake()
     {
@@ -116,6 +123,14 @@ public class PlayerShooting : MonoBehaviour
 
         cameraPrincipale = Camera.main;
         controllerVisivo = GetComponent<PlayerVisualController>();
+        potenziamenti = GetComponent<PlayerUpgrades>();
+        if (potenziamenti == null)
+        {
+            potenziamenti = gameObject.AddComponent<PlayerUpgrades>();
+        }
+        casualitaBuild = new System.Random(
+            unchecked(Environment.TickCount ^ GetInstanceID() * 397)
+        );
     }
 
     void OnEnable()
@@ -206,10 +221,32 @@ public class PlayerShooting : MonoBehaviour
 
         direzione.Normalize();
 
-        bool potente = bonusDanno > 0 || triploSparoAttivo;
-        bool perforante = PenetrazioneFinale > 0;
+        if (potenziamenti == null)
+        {
+            potenziamenti = GetComponent<PlayerUpgrades>();
+        }
 
-        if (triploSparoAttivo)
+        colpiContatiPerRaffica++;
+        bool rafficaRaccolto =
+            potenziamenti != null &&
+            potenziamenti.HaRafficaRaccolto &&
+            colpiContatiPerRaffica %
+            potenziamenti.ColpiPerRafficaRaccolto == 0;
+        bool sparaVentaglio = triploSparoAttivo || rafficaRaccolto;
+        bool potente =
+            bonusDanno > 0 ||
+            sparaVentaglio ||
+            (potenziamenti != null &&
+             (potenziamenti.OttieniLivello(
+                  TipoPotenziamento.PatataGigante
+              ) > 0 ||
+              potenziamenti.OttieniLivello(
+                  TipoPotenziamento.PatataEsplosiva
+              ) > 0));
+        bool perforante = PenetrazioneFinale > 0;
+        UltimoNumeroProiettiliCreati = 0;
+
+        if (sparaVentaglio)
         {
             CreateBullet(direzione, potente, perforante);
             CreateBullet(
@@ -226,6 +263,21 @@ public class PlayerShooting : MonoBehaviour
         else
         {
             CreateBullet(direzione, potente, perforante);
+            if (potenziamenti != null &&
+                EstraiProbabilita(
+                    potenziamenti.ProbabilitaColpoAggiuntivo
+                ))
+            {
+                float angolo =
+                    potenziamenti.AngoloColpoAggiuntivo *
+                    segnoColpoAggiuntivo;
+                segnoColpoAggiuntivo *= -1;
+                CreateBullet(
+                    Quaternion.Euler(0f, 0f, angolo) * direzione,
+                    true,
+                    perforante
+                );
+            }
         }
 
         if (controllerVisivo != null)
@@ -253,6 +305,21 @@ public class PlayerShooting : MonoBehaviour
         bool perforante
     )
     {
+        bool critico =
+            potenziamenti != null &&
+            EstraiProbabilita(potenziamenti.ProbabilitaCritico);
+        ProfiloProiettileBuild profilo =
+            potenziamenti != null
+                ? potenziamenti.CreaProfiloProiettile(critico)
+                : new ProfiloProiettileBuild
+                {
+                    Danno = DannoFinale,
+                    Penetrazioni = PenetrazioneFinale,
+                    Scala = 1f,
+                    MoltiplicatoreVelocita = 1f
+                };
+        if (critico) CriticiGenerati++;
+
         float angolo = Mathf.Atan2(direzione.y, direzione.x) * Mathf.Rad2Deg;
         Vector3 posizioneUscita = transform.position +
             (Vector3)(direzione.normalized * distanzaUscitaProiettile);
@@ -265,10 +332,9 @@ public class PlayerShooting : MonoBehaviour
         Proiettile comportamento = proiettile.GetComponent<Proiettile>();
         if (comportamento != null)
         {
-            comportamento.Inizializza(
-                DannoFinale,
-                PenetrazioneFinale,
-                potente,
+            comportamento.InizializzaBuild(
+                profilo,
+                potente || critico || profilo.Esplosivo,
                 perforante
             );
         }
@@ -276,8 +342,33 @@ public class PlayerShooting : MonoBehaviour
         Rigidbody2D corpo = proiettile.GetComponent<Rigidbody2D>();
         if (corpo != null)
         {
-            corpo.linearVelocity = direzione * VelocitaProiettileFinale;
+            corpo.linearVelocity =
+                direzione *
+                VelocitaProiettileFinale *
+                Mathf.Max(0.1f, profilo.MoltiplicatoreVelocita);
         }
+        UltimoNumeroProiettiliCreati++;
+    }
+
+    private bool EstraiProbabilita(float probabilita)
+    {
+        if (probabilita <= 0f) return false;
+        if (probabilita >= 1f) return true;
+        if (casualitaBuild == null)
+        {
+            casualitaBuild = new System.Random(
+                unchecked(Environment.TickCount ^ GetInstanceID() * 397)
+            );
+        }
+        return casualitaBuild.NextDouble() < probabilita;
+    }
+
+    public void ImpostaSeedBuildPerTest(int seed)
+    {
+        casualitaBuild = new System.Random(seed);
+        colpiContatiPerRaffica = 0;
+        segnoColpoAggiuntivo = 1;
+        CriticiGenerati = 0;
     }
 
     public void AttivaTriploSparo()
