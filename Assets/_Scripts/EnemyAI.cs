@@ -418,6 +418,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
                 trasportaGallina = true;
                 staInseguendo = true;
                 direzioneFugaLadra = CalcolaDirezioneFuga();
+                FarmObjectivesController.Instance?.NotificaUovoRubato();
                 if (presentazioneVariante != null)
                 {
                     presentazioneVariante.ImpostaTrasportoGallina(true);
@@ -487,6 +488,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         fugaLadraCompletata = true;
         trasportaGallina = false;
         gallinaBersaglio = null;
+        FarmObjectivesController.Instance?.NotificaUovoPerso();
         morto = true;
         SegnalaNeutralizzazione();
         Destroy(gameObject);
@@ -601,6 +603,8 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
                     distanza <= distanzaAttacco * 1.18f)
                 {
                     scattoAlfaHaColpito = true;
+                    FarmObjectivesController.Instance?.
+                        NotificaAlfaHaColpito();
                     playerHealth.SubisciDanno(danno);
                 }
                 if (timerStatoAlfa <= 0f)
@@ -1090,9 +1094,17 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     public void Die()
     {
         if (morto) return;
-        RilasciaGallinaSeNecessario();
+        bool richiedeRecupero = LasciaUovoRecuperabile();
+        if (!richiedeRecupero)
+        {
+            RilasciaGallinaSeNecessario();
+        }
         morto = true;
         SegnalaNeutralizzazione();
+        FarmObjectivesController.Instance?.NotificaVolpeEliminata(
+            tipo,
+            richiedeRecupero
+        );
 
         velocitaAttuale = Vector2.zero;
         velocitaDesiderata = Vector2.zero;
@@ -1241,6 +1253,39 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
             presentazioneVariante.ImpostaTrasportoGallina(false);
             presentazioneVariante.ImpostaTelegraphAlfa(false, 0f);
         }
+    }
+
+    private bool LasciaUovoRecuperabile()
+    {
+        if (!trasportaGallina || gallinaBersaglio == null)
+        {
+            return false;
+        }
+
+        Gallina gallinaRubata = gallinaBersaglio;
+        if (!gallinaRubata.PreparaRecupero(this))
+        {
+            return false;
+        }
+
+        UovoRecuperabile recupero = UovoRecuperabile.Crea(
+            gallinaRubata,
+            transform.position
+        );
+        if (recupero == null)
+        {
+            gallinaRubata.CompletaRecupero();
+            return false;
+        }
+
+        gallinaBersaglio = null;
+        trasportaGallina = false;
+        if (presentazioneVariante != null)
+        {
+            presentazioneVariante.ImpostaTrasportoGallina(false);
+        }
+        FarmObjectivesController.Instance?.NotificaUovoDaRecuperare();
+        return true;
     }
 
     private void SegnalaNeutralizzazione()

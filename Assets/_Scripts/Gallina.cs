@@ -6,6 +6,7 @@ public enum StatoGallina
     Disponibile,
     Prenotata,
     Trasportata,
+    DaRecuperare,
     Persa
 }
 
@@ -27,7 +28,23 @@ public class Gallina : MonoBehaviour
     public StatoGallina Stato { get; private set; } = StatoGallina.Disponibile;
     public bool Disponibile => Stato == StatoGallina.Disponibile;
     public bool Trasportata => Stato == StatoGallina.Trasportata;
+    public bool DaRecuperare => Stato == StatoGallina.DaRecuperare;
     public EnemyAI LadraPrenotata => ladraPrenotata;
+
+    public static int ContaAlSicuro()
+    {
+        int totale = 0;
+        foreach (Gallina gallina in attive)
+        {
+            if (gallina == null || !gallina.isActiveAndEnabled) continue;
+            if (gallina.Stato == StatoGallina.Disponibile ||
+                gallina.Stato == StatoGallina.Prenotata)
+            {
+                totale++;
+            }
+        }
+        return totale;
+    }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void AzzeraRegistro()
@@ -60,8 +77,11 @@ public class Gallina : MonoBehaviour
     void OnEnable()
     {
         if (Stato == StatoGallina.Persa) return;
-        if (rendererGallina != null) rendererGallina.enabled = true;
-        if (colliderGallina != null) colliderGallina.enabled = true;
+        bool visibile =
+            Stato != StatoGallina.Trasportata &&
+            Stato != StatoGallina.DaRecuperare;
+        if (rendererGallina != null) rendererGallina.enabled = visibile;
+        if (colliderGallina != null) colliderGallina.enabled = visibile;
         attive.Add(this);
     }
 
@@ -105,6 +125,7 @@ public class Gallina : MonoBehaviour
         Stato = StatoGallina.Trasportata;
         if (rendererGallina != null) rendererGallina.enabled = false;
         if (colliderGallina != null) colliderGallina.enabled = false;
+        NotificaStato();
         return true;
     }
 
@@ -122,6 +143,36 @@ public class Gallina : MonoBehaviour
         if (rendererGallina != null) rendererGallina.enabled = true;
         if (colliderGallina != null) colliderGallina.enabled = true;
         if (isActiveAndEnabled) attive.Add(this);
+        NotificaStato();
+    }
+
+    public bool PreparaRecupero(EnemyAI ladra)
+    {
+        if (!PrenotataDa(ladra) || Stato != StatoGallina.Trasportata)
+        {
+            return false;
+        }
+
+        Stato = StatoGallina.DaRecuperare;
+        ladraPrenotata = null;
+        if (rendererGallina != null) rendererGallina.enabled = false;
+        if (colliderGallina != null) colliderGallina.enabled = false;
+        NotificaStato();
+        return true;
+    }
+
+    public bool CompletaRecupero()
+    {
+        if (Stato != StatoGallina.DaRecuperare) return false;
+
+        Stato = StatoGallina.Disponibile;
+        ladraPrenotata = null;
+        transform.position = posizioneCasa;
+        if (rendererGallina != null) rendererGallina.enabled = true;
+        if (colliderGallina != null) colliderGallina.enabled = true;
+        if (isActiveAndEnabled) attive.Add(this);
+        NotificaStato();
+        return true;
     }
 
     public bool ConfermaPerdita(EnemyAI ladra)
@@ -131,6 +182,17 @@ public class Gallina : MonoBehaviour
             return false;
         }
 
+        return ConfermaPerditaInterna();
+    }
+
+    public bool ConfermaPerditaDaRecupero()
+    {
+        if (Stato != StatoGallina.DaRecuperare) return false;
+        return ConfermaPerditaInterna();
+    }
+
+    private bool ConfermaPerditaInterna()
+    {
         Stato = StatoGallina.Persa;
         ladraPrenotata = null;
         attive.Remove(this);
@@ -140,6 +202,14 @@ public class Gallina : MonoBehaviour
         }
         Destroy(gameObject);
         return true;
+    }
+
+    private static void NotificaStato()
+    {
+        if (GameManager.instance != null)
+        {
+            GameManager.instance.NotificaStatoGallineCambiato();
+        }
     }
 
     private void CreaNido()

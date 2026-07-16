@@ -160,17 +160,33 @@ public class ShopInterOndata : MonoBehaviour
         int bonus = GameManager.instance != null
             ? GameManager.instance.UltimoBonusCompletamento
             : 0;
+        int uovaOnda = GameManager.instance != null
+            ? GameManager.instance.UovaUltimaOnda
+            : 0;
+        string esitoObiettivo = "OBIETTIVO NON VALUTATO";
+        if (GameManager.instance != null &&
+            GameManager.instance.UltimoObiettivoValutato)
+        {
+            esitoObiettivo =
+                (GameManager.instance.UltimoObiettivoCompletato
+                    ? "OBIETTIVO COMPLETATO: "
+                    : "OBIETTIVO FALLITO: ") +
+                GameManager.instance.UltimoObiettivo.ToUpperInvariant();
+        }
         testoRiepilogo.text =
             "Ondata " + ondaCompletata + " di " + totaleOndate +
-            " superata\n" +
-            (bonus > 0
-                ? "Difesa completata: +" + bonus + " moneta."
-                : "La fattoria ha un momento per riorganizzarsi.");
+            " superata  -  +" + bonus + " moneta  -  +" +
+            uovaOnda + " uova\n" +
+            esitoObiettivo +
+            (GameManager.instance != null
+                ? "  -  SERIE x" +
+                  GameManager.instance.SerieSalvataggi
+                : string.Empty);
         string anteprima = FormattaAnteprima(prossimaOnda);
         testoAnteprimaRiepilogo.text = anteprima;
         testoAnteprimaBottega.text = anteprima;
         testoMessaggioBottega.text =
-            "Quattro offerte per costruire la tua strategia.";
+            "Lo shop usa monete. Le uova misurano salvataggi e obiettivi.";
 
         pannelloRiepilogo.SetActive(true);
         pannelloBottega.SetActive(false);
@@ -338,12 +354,17 @@ public class ShopInterOndata : MonoBehaviour
         {
             int premioMassimo =
                 anteprima.NumeroMaialini * anteprima.MoneteMaialino;
+            int premioUova =
+                anteprima.NumeroMaialini *
+                GameBalanceConfig.Corrente.ObiettiviFattoria
+                    .uovaPerMaialino;
             bonus =
                 anteprima.NumeroMaialini +
                 (anteprima.NumeroMaialini == 1
                     ? " MAIALINO"
                     : " MAIALINI") +
-                "  (FINO A +" + premioMassimo + ")";
+                "  (FINO A +" + premioMassimo + " MONETE E +" +
+                premioUova + " UOVA)";
         }
         else
         {
@@ -358,7 +379,9 @@ public class ShopInterOndata : MonoBehaviour
             "  -  " + anteprima.Nome.ToUpperInvariant() + "  -  " +
             anteprima.NumeroVolpi + " VOLPI  -  " + gruppi +
             "  -  " + bonus +
-            "\nTIPI: " + anteprima.Composizione.FormattaCompatta();
+            "\nTIPI: " + anteprima.Composizione.FormattaCompatta() +
+            "\nOBIETTIVO: " +
+            FarmObjectivesController.DescriviAnteprima(anteprima);
     }
 
     void PreparaPotenziamentiGiocatore()
@@ -385,7 +408,11 @@ public class ShopInterOndata : MonoBehaviour
         int monete = GameManager.instance != null
             ? GameManager.instance.monete
             : 0;
-        string testoMonete = "MONETE  " + monete;
+        int uova = GameManager.instance != null
+            ? GameManager.instance.UovaSalvate
+            : 0;
+        string testoMonete =
+            "MONETE  " + monete + "   |   UOVA  " + uova;
 
         if (testoMoneteRiepilogo != null)
         {
@@ -598,7 +625,7 @@ public class ShopInterOndata : MonoBehaviour
             string.Empty,
             new Vector2(0f, 128f),
             new Vector2(740f, 76f),
-            24f,
+            21f,
             new Color(1f, 0.91f, 0.71f, 1f),
             FontStyles.Normal,
             TextAlignmentOptions.Center
@@ -651,7 +678,7 @@ public class ShopInterOndata : MonoBehaviour
         CreaTesto(
             "Suggerimento",
             parent,
-            "Le offerte cambiano a ogni ondata. Spazio: riparti subito.",
+            "Solo le monete si spendono. Spazio: riparti subito.",
             new Vector2(0f, -122f),
             new Vector2(730f, 44f),
             18f,

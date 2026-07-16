@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71eb059f1b8bf85479410b9626b3361b, type: 3}
   m_Name: GameBalanceConfig
   m_EditorClassIdentifier: Assembly-CSharp::GameBalanceConfig
-  versioneRiferimento: Blocco 5 - Fattoria interattiva - 2026-07-16
+  versioneRiferimento: Blocco 6 - Galline, uova e obiettivi - 2026-07-16
   giocatore:
     velocitaMovimento: 8
     accelerazione: 45
@@ -126,6 +126,15 @@ MonoBehaviour:
     cambioDirezioneMinimo: 1.4
     cambioDirezioneMassimo: 2.8
     ritardoDirezioneDopoFuga: 0.5
+  obiettiviFattoria:
+    durataRecuperoUovo: 7
+    raggioRecuperoUovo: 0.85
+    uovaPerRecupero: 1
+    uovaPerMaialino: 1
+    uovaPerObiettivo: 2
+    salvataggiPerBonusSerie: 2
+    uovaBonusSeriePerLivello: 1
+    bonusMassimoSerie: 2
   shop:
     numeroOfferte: 4
     costoRerollBase: 1

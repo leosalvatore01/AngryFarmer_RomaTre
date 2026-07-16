@@ -20,17 +20,35 @@ public class GameManager : MonoBehaviour
     [SerializeField] private GameObject gameOverPanel;
 
     private TMP_Text testoUova;
+    private TMP_Text testoUovaSalvate;
     private TMP_Text testoMonete;
     private TMP_Text titoloFinePartita;
     private TMP_Text riepilogoFinePartita;
     private Button pulsanteRiprova;
     private ShopInterOndata shopInterOndata;
     private GameObject schedaUovaHud;
+    private GameObject schedaUovaSalvateHud;
+    private int gallineTotali;
+    private int uovaInizioOnda;
 
     public int monete = 0;
     public int MoneteRaccolte { get; private set; }
     public int MoneteSpese { get; private set; }
     public int UltimoBonusCompletamento { get; private set; }
+    public int GallineTotali => gallineTotali;
+    public int GallineAlSicuro =>
+        Mathf.Min(gallineTotali, Gallina.ContaAlSicuro());
+    public int UovaSalvate { get; private set; }
+    public int SerieSalvataggi { get; private set; }
+    public int MiglioreSerieSalvataggi { get; private set; }
+    public int UltimoBonusSerie { get; private set; }
+    public int UovaUltimaOnda { get; private set; }
+    public int ObiettiviCompletati { get; private set; }
+    public int ObiettiviFalliti { get; private set; }
+    public string UltimoObiettivo { get; private set; } = string.Empty;
+    public bool UltimoObiettivoValutato { get; private set; }
+    public bool UltimoObiettivoCompletato { get; private set; }
+    public int UovaUltimoObiettivo { get; private set; }
     public StatoPartita StatoCorrente { get; private set; } = StatoPartita.Onda;
     public bool GameplayAttivo =>
         !isGameOver && StatoCorrente == StatoPartita.Onda;
@@ -38,6 +56,8 @@ public class GameManager : MonoBehaviour
         !isGameOver && StatoCorrente == StatoPartita.Intervallo;
 
     public event Action<int> MoneteCambiate;
+    public event Action<int> UovaCambiate;
+    public event Action<int, int> GallineCambiate;
 
     void Awake()
     {
@@ -51,6 +71,13 @@ public class GameManager : MonoBehaviour
             MoneteRaccolte = monete;
             MoneteSpese = 0;
             UltimoBonusCompletamento = 0;
+            UovaSalvate = 0;
+            SerieSalvataggi = 0;
+            MiglioreSerieSalvataggi = 0;
+            UltimoBonusSerie = 0;
+            UovaUltimaOnda = 0;
+            ObiettiviCompletati = 0;
+            ObiettiviFalliti = 0;
         }
         else
         {
@@ -63,10 +90,12 @@ public class GameManager : MonoBehaviour
         ImpostaStatoPartita(StatoPartita.Onda);
 
         testoUova = TrovaTestoInterfaccia("UovaText");
+        testoUovaSalvate = TrovaTestoInterfaccia("UovaSalvateText");
         testoMonete = TrovaTestoInterfaccia("MoneteText");
 
         ConfiguraHUD();
         AggiornaContatoreUova();
+        AggiornaContatoreUovaSalvate();
         AggiornaContatoreMonete();
 
         ConfiguraPannelloFinale();
@@ -77,6 +106,7 @@ public class GameManager : MonoBehaviour
 
         shopInterOndata = ShopInterOndata.CreaOTrova();
         FarmInteractiveArena.CreaOTrova();
+        FarmObjectivesController.CreaOTrova();
     }
 
     public static TMP_Text TrovaTestoInterfaccia(string nome)
@@ -124,7 +154,7 @@ public class GameManager : MonoBehaviour
         rect.anchorMax = new Vector2(0f, 1f);
         rect.pivot = new Vector2(0f, 1f);
         rect.anchoredPosition = new Vector2(18f, -18f);
-        rect.sizeDelta = new Vector2(356f, 224f);
+        rect.sizeDelta = new Vector2(356f, 265f);
 
         Image immagine = pannello.GetComponent<Image>();
         FarmPixelUI.ApplicaPannello(immagine, false, false);
@@ -157,9 +187,23 @@ public class GameManager : MonoBehaviour
         schedaUovaHud = CreaSchedaHUD(
             pannello.transform,
             "SchedaUova",
-            FarmPixelIcon.Uovo,
+            FarmPixelIcon.Gallina,
             -190f
         );
+        schedaUovaSalvateHud = CreaSchedaHUD(
+            pannello.transform,
+            "SchedaUovaSalvate",
+            FarmPixelIcon.Uovo,
+            -231f
+        );
+
+        if (testoUovaSalvate == null)
+        {
+            testoUovaSalvate = CreaTestoHUDRuntime(
+                interfaccia.transform,
+                "UovaSalvateText"
+            );
+        }
 
         if (schedaUovaHud != null)
         {
@@ -186,10 +230,19 @@ public class GameManager : MonoBehaviour
             new Vector2(78f, -208f),
             new Color(1f, 0.94f, 0.76f, 1f)
         );
+        ConfiguraTestoHUD(
+            testoUovaSalvate,
+            new Vector2(78f, -249f),
+            new Color(1f, 0.82f, 0.28f, 1f)
+        );
 
         if (testoUova != null)
         {
             testoUova.gameObject.SetActive(gallineRimaste > 0);
+        }
+        if (schedaUovaSalvateHud != null)
+        {
+            schedaUovaSalvateHud.SetActive(true);
         }
     }
 
@@ -287,6 +340,23 @@ public class GameManager : MonoBehaviour
         testo.overflowMode = TextOverflowModes.Overflow;
         testo.raycastTarget = false;
         FarmPixelUI.ApplicaTesto(testo, colore);
+    }
+
+    static TMP_Text CreaTestoHUDRuntime(Transform parent, string nome)
+    {
+        GameObject oggetto = new GameObject(
+            nome,
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(TextMeshProUGUI)
+        );
+        oggetto.transform.SetParent(parent, false);
+
+        TextMeshProUGUI testo = oggetto.GetComponent<TextMeshProUGUI>();
+        TMP_Text riferimento = TrovaTestoInterfaccia("OndataText");
+        if (riferimento != null) testo.font = riferimento.font;
+        testo.raycastTarget = false;
+        return testo;
     }
 
     void ConfiguraPannelloFinale()
@@ -403,7 +473,7 @@ public class GameManager : MonoBehaviour
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = new Vector2(0f, 12f);
-            rect.sizeDelta = new Vector2(820f, 170f);
+            rect.sizeDelta = new Vector2(840f, 205f);
 
             if (titoloFinePartita != null)
             {
@@ -431,7 +501,7 @@ public class GameManager : MonoBehaviour
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.anchoredPosition = new Vector2(0f, -132f);
+            rect.anchoredPosition = new Vector2(0f, -155f);
             rect.sizeDelta = new Vector2(220f, 54f);
 
             TMP_Text testoPulsante =
@@ -458,6 +528,7 @@ public class GameManager : MonoBehaviour
     public void RegistraGallina()
     {
         gallineRimaste++;
+        gallineTotali++;
 
         if (testoUova == null)
         {
@@ -473,14 +544,19 @@ public class GameManager : MonoBehaviour
         }
 
         AggiornaContatoreUova();
+        GallineCambiate?.Invoke(GallineAlSicuro, gallineTotali);
     }
 
     public void GallinaMorta()
     {
         if (isGameOver) return;
 
-        gallineRimaste--;
+        gallineRimaste = Mathf.Max(0, gallineRimaste - 1);
+        SerieSalvataggi = 0;
+        UltimoBonusSerie = 0;
         AggiornaContatoreUova();
+        AggiornaContatoreUovaSalvate();
+        GallineCambiate?.Invoke(GallineAlSicuro, gallineTotali);
 
         if (gallineRimaste <= 0)
         {
@@ -492,7 +568,97 @@ public class GameManager : MonoBehaviour
     {
         if (testoUova != null)
         {
-            testoUova.text = "Uova protette   " + gallineRimaste;
+            testoUova.text =
+                "Galline   " + GallineAlSicuro + " / " + gallineTotali;
+        }
+    }
+
+    public void NotificaStatoGallineCambiato()
+    {
+        AggiornaContatoreUova();
+        GallineCambiate?.Invoke(GallineAlSicuro, gallineTotali);
+    }
+
+    public void AggiungiUova(int quantita)
+    {
+        int quantitaValida = Mathf.Max(0, quantita);
+        if (quantitaValida == 0) return;
+
+        UovaSalvate += quantitaValida;
+        AggiornaContatoreUovaSalvate();
+        UovaCambiate?.Invoke(UovaSalvate);
+    }
+
+    public int RegistraUovoRecuperato()
+    {
+        FarmObjectivesBalanceSettings config =
+            GameBalanceConfig.Corrente.ObiettiviFattoria;
+        SerieSalvataggi++;
+        MiglioreSerieSalvataggi = Mathf.Max(
+            MiglioreSerieSalvataggi,
+            SerieSalvataggi
+        );
+
+        int livelloBonus = Mathf.Min(
+            config.bonusMassimoSerie,
+            SerieSalvataggi / Mathf.Max(1, config.salvataggiPerBonusSerie)
+        );
+        UltimoBonusSerie =
+            livelloBonus * config.uovaBonusSeriePerLivello;
+        int premio = Mathf.Max(0, config.uovaPerRecupero) +
+                     UltimoBonusSerie;
+        AggiungiUova(premio);
+        AggiornaContatoreUovaSalvate();
+        return premio;
+    }
+
+    public void PreparaNuovaOnda()
+    {
+        uovaInizioOnda = UovaSalvate;
+        UovaUltimaOnda = 0;
+        UltimoBonusSerie = 0;
+        UltimoObiettivo = string.Empty;
+        UltimoObiettivoValutato = false;
+        UltimoObiettivoCompletato = false;
+        UovaUltimoObiettivo = 0;
+    }
+
+    public void RegistraEsitoObiettivo(
+        string nome,
+        bool completato,
+        int premioUova
+    )
+    {
+        UltimoObiettivo = nome ?? string.Empty;
+        UltimoObiettivoValutato = true;
+        UltimoObiettivoCompletato = completato;
+        UovaUltimoObiettivo = completato
+            ? Mathf.Max(0, premioUova)
+            : 0;
+
+        if (completato)
+        {
+            ObiettiviCompletati++;
+            AggiungiUova(UovaUltimoObiettivo);
+        }
+        else
+        {
+            ObiettiviFalliti++;
+        }
+    }
+
+    public void ConcludiRegistroOnda()
+    {
+        UovaUltimaOnda = Mathf.Max(0, UovaSalvate - uovaInizioOnda);
+    }
+
+    void AggiornaContatoreUovaSalvate()
+    {
+        if (testoUovaSalvate != null)
+        {
+            testoUovaSalvate.text =
+                "Uova   " + UovaSalvate +
+                "   Serie x" + SerieSalvataggi;
         }
     }
 
@@ -607,6 +773,12 @@ public class GameManager : MonoBehaviour
             "     •     SPESE  " + MoneteSpese +
             "     •     RIMASTE  " + monete +
             "\nGALLINE SALVE  " + Mathf.Max(0, gallineRimaste) +
+            " / " + gallineTotali +
+            "     •     UOVA SALVATE  " + UovaSalvate +
+            "     •     SERIE MIGLIORE  x" +
+            MiglioreSerieSalvataggi +
+            "\nOBIETTIVI  " + ObiettiviCompletati +
+            " COMPLETATI  -  " + ObiettiviFalliti + " FALLITI" +
             "\nBUILD FINALE\n" + build;
     }
 

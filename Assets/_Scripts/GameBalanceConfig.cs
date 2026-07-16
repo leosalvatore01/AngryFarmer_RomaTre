@@ -71,6 +71,24 @@ public sealed class PigBalanceSettings
 }
 
 [Serializable]
+public sealed class FarmObjectivesBalanceSettings
+{
+    [Header("Recupero delle uova")]
+    [Min(1f)] public float durataRecuperoUovo = 7f;
+    [Min(0.2f)] public float raggioRecuperoUovo = 0.85f;
+    [Min(0)] public int uovaPerRecupero = 1;
+
+    [Header("Ricompense")]
+    [Min(0)] public int uovaPerMaialino = 1;
+    [Min(0)] public int uovaPerObiettivo = 2;
+
+    [Header("Serie di difesa")]
+    [Min(1)] public int salvataggiPerBonusSerie = 2;
+    [Min(0)] public int uovaBonusSeriePerLivello = 1;
+    [Min(0)] public int bonusMassimoSerie = 2;
+}
+
+[Serializable]
 public sealed class ShopBalanceSettings
 {
     [Header("Offerte e ritmo della bottega")]
@@ -349,7 +367,7 @@ public sealed class GameBalanceConfig : ScriptableObject
 
     [SerializeField]
     private string versioneRiferimento =
-        "Blocco 5 - Fattoria interattiva - 2026-07-16";
+        "Blocco 6 - Galline, uova e obiettivi - 2026-07-16";
 
     [SerializeField] private PlayerBalanceSettings giocatore =
         new PlayerBalanceSettings();
@@ -359,6 +377,8 @@ public sealed class GameBalanceConfig : ScriptableObject
         new FoxVariantsBalanceSettings();
     [SerializeField] private PigBalanceSettings maialino =
         new PigBalanceSettings();
+    [SerializeField] private FarmObjectivesBalanceSettings obiettiviFattoria =
+        new FarmObjectivesBalanceSettings();
     [SerializeField] private ShopBalanceSettings shop =
         new ShopBalanceSettings();
     [SerializeField] private FarmInteractiveBalanceSettings fattoria =
@@ -378,6 +398,9 @@ public sealed class GameBalanceConfig : ScriptableObject
         variantiVolpe ??
         (variantiVolpe = new FoxVariantsBalanceSettings());
     public PigBalanceSettings Maialino => maialino;
+    public FarmObjectivesBalanceSettings ObiettiviFattoria =>
+        obiettiviFattoria ??
+        (obiettiviFattoria = new FarmObjectivesBalanceSettings());
     public ShopBalanceSettings Shop => shop;
     public FarmInteractiveBalanceSettings Fattoria =>
         fattoria ?? (fattoria = new FarmInteractiveBalanceSettings());
@@ -437,6 +460,10 @@ public sealed class GameBalanceConfig : ScriptableObject
         {
             fattoria = new FarmInteractiveBalanceSettings();
         }
+        if (obiettiviFattoria == null)
+        {
+            obiettiviFattoria = new FarmObjectivesBalanceSettings();
+        }
 
         giocatore.intervalloSparoMinimo = Mathf.Max(
             0.01f,
@@ -450,7 +477,38 @@ public sealed class GameBalanceConfig : ScriptableObject
             maialino.cambioDirezioneMinimo,
             maialino.cambioDirezioneMassimo
         );
-
+        obiettiviFattoria.durataRecuperoUovo = Mathf.Max(
+            1f,
+            obiettiviFattoria.durataRecuperoUovo
+        );
+        obiettiviFattoria.raggioRecuperoUovo = Mathf.Max(
+            0.2f,
+            obiettiviFattoria.raggioRecuperoUovo
+        );
+        obiettiviFattoria.uovaPerRecupero = Mathf.Max(
+            0,
+            obiettiviFattoria.uovaPerRecupero
+        );
+        obiettiviFattoria.uovaPerMaialino = Mathf.Max(
+            0,
+            obiettiviFattoria.uovaPerMaialino
+        );
+        obiettiviFattoria.uovaPerObiettivo = Mathf.Max(
+            0,
+            obiettiviFattoria.uovaPerObiettivo
+        );
+        obiettiviFattoria.salvataggiPerBonusSerie = Mathf.Max(
+            1,
+            obiettiviFattoria.salvataggiPerBonusSerie
+        );
+        obiettiviFattoria.uovaBonusSeriePerLivello = Mathf.Max(
+            0,
+            obiettiviFattoria.uovaBonusSeriePerLivello
+        );
+        obiettiviFattoria.bonusMassimoSerie = Mathf.Max(
+            0,
+            obiettiviFattoria.bonusMassimoSerie
+        );
         NormalizzaArrayNonNegativo(shop.costiMovimento);
         NormalizzaArrayNonNegativo(shop.costiResistenza);
         NormalizzaArrayNonNegativo(shop.costiSalute);

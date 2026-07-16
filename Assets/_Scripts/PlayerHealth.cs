@@ -41,6 +41,7 @@ public class PlayerHealth : MonoBehaviour
     public int vitaMassima => VitaMassimaFinale;
 
     public event Action VitaCambiata;
+    public event Action<int> DannoSubito;
 
     void Awake()
     {
@@ -76,9 +77,15 @@ public class PlayerHealth : MonoBehaviour
             }
         }
 
+        int vitaPrecedente = vitaCorrente;
         vitaCorrente = Mathf.Max(0, vitaCorrente - danno);
+        int dannoEffettivo = vitaPrecedente - vitaCorrente;
         AggiornaInterfaccia();
         VitaCambiata?.Invoke();
+        if (dannoEffettivo > 0)
+        {
+            DannoSubito?.Invoke(dannoEffettivo);
+        }
 
         if (vitaCorrente <= 0 && GameManager.instance != null)
         {

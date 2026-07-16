@@ -142,6 +142,7 @@ public class EnemySpawner : MonoBehaviour
     private float durataMinimaDistribuzioneMaialini = 1f;
     private float durataPreavvisoSpawn = 0.5f;
     private int nemiciDaSpawnare;
+    private int maialiniDaSpawnare;
     private int totaleNemiciOnda;
     private int gruppoCorrente;
     private int totaleGruppi;
@@ -151,6 +152,7 @@ public class EnemySpawner : MonoBehaviour
     private bool ondaAttiva;
     private bool avvioRapidoRichiesto;
     private WaveReadabilityController leggibilita;
+    private FarmObjectivesController obiettivi;
 
     public WaveRuntimeDiagnostics Diagnostica => diagnostica;
     public int IndiceOndaCorrente => currentWaveIndex;
@@ -192,6 +194,7 @@ public class EnemySpawner : MonoBehaviour
         ConfiguraPannelloMessaggio();
         NascondiMessaggio();
         ConfiguraLeggibilita();
+        obiettivi = FarmObjectivesController.CreaOTrova();
         StartCoroutine(GestoreOndate());
     }
 
@@ -201,6 +204,10 @@ public class EnemySpawner : MonoBehaviour
         {
             yield break;
         }
+
+        // Garantisce che GameManager e galline completino Start prima
+        // di fotografare lo stato iniziale del primo obiettivo.
+        yield return null;
 
         while (currentWaveIndex < ondate.Length)
         {
@@ -219,6 +226,11 @@ public class EnemySpawner : MonoBehaviour
                 OttieniAnteprima(currentWaveIndex);
 
             IniziaStatoOnda(ondataCorrente, anteprima);
+            if (obiettivi == null)
+            {
+                obiettivi = FarmObjectivesController.CreaOTrova();
+            }
+            obiettivi?.IniziaOnda(anteprima);
             diagnostica.IniziaOndata(
                 currentWaveIndex + 1,
                 ondate.Length,
@@ -368,7 +380,14 @@ public class EnemySpawner : MonoBehaviour
             NotificaProgresso();
             diagnostica.SegnaFineSpawn();
 
-            while (GameObject.FindGameObjectWithTag("Nemico") != null)
+            while (
+                GameObject.FindGameObjectWithTag("Nemico") != null ||
+                UovoRecuperabile.RecuperiAttivi > 0 ||
+                (obiettivi != null &&
+                 obiettivi.RichiedeMaialino &&
+                 (maialiniDaSpawnare > 0 ||
+                  MaialinoBonus.NumeroAttivi > 0))
+            )
             {
                 diagnostica.CampionaNemiciVivi();
                 if (PartitaTerminata())
@@ -400,6 +419,7 @@ public class EnemySpawner : MonoBehaviour
             diagnostica.TerminaOndata(
                 EsitoDiagnosticaOndata.Completata
             );
+            obiettivi?.ConcludiOnda();
             ConcludiStatoOnda();
             if (GameManager.instance != null)
             {
@@ -471,6 +491,7 @@ public class EnemySpawner : MonoBehaviour
             }
 
             diagnostica.RegistraSpawnMaialino(SpawnMaialino(ondata));
+            maialiniDaSpawnare = Mathf.Max(0, maialiniDaSpawnare - 1);
         }
     }
 
@@ -614,6 +635,7 @@ public class EnemySpawner : MonoBehaviour
         SganciaMinacce();
         totaleNemiciOnda = anteprima.NumeroVolpi;
         nemiciDaSpawnare = anteprima.NumeroVolpi;
+        maialiniDaSpawnare = Mathf.Max(0, onda.numeroMaialiniBonus);
         composizioneTotaleOnda = anteprima.Composizione;
         composizioneDaSpawnare = anteprima.Composizione;
         gruppoCorrente = 0;
@@ -630,6 +652,7 @@ public class EnemySpawner : MonoBehaviour
             minacceAttive.Count > 0;
         ondaAttiva = false;
         nemiciDaSpawnare = 0;
+        maialiniDaSpawnare = 0;
         composizioneDaSpawnare = default;
         spawnTerminato = true;
         gruppoCorrente = totaleGruppi;
@@ -644,6 +667,7 @@ public class EnemySpawner : MonoBehaviour
 
     void InterrompiStatoOnda()
     {
+        obiettivi?.InterrompiOnda();
         ConcludiStatoOnda();
         NascondiMessaggio();
     }
@@ -1072,6 +1096,7 @@ public class EnemySpawner : MonoBehaviour
         }
 
         MaialinoBonus.RimuoviTuttiSenzaPremio();
+        UovoRecuperabile.RimuoviTuttiSenzaEsito();
     }
 
     static Vector2 DirezioneCasuale()
