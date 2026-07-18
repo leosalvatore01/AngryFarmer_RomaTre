@@ -520,7 +520,10 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
         testo.fontSize = 3.2f;
         testo.fontStyle = FontStyles.Bold;
         testo.alignment = TextAlignmentOptions.Center;
-        testo.color = new Color(1f, 0.82f, 0.16f, 1f);
+        FarmPixelUI.ApplicaTestoMondo(
+            testo,
+            new Color(1f, 0.82f, 0.16f, 1f)
+        );
         testo.renderer.sortingLayerID = spriteRendererVisibile.sortingLayerID;
         testo.renderer.sortingOrder = spriteRendererVisibile.sortingOrder + 8;
 

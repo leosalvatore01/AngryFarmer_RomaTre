@@ -10,15 +10,15 @@ using UnityEngine.UI;
 public sealed class PauseSettingsMenu : MonoBehaviour
 {
     private static readonly Color Crema =
-        new Color(1f, 0.91f, 0.69f, 1f);
+        FarmPixelUI.TestoChiaroFlat;
     private static readonly Color Oro =
-        new Color(0.96f, 0.67f, 0.19f, 1f);
+        FarmPixelUI.TestoTitoloFlat;
     private static readonly Color Verde =
-        new Color(0.35f, 0.72f, 0.28f, 1f);
+        FarmPixelUI.TestoConfrontoFlat;
     private static readonly Color RossoMorbido =
-        new Color(0.77f, 0.35f, 0.23f, 1f);
+        FarmPixelUI.TestoErroreFlat;
     private static readonly Color TestoSecondario =
-        new Color(0.84f, 0.76f, 0.61f, 1f);
+        FarmPixelUI.TestoMetaFlat;
 
     private Canvas canvas;
     private GameObject pannelloOverlay;
@@ -197,20 +197,20 @@ public sealed class PauseSettingsMenu : MonoBehaviour
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920f, 1080f);
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-        scaler.matchWidthOrHeight = 0.5f;
+        scaler.matchWidthOrHeight = 1f;
         gameObject.AddComponent<GraphicRaycaster>();
 
         pulsanteApri = CreaPulsante(
             "ApriPausaOpzioni",
             transform,
-            "II  OPZIONI  [ESC]",
-            new Vector2(-22f, -22f),
-            new Vector2(270f, 54f),
-            new Color(0.47f, 0.25f, 0.10f, 1f),
+            "PAUSA [ESC]",
+            new Vector2(-22f, 22f),
+            new Vector2(250f, 58f),
+            FarmPixelUI.ColorePulsanteNeutroFlat,
             Mostra,
-            new Vector2(1f, 1f),
-            new Vector2(1f, 1f),
-            new Vector2(1f, 1f)
+            new Vector2(1f, 0f),
+            new Vector2(1f, 0f),
+            new Vector2(1f, 0f)
         );
 
         pannelloOverlay = CreaImmagine(
@@ -218,7 +218,7 @@ public sealed class PauseSettingsMenu : MonoBehaviour
             transform,
             Vector2.zero,
             Vector2.zero,
-            new Color(0.035f, 0.025f, 0.018f, 0.83f),
+            FarmPixelUI.ColoreVeloFlat,
             Vector2.zero,
             Vector2.one,
             new Vector2(0.5f, 0.5f)
@@ -240,11 +240,6 @@ public sealed class PauseSettingsMenu : MonoBehaviour
             false,
             true
         );
-        Outline bordoPannello = pannello.AddComponent<Outline>();
-        bordoPannello.effectColor =
-            new Color(0.07f, 0.03f, 0.012f, 0.92f);
-        bordoPannello.effectDistance = new Vector2(6f, -6f);
-        bordoPannello.useGraphicAlpha = true;
 
         FarmPixelUI.AggiungiIcona(
             pannello.transform,
@@ -275,11 +270,11 @@ public sealed class PauseSettingsMenu : MonoBehaviour
         CreaTesto(
             "Sottotitolo",
             pannello.transform,
-            "SUONI, COMFORT E LEGGIBILITA'",
+            "SUONI, COMFORT E LEGGIBILITÀ",
             new Vector2(0f, 310f),
             new Vector2(620f, 30f),
-            16f,
-            TestoSecondario,
+            22f,
+            Crema,
             FontStyles.Bold,
             TextAlignmentOptions.Center
         );
@@ -343,8 +338,8 @@ public sealed class PauseSettingsMenu : MonoBehaviour
             "ESC: APRI O CHIUDI  -  MOUSE: REGOLA LE OPZIONI",
             new Vector2(0f, -276f),
             new Vector2(670f, 32f),
-            14f,
-            TestoSecondario,
+            20f,
+            Crema,
             FontStyles.Bold,
             TextAlignmentOptions.Center
         );
@@ -355,7 +350,7 @@ public sealed class PauseSettingsMenu : MonoBehaviour
             "PREDEFINITI",
             new Vector2(-176f, -346f),
             new Vector2(260f, 58f),
-            new Color(0.48f, 0.28f, 0.12f, 1f),
+            FarmPixelUI.ColorePulsanteNeutroFlat,
             opzioni.RipristinaPredefiniti
         );
         pulsanteChiudi = CreaPulsante(
@@ -364,7 +359,7 @@ public sealed class PauseSettingsMenu : MonoBehaviour
             "RIPRENDI",
             new Vector2(176f, -346f),
             new Vector2(330f, 58f),
-            new Color(0.27f, 0.59f, 0.22f, 1f),
+            FarmPixelUI.ColorePulsanteVerdeFlat,
             Nascondi
         );
         testoPulsanteChiudi =
@@ -467,7 +462,7 @@ public sealed class PauseSettingsMenu : MonoBehaviour
             etichetta,
             new Vector2(-180f, 23f),
             new Vector2(350f, 28f),
-            18f,
+            20f,
             Crema,
             FontStyles.Bold,
             TextAlignmentOptions.MidlineLeft
@@ -478,7 +473,7 @@ public sealed class PauseSettingsMenu : MonoBehaviour
             "--",
             new Vector2(255f, 23f),
             new Vector2(120f, 28f),
-            18f,
+            20f,
             Oro,
             FontStyles.Bold,
             TextAlignmentOptions.MidlineRight
@@ -536,10 +531,10 @@ public sealed class PauseSettingsMenu : MonoBehaviour
             areaManiglia.transform,
             Vector2.zero,
             new Vector2(28f, 42f),
-            Color.white
+            FarmPixelUI.ColorePulsanteOroFlat
         );
-        maniglia.sprite = FarmPixelUI.PulsanteLegno;
-        maniglia.type = Image.Type.Sliced;
+        maniglia.sprite = null;
+        maniglia.type = Image.Type.Simple;
 
         Slider slider = radice.GetComponent<Slider>();
         slider.minValue = minimo;
@@ -605,7 +600,7 @@ public sealed class PauseSettingsMenu : MonoBehaviour
             etichetta,
             new Vector2(-78f, 0f),
             new Vector2(360f, 34f),
-            18f,
+            20f,
             Crema,
             FontStyles.Bold,
             TextAlignmentOptions.MidlineLeft
@@ -616,7 +611,7 @@ public sealed class PauseSettingsMenu : MonoBehaviour
             "ATTIVO",
             new Vector2(230f, 0f),
             new Vector2(150f, 34f),
-            16f,
+            18f,
             Verde,
             FontStyles.Bold,
             TextAlignmentOptions.MidlineRight
@@ -677,8 +672,8 @@ public sealed class PauseSettingsMenu : MonoBehaviour
             etichetta,
             Vector2.zero,
             dimensioni - new Vector2(18f, 10f),
-            17f,
-            Crema,
+            20f,
+            FarmPixelUI.TestoPulsanteFlat,
             FontStyles.Bold,
             TextAlignmentOptions.Center
         );

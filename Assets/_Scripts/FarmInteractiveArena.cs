@@ -1363,8 +1363,8 @@ internal sealed class FarmPixelBurstEffect : MonoBehaviour
 internal sealed class FarmInteractiveHint : MonoBehaviour
 {
     private const string MessaggioIniziale =
-        "FATTORIA INTERATTIVA  |  IL FANGO RALLENTA TUTTI  |  " +
-        "COLPISCI ZUCCHE E CASSE";
+        "FATTORIA INTERATTIVA  |  FANGO: RALLENTA  |  " +
+        "ROMPI ZUCCHE E CASSE";
 
     private CanvasGroup gruppo;
     private TMP_Text testo;
@@ -1421,11 +1421,11 @@ internal sealed class FarmInteractiveHint : MonoBehaviour
         rect.anchorMax = new Vector2(0.5f, 0f);
         rect.pivot = new Vector2(0.5f, 0f);
         rect.anchoredPosition = new Vector2(0f, 26f);
-        rect.sizeDelta = new Vector2(790f, 54f);
+        rect.sizeDelta = new Vector2(900f, 66f);
 
         Image immagine = pannello.GetComponent<Image>();
         FarmPixelUI.ApplicaPannello(immagine, true, false);
-        immagine.color = new Color(0.76f, 0.56f, 0.3f, 0.96f);
+        immagine.color = FarmPixelUI.ColoreCartaFlat;
         immagine.raycastTarget = false;
 
         GameObject oggettoTesto = new GameObject(
@@ -1447,14 +1447,14 @@ internal sealed class FarmInteractiveHint : MonoBehaviour
         TMP_Text riferimento =
             GameManager.TrovaTestoInterfaccia("OndataText");
         if (riferimento != null) testo.font = riferimento.font;
-        testo.fontSize = 16f;
+        testo.fontSize = 20f;
         testo.fontStyle = FontStyles.Bold;
         testo.alignment = TextAlignmentOptions.Center;
         testo.textWrappingMode = TextWrappingModes.NoWrap;
         testo.raycastTarget = false;
         FarmPixelUI.ApplicaTesto(
             testo,
-            new Color(1f, 0.92f, 0.66f, 1f)
+            FarmPixelUI.TestoChiaroFlat
         );
 
         FarmInteractiveHint hint =

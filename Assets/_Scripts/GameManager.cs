@@ -133,6 +133,11 @@ public class GameManager : MonoBehaviour
         {
             canvas.pixelPerfect = true;
         }
+        CanvasScaler scaler = interfaccia.GetComponent<CanvasScaler>();
+        if (scaler != null)
+        {
+            scaler.matchWidthOrHeight = 1f;
+        }
 
         Transform pannelloEsistente = interfaccia.transform.Find("PannelloHUD");
         GameObject pannello;
@@ -142,8 +147,7 @@ public class GameManager : MonoBehaviour
                 "PannelloHUD",
                 typeof(RectTransform),
                 typeof(CanvasRenderer),
-                typeof(Image),
-                typeof(Shadow)
+                typeof(Image)
             );
             pannello.transform.SetParent(interfaccia.transform, false);
             pannello.transform.SetAsFirstSibling();
@@ -159,47 +163,41 @@ public class GameManager : MonoBehaviour
         rect.anchorMax = new Vector2(0f, 1f);
         rect.pivot = new Vector2(0f, 1f);
         rect.anchoredPosition = new Vector2(18f, -18f);
-        rect.sizeDelta = new Vector2(356f, 265f);
+        rect.sizeDelta = new Vector2(376f, 278f);
 
         Image immagine = pannello.GetComponent<Image>();
         FarmPixelUI.ApplicaPannello(immagine, false, false);
-
-        Shadow ombra = pannello.GetComponent<Shadow>();
-        if (ombra == null) ombra = pannello.AddComponent<Shadow>();
-        ombra.effectColor = new Color(0.09f, 0.04f, 0.018f, 0.9f);
-        ombra.effectDistance = new Vector2(5f, -5f);
-        ombra.useGraphicAlpha = true;
 
         CreaTitoloHUD(pannello.transform);
         CreaSchedaHUD(
             pannello.transform,
             "SchedaOndata",
             FarmPixelIcon.Ondata,
-            -67f
+            -68f
         );
         CreaSchedaHUD(
             pannello.transform,
             "SchedaVita",
             FarmPixelIcon.Cuore,
-            -108f
+            -110f
         );
         CreaSchedaHUD(
             pannello.transform,
             "SchedaMonete",
             FarmPixelIcon.Moneta,
-            -149f
+            -152f
         );
         schedaUovaHud = CreaSchedaHUD(
             pannello.transform,
             "SchedaUova",
             FarmPixelIcon.Gallina,
-            -190f
+            -194f
         );
         schedaUovaSalvateHud = CreaSchedaHUD(
             pannello.transform,
             "SchedaUovaSalvate",
             FarmPixelIcon.Uovo,
-            -231f
+            -236f
         );
 
         if (testoUovaSalvate == null)
@@ -217,27 +215,27 @@ public class GameManager : MonoBehaviour
 
         ConfiguraTestoHUD(
             TrovaTestoInterfaccia("OndataText"),
-            new Vector2(78f, -85f),
+            new Vector2(82f, -86f),
             new Color(1f, 0.77f, 0.32f, 1f)
         );
         ConfiguraTestoHUD(
             TrovaTestoInterfaccia("VitaText"),
-            new Vector2(78f, -126f),
+            new Vector2(82f, -128f),
             new Color(0.5f, 0.95f, 0.47f, 1f)
         );
         ConfiguraTestoHUD(
             testoMonete,
-            new Vector2(78f, -167f),
+            new Vector2(82f, -170f),
             new Color(1f, 0.9f, 0.24f, 1f)
         );
         ConfiguraTestoHUD(
             testoUova,
-            new Vector2(78f, -208f),
+            new Vector2(82f, -212f),
             new Color(1f, 0.94f, 0.76f, 1f)
         );
         ConfiguraTestoHUD(
             testoUovaSalvate,
-            new Vector2(78f, -249f),
+            new Vector2(82f, -254f),
             new Color(1f, 0.82f, 0.28f, 1f)
         );
 
@@ -268,13 +266,13 @@ public class GameManager : MonoBehaviour
         rect.anchorMax = new Vector2(0.5f, 1f);
         rect.pivot = new Vector2(0.5f, 0.5f);
         rect.anchoredPosition = new Vector2(0f, -26f);
-        rect.sizeDelta = new Vector2(300f, 32f);
+        rect.sizeDelta = new Vector2(330f, 34f);
 
         TextMeshProUGUI titolo = oggetto.GetComponent<TextMeshProUGUI>();
         TMP_Text riferimento = TrovaTestoInterfaccia("OndataText");
         if (riferimento != null) titolo.font = riferimento.font;
         titolo.text = "FATTORIA";
-        titolo.fontSize = 21f;
+        titolo.fontSize = 24f;
         titolo.fontStyle = FontStyles.Bold;
         titolo.alignment = TextAlignmentOptions.Center;
         titolo.textWrappingMode = TextWrappingModes.NoWrap;
@@ -308,7 +306,7 @@ public class GameManager : MonoBehaviour
         rect.anchorMax = new Vector2(0f, 1f);
         rect.pivot = new Vector2(0f, 0.5f);
         rect.anchoredPosition = new Vector2(14f, posizioneY);
-        rect.sizeDelta = new Vector2(328f, 37f);
+        rect.sizeDelta = new Vector2(346f, 40f);
 
         Image sfondo = scheda.GetComponent<Image>();
         FarmPixelUI.ApplicaPannello(sfondo, true, false);
@@ -317,8 +315,8 @@ public class GameManager : MonoBehaviour
             scheda.transform,
             "Icona",
             icona,
-            new Vector2(-136f, 0f),
-            new Vector2(31f, 31f)
+            new Vector2(-145f, 0f),
+            new Vector2(32f, 32f)
         );
         return scheda;
     }
@@ -336,9 +334,9 @@ public class GameManager : MonoBehaviour
         rect.anchorMax = new Vector2(0f, 1f);
         rect.pivot = new Vector2(0f, 0.5f);
         rect.anchoredPosition = posizione;
-        rect.sizeDelta = new Vector2(230f, 32f);
+        rect.sizeDelta = new Vector2(268f, 36f);
 
-        testo.fontSize = 22f;
+        testo.fontSize = 25f;
         testo.fontStyle = FontStyles.Bold;
         testo.alignment = TextAlignmentOptions.MidlineLeft;
         testo.textWrappingMode = TextWrappingModes.NoWrap;
@@ -380,7 +378,7 @@ public class GameManager : MonoBehaviour
         Image sfondo = gameOverPanel.GetComponent<Image>();
         if (sfondo != null)
         {
-            sfondo.color = new Color(0.035f, 0.018f, 0.012f, 0.72f);
+            sfondo.color = FarmPixelUI.ColoreVeloFlat;
         }
 
         Transform pannelloRiepilogo =
@@ -392,8 +390,7 @@ public class GameManager : MonoBehaviour
                 "PannelloRiepilogoFinale",
                 typeof(RectTransform),
                 typeof(CanvasRenderer),
-                typeof(Image),
-                typeof(Shadow)
+                typeof(Image)
             );
             pannelloRiepilogoOggetto.transform.SetParent(
                 gameOverPanel.transform,
@@ -411,19 +408,13 @@ public class GameManager : MonoBehaviour
         pannelloRiepilogoRect.anchorMax = new Vector2(0.5f, 0.5f);
         pannelloRiepilogoRect.pivot = new Vector2(0.5f, 0.5f);
         pannelloRiepilogoRect.anchoredPosition = Vector2.zero;
-        pannelloRiepilogoRect.sizeDelta = new Vector2(920f, 450f);
+        pannelloRiepilogoRect.sizeDelta = new Vector2(920f, 560f);
 
         FarmPixelUI.ApplicaPannello(
             pannelloRiepilogoOggetto.GetComponent<Image>(),
             false,
             false
         );
-        Shadow ombraPannello =
-            pannelloRiepilogoOggetto.GetComponent<Shadow>();
-        ombraPannello.effectColor =
-            new Color(0.04f, 0.015f, 0.008f, 0.9f);
-        ombraPannello.effectDistance = new Vector2(8f, -8f);
-        ombraPannello.useGraphicAlpha = true;
         pannelloRiepilogoOggetto.transform.SetAsFirstSibling();
 
         Transform titoloTransform = gameOverPanel.transform.Find("Text");
@@ -437,13 +428,13 @@ public class GameManager : MonoBehaviour
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.anchoredPosition = new Vector2(0f, 128f);
+            rect.anchoredPosition = new Vector2(0f, 210f);
             rect.sizeDelta = new Vector2(620f, 90f);
 
             titoloFinePartita.fontSize = 50f;
             titoloFinePartita.fontStyle = FontStyles.Bold;
             titoloFinePartita.alignment = TextAlignmentOptions.Center;
-            titoloFinePartita.color = new Color(1f, 0.83f, 0.34f, 1f);
+            titoloFinePartita.color = FarmPixelUI.TestoTitoloFlat;
             titoloFinePartita.raycastTarget = false;
             FarmPixelUI.ApplicaTesto(
                 titoloFinePartita,
@@ -477,19 +468,19 @@ public class GameManager : MonoBehaviour
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.anchoredPosition = new Vector2(0f, 12f);
-            rect.sizeDelta = new Vector2(840f, 205f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = new Vector2(840f, 320f);
 
             if (titoloFinePartita != null)
             {
                 riepilogoFinePartita.font = titoloFinePartita.font;
             }
-            riepilogoFinePartita.fontSize = 19f;
+            riepilogoFinePartita.fontSize = 22f;
             riepilogoFinePartita.fontStyle = FontStyles.Bold;
             riepilogoFinePartita.alignment =
                 TextAlignmentOptions.Center;
             riepilogoFinePartita.color =
-                new Color(1f, 0.9f, 0.66f, 1f);
+                FarmPixelUI.TestoChiaroFlat;
             riepilogoFinePartita.textWrappingMode =
                 TextWrappingModes.Normal;
             riepilogoFinePartita.raycastTarget = false;
@@ -506,8 +497,8 @@ public class GameManager : MonoBehaviour
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.anchoredPosition = new Vector2(0f, -155f);
-            rect.sizeDelta = new Vector2(220f, 54f);
+            rect.anchoredPosition = new Vector2(0f, -230f);
+            rect.sizeDelta = new Vector2(240f, 58f);
 
             TMP_Text testoPulsante =
                 pulsanteRiprova.GetComponentInChildren<TMP_Text>(true);
@@ -518,13 +509,13 @@ public class GameManager : MonoBehaviour
                 testoPulsante.fontStyle = FontStyles.Bold;
                 FarmPixelUI.ApplicaTesto(
                     testoPulsante,
-                    new Color(1f, 0.94f, 0.77f, 1f)
+                    FarmPixelUI.TestoPulsanteFlat
                 );
             }
 
             FarmPixelUI.ApplicaPulsante(
                 pulsanteRiprova,
-                new Color(0.52f, 0.24f, 0.07f, 1f)
+                FarmPixelUI.ColorePulsanteOroFlat
             );
             pulsanteRiprova.onClick.AddListener(Riprova);
         }
@@ -778,18 +769,22 @@ public class GameManager : MonoBehaviour
         string build = potenziamenti != null
             ? potenziamenti.DescriviBuildCompatta()
             : "NESSUNA BUILD";
+        string buildLeggibile = build
+            .Replace("  |  ", "\n")
+            .Replace("  •  ", "\n");
         riepilogoFinePartita.text =
             "MONETE RACCOLTE  " + MoneteRaccolte +
-            "     •     SPESE  " + MoneteSpese +
-            "     •     RIMASTE  " + monete +
-            "\nGALLINE SALVE  " + Mathf.Max(0, gallineRimaste) +
+            "  |  SPESE  " + MoneteSpese +
+            "\nMONETE RIMASTE  " + monete +
+            "  |  GALLINE SALVE  " + Mathf.Max(0, gallineRimaste) +
             " / " + gallineTotali +
-            "     •     UOVA SALVATE  " + UovaSalvate +
-            "     •     SERIE MIGLIORE  x" +
-            MiglioreSerieSalvataggi +
+            "\nUOVA SALVATE  " + UovaSalvate +
+            "  |  SERIE MIGLIORE  x" + MiglioreSerieSalvataggi +
             "\nOBIETTIVI  " + ObiettiviCompletati +
-            " COMPLETATI  -  " + ObiettiviFalliti + " FALLITI" +
-            "\nBUILD FINALE\n" + build;
+            " COMPLETATI  |  " + ObiettiviFalliti + " FALLITI" +
+            "\n------------------------------" +
+            "\nBUILD FINALE" +
+            "\n" + buildLeggibile;
     }
 
     public void IniziaIntervallo(int ondaCompletata, int totaleOndate)

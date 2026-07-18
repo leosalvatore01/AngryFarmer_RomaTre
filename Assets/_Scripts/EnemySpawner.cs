@@ -910,8 +910,7 @@ public class EnemySpawner : MonoBehaviour
             "PannelloMessaggioOndata",
             typeof(RectTransform),
             typeof(CanvasRenderer),
-            typeof(Image),
-            typeof(Shadow)
+            typeof(Image)
         );
         contenitoreMessaggio.transform.SetParent(canvas, false);
         contenitoreMessaggio.transform.SetSiblingIndex(indice);
@@ -922,15 +921,10 @@ public class EnemySpawner : MonoBehaviour
         pannelloRect.anchorMax = new Vector2(0.5f, 0.5f);
         pannelloRect.pivot = new Vector2(0.5f, 0.5f);
         pannelloRect.anchoredPosition = Vector2.zero;
-        pannelloRect.sizeDelta = new Vector2(690f, 174f);
+        pannelloRect.sizeDelta = new Vector2(760f, 190f);
 
         Image sfondo = contenitoreMessaggio.GetComponent<Image>();
         FarmPixelUI.ApplicaPannello(sfondo, false, false);
-
-        Shadow ombra = contenitoreMessaggio.GetComponent<Shadow>();
-        ombra.effectColor = new Color(0.08f, 0.035f, 0.018f, 0.88f);
-        ombra.effectDistance = new Vector2(5f, -5f);
-        ombra.useGraphicAlpha = true;
 
         GameObject interno = new GameObject(
             "CorniceMessaggio",
@@ -955,25 +949,25 @@ public class EnemySpawner : MonoBehaviour
         testoRect.anchorMax = Vector2.one;
         testoRect.pivot = new Vector2(0.5f, 0.5f);
         testoRect.anchoredPosition = Vector2.zero;
-        testoRect.offsetMin = new Vector2(86f, 8f);
-        testoRect.offsetMax = new Vector2(-86f, -8f);
+        testoRect.offsetMin = new Vector2(98f, 8f);
+        testoRect.offsetMax = new Vector2(-98f, -8f);
 
         FarmPixelUI.AggiungiIcona(
             internoRect,
             "IconaOndataSinistra",
             FarmPixelIcon.Volpe,
-            new Vector2(-282f, 0f),
-            new Vector2(48f, 48f)
+            new Vector2(-312f, 0f),
+            new Vector2(54f, 54f)
         );
         FarmPixelUI.AggiungiIcona(
             internoRect,
             "IconaOndataDestra",
             FarmPixelIcon.Ondata,
-            new Vector2(282f, 0f),
-            new Vector2(48f, 48f)
+            new Vector2(312f, 0f),
+            new Vector2(54f, 54f)
         );
 
-        messaggioOndata.fontSize = 25f;
+        messaggioOndata.fontSize = 28f;
         messaggioOndata.fontStyle = FontStyles.Bold;
         messaggioOndata.alignment = TextAlignmentOptions.Center;
         FarmPixelUI.ApplicaTesto(
@@ -981,6 +975,8 @@ public class EnemySpawner : MonoBehaviour
             new Color(1f, 0.88f, 0.56f, 1f)
         );
         messaggioOndata.textWrappingMode = TextWrappingModes.Normal;
+        messaggioOndata.overflowMode = TextOverflowModes.Ellipsis;
+        messaggioOndata.maxVisibleLines = 4;
         messaggioOndata.raycastTarget = false;
         messaggioOndata.gameObject.SetActive(true);
     }

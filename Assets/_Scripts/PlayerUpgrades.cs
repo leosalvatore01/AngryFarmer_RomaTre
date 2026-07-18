@@ -318,7 +318,7 @@ public class PlayerUpgrades : MonoBehaviour
         {
             return "ORA  " +
                    DescriviValoreAttuale(tipo, configurazione) +
-                   "   •   MASSIMO";
+                   "   |   MASSIMO";
         }
 
         switch (tipo)
@@ -631,7 +631,7 @@ public class PlayerUpgrades : MonoBehaviour
         int utilita = OttieniPuntiPercorso(PercorsoBuild.Utilita);
         if (utilita > 0)
         {
-            if (testo.Length > 0) testo.Append("  •  ");
+            if (testo.Length > 0) testo.Append("  |  ");
             testo.Append("UTILITÀ ");
             testo.Append(utilita);
         }
@@ -813,7 +813,7 @@ public class PlayerUpgrades : MonoBehaviour
     {
         int punti = OttieniPuntiPercorso(percorso);
         if (punti <= 0) return;
-        if (testo.Length > 0) testo.Append("  •  ");
+        if (testo.Length > 0) testo.Append("  |  ");
         testo.Append(CatalogoPotenziamentiBuild.NomePercorso(percorso));
         testo.Append(' ');
         testo.Append(punti);
@@ -844,7 +844,7 @@ public class PlayerUpgrades : MonoBehaviour
 
     private static string Confronto(string attuale, string prossimo)
     {
-        return "ORA  " + attuale + "   →   DOPO  " + prossimo;
+        return "ORA  " + attuale + "   >   DOPO  " + prossimo;
     }
 
     private static string ConfrontoPercentuale(

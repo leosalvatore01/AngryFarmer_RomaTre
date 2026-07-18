@@ -193,13 +193,14 @@ public sealed class UovoRecuperabile : MonoBehaviour
         oggettoTesto.transform.localPosition = new Vector3(0f, 0.88f, 0f);
         oggettoTesto.transform.localScale = Vector3.one * 0.28f;
         testoTempo = oggettoTesto.AddComponent<TextMeshPro>();
-        TMP_Text riferimento = GameManager.TrovaTestoInterfaccia("OndataText");
-        if (riferimento != null) testoTempo.font = riferimento.font;
         testoTempo.text = "RECUPERA  " + Mathf.CeilToInt(tempoRimasto);
         testoTempo.fontSize = 4f;
         testoTempo.fontStyle = FontStyles.Bold;
         testoTempo.alignment = TextAlignmentOptions.Center;
-        testoTempo.color = new Color(1f, 0.9f, 0.47f, 1f);
+        FarmPixelUI.ApplicaTestoMondo(
+            testoTempo,
+            new Color(1f, 0.9f, 0.47f, 1f)
+        );
         Renderer rendererTestoTempo =
             testoTempo.GetComponent<Renderer>();
         if (rendererTestoTempo != null)
@@ -238,13 +239,11 @@ public sealed class UovoRecuperabile : MonoBehaviour
         oggetto.transform.localScale = Vector3.one * 0.13f;
 
         TextMeshPro testo = oggetto.AddComponent<TextMeshPro>();
-        TMP_Text riferimento = GameManager.TrovaTestoInterfaccia("OndataText");
-        if (riferimento != null) testo.font = riferimento.font;
         testo.text = messaggio;
         testo.fontSize = 3.2f;
         testo.fontStyle = FontStyles.Bold;
         testo.alignment = TextAlignmentOptions.Center;
-        testo.color = colore;
+        FarmPixelUI.ApplicaTestoMondo(testo, colore);
         Renderer rendererTesto = testo.GetComponent<Renderer>();
         if (rendererTesto != null)
         {

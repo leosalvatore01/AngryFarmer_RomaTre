@@ -7,6 +7,39 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public class ShopInterOndata : MonoBehaviour
 {
+    private static readonly Color32 ColoreVelo =
+        FarmPixelUI.ColoreVeloFlat;
+    private static readonly Color32 ColorePannello =
+        FarmPixelUI.ColorePannelloFlat;
+    private static readonly Color32 ColoreCarta =
+        FarmPixelUI.ColoreCartaFlat;
+    private static readonly Color32 ColoreCartaDisabilitata =
+        FarmPixelUI.ColoreCartaDisabilitataFlat;
+    private static readonly Color32 ColoreBordoPannello =
+        FarmPixelUI.ColoreBordoFlat;
+    private static readonly Color32 TestoChiaro =
+        FarmPixelUI.TestoChiaroFlat;
+    private static readonly Color32 TestoTitolo =
+        FarmPixelUI.TestoTitoloFlat;
+    private static readonly Color32 TestoMeta =
+        FarmPixelUI.TestoMetaFlat;
+    private static readonly Color32 TestoConfronto =
+        FarmPixelUI.TestoConfrontoFlat;
+    private static readonly Color32 TestoBuild =
+        FarmPixelUI.TestoConfrontoFlat;
+    private static readonly Color32 TestoPulsante =
+        FarmPixelUI.TestoPulsanteFlat;
+    private static readonly Color32 TestoErrorePulsante =
+        new Color32(118, 30, 28, 255);
+    private static readonly Color32 ColorePulsanteOro =
+        FarmPixelUI.ColorePulsanteOroFlat;
+    private static readonly Color32 ColorePulsanteVerde =
+        FarmPixelUI.ColorePulsanteVerdeFlat;
+    private static readonly Color32 ColorePulsanteViola =
+        FarmPixelUI.ColorePulsanteViolaFlat;
+    private static readonly Color32 ColorePulsanteNeutro =
+        FarmPixelUI.ColorePulsanteNeutroFlat;
+
     private sealed class CartaOfferta
     {
         public GameObject radice;
@@ -370,27 +403,28 @@ public class ShopInterOndata : MonoBehaviour
                 GameBalanceConfig.Corrente.ObiettiviFattoria
                     .uovaPerMaialino;
             bonus =
-                anteprima.NumeroMaialini +
+                "BONUS: " + anteprima.NumeroMaialini +
                 (anteprima.NumeroMaialini == 1
                     ? " MAIALINO"
                     : " MAIALINI") +
-                "  (FINO A +" + premioMassimo + " MONETE E +" +
-                premioUova + " UOVA)";
+                "  |  FINO A +" + premioMassimo + " MONETE / +" +
+                premioUova + " UOVA";
         }
         else
         {
-            bonus = "NESSUN MAIALINO BONUS";
+            bonus = "BONUS: NESSUN MAIALINO";
         }
         string gruppi = anteprima.NumeroGruppi == 1
             ? "1 GRUPPO"
             : anteprima.NumeroGruppi + " GRUPPI";
 
         return
-            "PROSSIMA: ONDATA " + anteprima.Indice + " / " + anteprima.Totale +
-            "  -  " + anteprima.Nome.ToUpperInvariant() + "  -  " +
-            anteprima.NumeroVolpi + " VOLPI  -  " + gruppi +
-            "  -  " + bonus +
-            "\nTIPI: " + anteprima.Composizione.FormattaCompatta() +
+            "PROSSIMA ONDATA  " + anteprima.Indice + " / " +
+            anteprima.Totale + "  |  " +
+            anteprima.Nome.ToUpperInvariant() +
+            "\n" + anteprima.NumeroVolpi + " VOLPI  |  " + gruppi +
+            "  |  TIPI: " + anteprima.Composizione.FormattaCompatta() +
+            "\n" + bonus +
             "\nOBIETTIVO: " +
             FarmObjectivesController.DescriviAnteprima(anteprima);
     }
@@ -448,10 +482,11 @@ public class ShopInterOndata : MonoBehaviour
         int costoReroll = CostoRerollCorrente;
         if (testoReroll != null)
         {
-            testoReroll.text = EtichettaMonete(costoReroll);
+            testoReroll.text =
+                "CAMBIA  |  " + EtichettaMonete(costoReroll);
             testoReroll.color = monete >= costoReroll
-                ? new Color(1f, 0.94f, 0.77f, 1f)
-                : new Color(1f, 0.52f, 0.42f, 1f);
+                ? TestoPulsante
+                : TestoErrorePulsante;
         }
         if (pulsanteReroll != null) pulsanteReroll.interactable = true;
         if (iconaCostoReroll != null) iconaCostoReroll.enabled = true;
@@ -462,11 +497,11 @@ public class ShopInterOndata : MonoBehaviour
                 potenziamenti.PuoAcquistare(TipoPotenziamento.Cura);
             int costo = potenziamenti.OttieniCosto(TipoPotenziamento.Cura);
             testoCura.text = disponibile
-                ? EtichettaMonete(costo)
+                ? "CURA  |  " + EtichettaMonete(costo)
                 : "SALUTE PIENA";
             testoCura.color = disponibile && monete < costo
-                ? new Color(1f, 0.52f, 0.42f, 1f)
-                : new Color(1f, 0.94f, 0.77f, 1f);
+                ? TestoErrorePulsante
+                : TestoPulsante;
             pulsanteCura.interactable = disponibile;
             if (iconaCostoCura != null) iconaCostoCura.enabled = disponibile;
         }
@@ -512,7 +547,7 @@ public class ShopInterOndata : MonoBehaviour
             ) +
             "  •  " +
             CatalogoPotenziamentiBuild.NomeRarita(definizione.Rarita);
-        carta.testoPercorso.color = coloreRarita;
+        carta.testoPercorso.color = TestoMeta;
         carta.testoTitolo.text = potenziamenti.OttieniTitolo(carta.tipo);
         carta.testoDescrizione.text =
             potenziamenti.OttieniDescrizione(carta.tipo);
@@ -525,42 +560,28 @@ public class ShopInterOndata : MonoBehaviour
         if (carta.acquistata)
         {
             carta.testoPulsante.text = "ACQUISTATO";
-            carta.testoPulsante.color =
-                new Color(1f, 0.94f, 0.77f, 1f);
+            carta.testoPulsante.color = TestoPulsante;
             carta.pulsante.interactable = false;
             carta.iconaCosto.enabled = false;
-            carta.sfondo.color = Color.Lerp(
-                Color.white,
-                colorePercorso,
-                0.28f
-            );
+            carta.sfondo.color = ColoreCartaDisabilitata;
         }
         else if (!disponibile)
         {
             carta.testoPulsante.text = "MAX";
-            carta.testoPulsante.color =
-                new Color(1f, 0.94f, 0.77f, 1f);
+            carta.testoPulsante.color = TestoPulsante;
             carta.pulsante.interactable = false;
             carta.iconaCosto.enabled = false;
-            carta.sfondo.color = Color.Lerp(
-                Color.white,
-                colorePercorso,
-                0.28f
-            );
+            carta.sfondo.color = ColoreCartaDisabilitata;
         }
         else
         {
             carta.testoPulsante.text = EtichettaMonete(costo);
             carta.testoPulsante.color = monete >= costo
-                ? new Color(1f, 0.94f, 0.77f, 1f)
-                : new Color(1f, 0.52f, 0.42f, 1f);
+                ? TestoPulsante
+                : TestoErrorePulsante;
             carta.pulsante.interactable = true;
             carta.iconaCosto.enabled = true;
-            carta.sfondo.color = Color.Lerp(
-                Color.white,
-                colorePercorso,
-                0.13f
-            );
+            carta.sfondo.color = ColoreCarta;
         }
     }
 
@@ -584,22 +605,22 @@ public class ShopInterOndata : MonoBehaviour
         rootRect.offsetMax = Vector2.zero;
 
         Image velo = GetComponent<Image>();
-        velo.color = new Color(0.055f, 0.035f, 0.02f, 0.84f);
+        velo.color = ColoreVelo;
         velo.raycastTarget = true;
 
         pannelloRiepilogo = CreaPannello(
             "RiepilogoOndata",
             transform,
-            new Vector2(860f, 560f),
-            new Color(0.13f, 0.072f, 0.035f, 0.98f)
+            new Vector2(900f, 640f),
+            ColorePannello
         );
         CostruisciRiepilogo(pannelloRiepilogo.transform);
 
         pannelloBottega = CreaPannello(
             "BottegaBuild",
             transform,
-            new Vector2(1220f, 920f),
-            new Color(0.105f, 0.057f, 0.027f, 0.99f)
+            new Vector2(1220f, 980f),
+            ColorePannello
         );
         CostruisciBottega(pannelloBottega.transform);
 
@@ -614,7 +635,7 @@ public class ShopInterOndata : MonoBehaviour
             parent,
             "IconaBottega",
             FarmPixelIcon.Bottega,
-            new Vector2(-322f, 204f),
+            new Vector2(-342f, 250f),
             new Vector2(58f, 58f)
         );
 
@@ -622,10 +643,10 @@ public class ShopInterOndata : MonoBehaviour
             "Titolo",
             parent,
             "ONDATA COMPLETATA",
-            new Vector2(0f, 204f),
-            new Vector2(760f, 64f),
+            new Vector2(0f, 250f),
+            new Vector2(800f, 64f),
             42f,
-            new Color(1f, 0.76f, 0.25f, 1f),
+            TestoTitolo,
             FontStyles.Bold,
             TextAlignmentOptions.Center
         );
@@ -634,22 +655,23 @@ public class ShopInterOndata : MonoBehaviour
             "Riepilogo",
             parent,
             string.Empty,
-            new Vector2(0f, 128f),
-            new Vector2(740f, 76f),
-            21f,
-            new Color(1f, 0.91f, 0.71f, 1f),
+            new Vector2(0f, 170f),
+            new Vector2(800f, 88f),
+            22f,
+            TestoChiaro,
             FontStyles.Normal,
             TextAlignmentOptions.Center
         );
+        testoRiepilogo.overflowMode = TextOverflowModes.Overflow;
 
         testoAnteprimaRiepilogo = CreaTesto(
             "AnteprimaProssimaOnda",
             parent,
             string.Empty,
-            new Vector2(0f, 50f),
-            new Vector2(760f, 72f),
-            17f,
-            new Color(1f, 0.76f, 0.32f, 1f),
+            new Vector2(0f, 66f),
+            new Vector2(810f, 108f),
+            19f,
+            TestoTitolo,
             FontStyles.Bold,
             TextAlignmentOptions.Center
         );
@@ -659,10 +681,10 @@ public class ShopInterOndata : MonoBehaviour
             "Monete",
             parent,
             "MONETE  0",
-            new Vector2(0f, -28f),
+            new Vector2(0f, -24f),
             new Vector2(400f, 46f),
             28f,
-            new Color(1f, 0.86f, 0.22f, 1f),
+            TestoTitolo,
             FontStyles.Bold,
             TextAlignmentOptions.Center
         );
@@ -670,7 +692,7 @@ public class ShopInterOndata : MonoBehaviour
             parent,
             "IconaMonete",
             FarmPixelIcon.Moneta,
-            new Vector2(-125f, -28f),
+            new Vector2(-125f, -24f),
             new Vector2(34f, 34f)
         );
 
@@ -679,21 +701,22 @@ public class ShopInterOndata : MonoBehaviour
             parent,
             "BUILD: NESSUNA BUILD",
             new Vector2(0f, -76f),
-            new Vector2(760f, 34f),
-            17f,
-            new Color(0.71f, 0.9f, 0.68f, 1f),
+            new Vector2(810f, 42f),
+            19f,
+            TestoBuild,
             FontStyles.Bold,
             TextAlignmentOptions.Center
         );
+        testoBuildRiepilogo.overflowMode = TextOverflowModes.Overflow;
 
         CreaTesto(
             "Suggerimento",
             parent,
             "Solo le monete si spendono. Spazio: riparti subito.",
-            new Vector2(0f, -122f),
-            new Vector2(730f, 44f),
-            18f,
-            new Color(0.86f, 0.78f, 0.65f, 1f),
+            new Vector2(0f, -128f),
+            new Vector2(790f, 44f),
+            20f,
+            TestoMeta,
             FontStyles.Normal,
             TextAlignmentOptions.Center
         );
@@ -702,18 +725,18 @@ public class ShopInterOndata : MonoBehaviour
             "ApriBottega",
             parent,
             "SCEGLI LA BUILD",
-            new Vector2(-195f, -204f),
-            new Vector2(350f, 64f),
-            new Color(0.7f, 0.35f, 0.08f, 1f),
+            new Vector2(-205f, -224f),
+            new Vector2(370f, 66f),
+            ColorePulsanteOro,
             ApriBottega
         );
         CreaPulsante(
             "OndataSuccessiva",
             parent,
             "PARTI SUBITO  [SPAZIO]",
-            new Vector2(195f, -204f),
-            new Vector2(350f, 64f),
-            new Color(0.24f, 0.55f, 0.2f, 1f),
+            new Vector2(205f, -224f),
+            new Vector2(370f, 66f),
+            ColorePulsanteVerde,
             AvviaOndataSuccessiva
         );
     }
@@ -724,7 +747,7 @@ public class ShopInterOndata : MonoBehaviour
             parent,
             "IconaBottega",
             FarmPixelIcon.Bottega,
-            new Vector2(-425f, 412f),
+            new Vector2(-425f, 442f),
             new Vector2(52f, 52f)
         );
 
@@ -732,10 +755,10 @@ public class ShopInterOndata : MonoBehaviour
             "Titolo",
             parent,
             "BOTTEGA DELLE BUILD",
-            new Vector2(0f, 412f),
+            new Vector2(0f, 442f),
             new Vector2(760f, 54f),
             37f,
-            new Color(1f, 0.76f, 0.25f, 1f),
+            TestoTitolo,
             FontStyles.Bold,
             TextAlignmentOptions.Center
         );
@@ -744,10 +767,10 @@ public class ShopInterOndata : MonoBehaviour
             "Monete",
             parent,
             "MONETE  0",
-            new Vector2(448f, 412f),
-            new Vector2(250f, 48f),
-            25f,
-            new Color(1f, 0.86f, 0.22f, 1f),
+            new Vector2(430f, 442f),
+            new Vector2(340f, 48f),
+            23f,
+            TestoTitolo,
             FontStyles.Bold,
             TextAlignmentOptions.Center
         );
@@ -755,7 +778,7 @@ public class ShopInterOndata : MonoBehaviour
             parent,
             "IconaMonete",
             FarmPixelIcon.Moneta,
-            new Vector2(330f, 412f),
+            new Vector2(275f, 442f),
             new Vector2(34f, 34f)
         );
 
@@ -763,15 +786,16 @@ public class ShopInterOndata : MonoBehaviour
             "BuildCorrente",
             parent,
             "BUILD: NESSUNA BUILD",
-            new Vector2(0f, 365f),
+            new Vector2(0f, 395f),
             new Vector2(1040f, 32f),
-            17f,
-            new Color(0.72f, 0.92f, 0.68f, 1f),
+            20f,
+            TestoBuild,
             FontStyles.Bold,
             TextAlignmentOptions.Center
         );
+        testoBuildBottega.overflowMode = TextOverflowModes.Overflow;
 
-        float[] posizioniY = { 286f, 158f, 30f, -98f };
+        float[] posizioniY = { 308f, 175f, 42f, -91f };
         for (int i = 0; i < posizioniY.Length; i++)
         {
             CreaCartaOfferta(parent, i, posizioniY[i]);
@@ -780,10 +804,10 @@ public class ShopInterOndata : MonoBehaviour
         pulsanteCura = CreaPulsante(
             "Cura",
             parent,
-            "2 MONETE",
-            new Vector2(-300f, -224f),
-            new Vector2(280f, 54f),
-            new Color(0.32f, 0.55f, 0.24f, 1f),
+            "CURA  |  2 MONETE",
+            new Vector2(-315f, -224f),
+            new Vector2(310f, 60f),
+            ColorePulsanteVerde,
             AcquistaCura
         );
         testoCura = pulsanteCura.GetComponentInChildren<TMP_Text>();
@@ -791,17 +815,22 @@ public class ShopInterOndata : MonoBehaviour
             pulsanteCura.transform,
             "IconaCosto",
             FarmPixelIcon.Cura,
-            new Vector2(-103f, 0f),
+            new Vector2(-122f, 0f),
             new Vector2(27f, 27f)
         );
+        if (testoCura != null)
+        {
+            testoCura.rectTransform.anchoredPosition = new Vector2(16f, 0f);
+            testoCura.rectTransform.sizeDelta = new Vector2(246f, 44f);
+        }
 
         pulsanteReroll = CreaPulsante(
             "Reroll",
             parent,
-            "1 MONETA",
-            new Vector2(0f, -224f),
-            new Vector2(280f, 54f),
-            new Color(0.35f, 0.32f, 0.58f, 1f),
+            "CAMBIA  |  1 MONETA",
+            new Vector2(5f, -224f),
+            new Vector2(310f, 60f),
+            ColorePulsanteViola,
             Reroll
         );
         testoReroll = pulsanteReroll.GetComponentInChildren<TMP_Text>();
@@ -809,18 +838,23 @@ public class ShopInterOndata : MonoBehaviour
             pulsanteReroll.transform,
             "IconaCosto",
             FarmPixelIcon.Moneta,
-            new Vector2(-103f, 0f),
+            new Vector2(-122f, 0f),
             new Vector2(27f, 27f)
         );
+        if (testoReroll != null)
+        {
+            testoReroll.rectTransform.anchoredPosition = new Vector2(16f, 0f);
+            testoReroll.rectTransform.sizeDelta = new Vector2(246f, 44f);
+        }
 
         CreaTesto(
             "EtichettaServizi",
             parent,
-            "CURA RAPIDA                         CAMBIA OFFERTE",
-            new Vector2(-150f, -264f),
-            new Vector2(610f, 28f),
-            14f,
-            new Color(0.84f, 0.75f, 0.62f, 1f),
+            "SERVIZI DELLA BOTTEGA",
+            new Vector2(-155f, -177f),
+            new Vector2(620f, 28f),
+            18f,
+            TestoMeta,
             FontStyles.Bold,
             TextAlignmentOptions.Center
         );
@@ -829,22 +863,23 @@ public class ShopInterOndata : MonoBehaviour
             "Messaggio",
             parent,
             string.Empty,
-            new Vector2(0f, -302f),
-            new Vector2(1020f, 36f),
-            17f,
-            new Color(1f, 0.84f, 0.51f, 1f),
-            FontStyles.Italic,
+            new Vector2(0f, -276f),
+            new Vector2(1060f, 40f),
+            20f,
+            TestoChiaro,
+            FontStyles.Bold,
             TextAlignmentOptions.Center
         );
+        testoMessaggioBottega.overflowMode = TextOverflowModes.Overflow;
 
         testoAnteprimaBottega = CreaTesto(
             "AnteprimaProssimaOnda",
             parent,
             string.Empty,
             new Vector2(0f, -350f),
-            new Vector2(1060f, 52f),
-            15f,
-            new Color(1f, 0.74f, 0.28f, 1f),
+            new Vector2(1080f, 100f),
+            20f,
+            TestoTitolo,
             FontStyles.Bold,
             TextAlignmentOptions.Center
         );
@@ -854,18 +889,18 @@ public class ShopInterOndata : MonoBehaviour
             "Indietro",
             parent,
             "INDIETRO",
-            new Vector2(-205f, -415f),
-            new Vector2(330f, 56f),
-            new Color(0.39f, 0.24f, 0.13f, 1f),
+            new Vector2(-215f, -449f),
+            new Vector2(360f, 60f),
+            ColorePulsanteNeutro,
             TornaAlRiepilogo
         );
         CreaPulsante(
             "OndataSuccessiva",
             parent,
             "PARTI SUBITO  [SPAZIO]",
-            new Vector2(205f, -415f),
-            new Vector2(330f, 56f),
-            new Color(0.24f, 0.55f, 0.2f, 1f),
+            new Vector2(215f, -449f),
+            new Vector2(360f, 60f),
+            ColorePulsanteVerde,
             AvviaOndataSuccessiva
         );
     }
@@ -875,8 +910,8 @@ public class ShopInterOndata : MonoBehaviour
         GameObject radice = CreaPannello(
             "Offerta_" + (indice + 1),
             parent,
-            new Vector2(1080f, 112f),
-            new Color(0.22f, 0.125f, 0.06f, 0.96f),
+            new Vector2(1080f, 124f),
+            ColoreCarta,
             new Vector2(0f, posizioneY),
             false
         );
@@ -906,9 +941,9 @@ public class ShopInterOndata : MonoBehaviour
             "PercorsoRarita",
             radice.transform,
             string.Empty,
-            new Vector2(-293f, 36f),
-            new Vector2(460f, 25f),
-            13f,
+            new Vector2(-293f, 45f),
+            new Vector2(460f, 27f),
+            18f,
             Color.white,
             FontStyles.Bold,
             TextAlignmentOptions.MidlineLeft
@@ -917,10 +952,10 @@ public class ShopInterOndata : MonoBehaviour
             "Titolo",
             radice.transform,
             string.Empty,
-            new Vector2(-330f, 8f),
-            new Vector2(385f, 30f),
-            21f,
-            new Color(1f, 0.82f, 0.38f, 1f),
+            new Vector2(-330f, 13f),
+            new Vector2(385f, 32f),
+            22f,
+            TestoTitolo,
             FontStyles.Bold,
             TextAlignmentOptions.MidlineLeft
         );
@@ -928,35 +963,36 @@ public class ShopInterOndata : MonoBehaviour
             "Descrizione",
             radice.transform,
             string.Empty,
-            new Vector2(-275f, -27f),
-            new Vector2(500f, 28f),
-            15f,
-            new Color(0.91f, 0.84f, 0.72f, 1f),
+            new Vector2(-275f, -30f),
+            new Vector2(500f, 49f),
+            19f,
+            TestoChiaro,
             FontStyles.Normal,
             TextAlignmentOptions.MidlineLeft
         );
+        descrizione.overflowMode = TextOverflowModes.Overflow;
         TMP_Text confronto = CreaTesto(
             "Confronto",
             radice.transform,
             string.Empty,
-            new Vector2(145f, 19f),
-            new Vector2(370f, 30f),
-            15f,
-            new Color(0.72f, 0.94f, 0.69f, 1f),
+            new Vector2(145f, 21f),
+            new Vector2(370f, 34f),
+            20f,
+            TestoConfronto,
             FontStyles.Bold,
             TextAlignmentOptions.Center
         );
         confronto.enableAutoSizing = true;
-        confronto.fontSizeMin = 12f;
-        confronto.fontSizeMax = 15f;
+        confronto.fontSizeMin = 18f;
+        confronto.fontSizeMax = 20f;
         TMP_Text stato = CreaTesto(
             "Stato",
             radice.transform,
             string.Empty,
-            new Vector2(145f, -22f),
-            new Vector2(260f, 28f),
-            14f,
-            new Color(0.78f, 0.72f, 0.62f, 1f),
+            new Vector2(145f, -25f),
+            new Vector2(260f, 30f),
+            18f,
+            TestoMeta,
             FontStyles.Bold,
             TextAlignmentOptions.Center
         );
@@ -967,8 +1003,8 @@ public class ShopInterOndata : MonoBehaviour
             radice.transform,
             "--",
             new Vector2(430f, 0f),
-            new Vector2(190f, 54f),
-            new Color(0.68f, 0.33f, 0.075f, 1f),
+            new Vector2(200f, 58f),
+            ColorePulsanteOro,
             () => AcquistaCarta(indiceCatturato)
         );
         Image iconaCosto = FarmPixelUI.AggiungiIcona(
@@ -982,7 +1018,7 @@ public class ShopInterOndata : MonoBehaviour
         if (testoCosto != null)
         {
             testoCosto.rectTransform.anchoredPosition = new Vector2(15f, 0f);
-            testoCosto.rectTransform.sizeDelta = new Vector2(142f, 40f);
+            testoCosto.rectTransform.sizeDelta = new Vector2(150f, 44f);
         }
 
         carte.Add(new CartaOfferta
@@ -1028,18 +1064,16 @@ public class ShopInterOndata : MonoBehaviour
         rect.sizeDelta = dimensioni;
 
         Image immagine = oggetto.GetComponent<Image>();
-        FarmPixelUI.ApplicaPannello(immagine, !bordoMarcato, true);
-        immagine.color = Color.Lerp(
-            Color.white,
-            colore,
-            bordoMarcato ? 0.1f : 0.16f
-        );
+        immagine.sprite = null;
+        immagine.type = Image.Type.Simple;
+        immagine.color = colore;
+        immagine.raycastTarget = true;
 
         Outline bordo = oggetto.GetComponent<Outline>();
-        bordo.effectColor = new Color(0.12f, 0.055f, 0.025f, 0.72f);
+        bordo.effectColor = ColoreBordoPannello;
         bordo.effectDistance = bordoMarcato
-            ? new Vector2(3f, -3f)
-            : new Vector2(2f, -2f);
+            ? new Vector2(2f, 2f)
+            : new Vector2(1f, 1f);
         bordo.useGraphicAlpha = true;
         return oggetto;
     }
@@ -1081,7 +1115,15 @@ public class ShopInterOndata : MonoBehaviour
         testo.textWrappingMode = TextWrappingModes.Normal;
         testo.overflowMode = TextOverflowModes.Ellipsis;
         testo.raycastTarget = false;
-        FarmPixelUI.ApplicaTesto(testo, colore);
+        TMP_FontAsset fontPixel = FarmPixelUI.FontInterfaccia;
+        if (fontPixel != null) testo.font = fontPixel;
+        testo.color = colore;
+        testo.extraPadding = true;
+        testo.outlineColor = Color.clear;
+        testo.outlineWidth = 0f;
+
+        Shadow ombraTesto = testo.GetComponent<Shadow>();
+        if (ombraTesto != null) ombraTesto.enabled = false;
         return testo;
     }
 
@@ -1113,6 +1155,8 @@ public class ShopInterOndata : MonoBehaviour
         rect.sizeDelta = dimensioni;
 
         Image immagine = oggetto.GetComponent<Image>();
+        immagine.sprite = null;
+        immagine.type = Image.Type.Simple;
         immagine.color = colore;
 
         Outline bordo = oggetto.GetComponent<Outline>();
@@ -1120,7 +1164,15 @@ public class ShopInterOndata : MonoBehaviour
 
         Button pulsante = oggetto.GetComponent<Button>();
         pulsante.targetGraphic = immagine;
-        FarmPixelUI.ApplicaPulsante(pulsante, colore);
+        ColorBlock colori = pulsante.colors;
+        colori.normalColor = Color.white;
+        colori.highlightedColor = new Color(1.05f, 1.05f, 1.05f, 1f);
+        colori.pressedColor = new Color(0.84f, 0.84f, 0.84f, 1f);
+        colori.selectedColor = Color.white;
+        colori.disabledColor = new Color(0.85f, 0.85f, 0.85f, 1f);
+        colori.colorMultiplier = 1f;
+        colori.fadeDuration = 0.06f;
+        pulsante.colors = colori;
         pulsante.onClick.AddListener(azione);
 
         TMP_Text testo = CreaTesto(
@@ -1129,8 +1181,8 @@ public class ShopInterOndata : MonoBehaviour
             etichetta,
             Vector2.zero,
             dimensioni - new Vector2(16f, 10f),
-            18f,
-            new Color(1f, 0.94f, 0.77f, 1f),
+            20f,
+            TestoPulsante,
             FontStyles.Bold,
             TextAlignmentOptions.Center
         );

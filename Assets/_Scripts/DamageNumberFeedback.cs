@@ -134,8 +134,7 @@ internal sealed class DamageNumberPopup : MonoBehaviour
         testo.fontSize = 4.2f;
         testo.textWrappingMode = TextWrappingModes.NoWrap;
         testo.rectTransform.sizeDelta = new Vector2(3.5f, 1.2f);
-        testo.outlineWidth = 0.22f;
-        testo.outlineColor = new Color32(64, 30, 15, 255);
+        FarmPixelUI.ApplicaTestoMondo(testo, Color.white);
         MeshRenderer renderer = testo.GetComponent<MeshRenderer>();
         if (renderer != null) renderer.sortingOrder = 320;
     }

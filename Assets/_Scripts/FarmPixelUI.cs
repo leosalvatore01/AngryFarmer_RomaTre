@@ -30,6 +30,39 @@ public enum FarmPixelIcon
 public static class FarmPixelUI
 {
     private const int DimensioneIcona = 20;
+    private const string PercorsoFontInterfaccia =
+        "Fonts/PixelifySans-SemiBold SDF";
+
+    public static readonly Color32 ColoreVeloFlat =
+        new Color32(24, 17, 12, 232);
+    public static readonly Color32 ColorePannelloFlat =
+        new Color32(111, 58, 31, 255);
+    public static readonly Color32 ColoreCartaFlat =
+        new Color32(76, 40, 23, 255);
+    public static readonly Color32 ColoreCartaDisabilitataFlat =
+        new Color32(62, 49, 38, 255);
+    public static readonly Color32 ColoreBordoFlat =
+        new Color32(68, 34, 20, 235);
+    public static readonly Color32 TestoChiaroFlat =
+        new Color32(248, 229, 191, 255);
+    public static readonly Color32 TestoTitoloFlat =
+        new Color32(255, 207, 91, 255);
+    public static readonly Color32 TestoMetaFlat =
+        new Color32(218, 195, 158, 255);
+    public static readonly Color32 TestoConfrontoFlat =
+        new Color32(187, 229, 158, 255);
+    public static readonly Color32 TestoPulsanteFlat =
+        new Color32(55, 29, 17, 255);
+    public static readonly Color32 TestoErroreFlat =
+        new Color32(243, 178, 150, 255);
+    public static readonly Color32 ColorePulsanteOroFlat =
+        new Color32(211, 144, 37, 255);
+    public static readonly Color32 ColorePulsanteVerdeFlat =
+        new Color32(143, 183, 94, 255);
+    public static readonly Color32 ColorePulsanteViolaFlat =
+        new Color32(160, 145, 194, 255);
+    public static readonly Color32 ColorePulsanteNeutroFlat =
+        new Color32(191, 143, 94, 255);
 
     private static readonly Color32 Trasparente = new Color32(0, 0, 0, 0);
     private static readonly Color32 Contorno = new Color32(33, 20, 15, 255);
@@ -43,8 +76,39 @@ public static class FarmPixelUI
     private static Sprite pannelloLegno;
     private static Sprite pannelloIncassato;
     private static Sprite pulsanteLegno;
+    private static TMP_FontAsset fontInterfaccia;
+    private static bool fontInterfacciaCercato;
     private static readonly Dictionary<FarmPixelIcon, Sprite> Icone =
         new Dictionary<FarmPixelIcon, Sprite>();
+
+    public static TMP_FontAsset FontInterfaccia
+    {
+        get
+        {
+            if (!fontInterfacciaCercato)
+            {
+                fontInterfacciaCercato = true;
+                fontInterfaccia = Resources.Load<TMP_FontAsset>(
+                    PercorsoFontInterfaccia
+                );
+                if (fontInterfaccia == null)
+                {
+                    Debug.LogWarning(
+                        "Font Pixelify Sans non trovato in Resources. " +
+                        "L'interfaccia userà il font di riserva."
+                    );
+                }
+            }
+            return fontInterfaccia;
+        }
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void AzzeraCacheRuntime()
+    {
+        fontInterfaccia = null;
+        fontInterfacciaCercato = false;
+    }
 
     public static Sprite PannelloLegno
     {
@@ -134,10 +198,31 @@ public static class FarmPixelUI
     {
         if (immagine == null) return;
 
-        immagine.sprite = incassato ? PannelloIncassato : PannelloLegno;
-        immagine.type = Image.Type.Sliced;
-        immagine.color = Color.white;
+        immagine.sprite = null;
+        immagine.material = null;
+        immagine.type = Image.Type.Simple;
+        immagine.color = incassato
+            ? ColoreCartaFlat
+            : ColorePannelloFlat;
         immagine.raycastTarget = riceveRaycast;
+
+        Shadow[] effetti = immagine.GetComponents<Shadow>();
+        foreach (Shadow effetto in effetti)
+        {
+            effetto.enabled = false;
+        }
+
+        Outline bordo = immagine.GetComponent<Outline>();
+        if (bordo == null)
+        {
+            bordo = immagine.gameObject.AddComponent<Outline>();
+        }
+        bordo.enabled = true;
+        bordo.effectColor = ColoreBordoFlat;
+        bordo.effectDistance = incassato
+            ? new Vector2(1f, 1f)
+            : new Vector2(2f, 2f);
+        bordo.useGraphicAlpha = true;
     }
 
     public static void ApplicaPulsante(Button pulsante, Color tinta)
@@ -153,47 +238,66 @@ public static class FarmPixelUI
 
         if (immagine != null)
         {
-            immagine.sprite = PulsanteLegno;
-            immagine.type = Image.Type.Sliced;
+            immagine.sprite = null;
+            immagine.material = null;
+            immagine.type = Image.Type.Simple;
             immagine.color = tinta;
         }
 
         ColorBlock colori = pulsante.colors;
         colori.normalColor = Color.white;
-        colori.highlightedColor = new Color(1.08f, 1.08f, 1.02f, 1f);
-        colori.pressedColor = new Color(0.72f, 0.72f, 0.68f, 1f);
+        colori.highlightedColor = new Color(1.05f, 1.05f, 1.05f, 1f);
+        colori.pressedColor = new Color(0.84f, 0.84f, 0.84f, 1f);
         colori.selectedColor = Color.white;
-        colori.disabledColor = new Color(0.35f, 0.35f, 0.35f, 0.72f);
+        colori.disabledColor = new Color(0.85f, 0.85f, 0.85f, 1f);
         colori.colorMultiplier = 1f;
         colori.fadeDuration = 0.06f;
         pulsante.colors = colori;
 
-        Shadow ombra = pulsante.GetComponent<Shadow>();
-        if (ombra == null)
+        Shadow[] effetti = pulsante.GetComponents<Shadow>();
+        foreach (Shadow effetto in effetti)
         {
-            ombra = pulsante.gameObject.AddComponent<Shadow>();
+            effetto.enabled = false;
         }
-        ombra.effectColor = new Color(0.10f, 0.045f, 0.02f, 0.9f);
-        ombra.effectDistance = new Vector2(3f, -3f);
-        ombra.useGraphicAlpha = true;
     }
 
     public static void ApplicaTesto(TMP_Text testo, Color colore)
     {
         if (testo == null) return;
 
-        testo.color = colore;
-        testo.outlineColor = new Color32(42, 22, 14, 235);
-        testo.outlineWidth = 0.12f;
-
-        Shadow ombra = testo.GetComponent<Shadow>();
-        if (ombra == null)
+        TMP_FontAsset font = FontInterfaccia;
+        if (font != null)
         {
-            ombra = testo.gameObject.AddComponent<Shadow>();
+            testo.font = font;
         }
-        ombra.effectColor = new Color(0.08f, 0.035f, 0.018f, 0.82f);
-        ombra.effectDistance = new Vector2(2f, -2f);
-        ombra.useGraphicAlpha = true;
+        testo.color = colore;
+        testo.extraPadding = true;
+        testo.outlineColor = Color.clear;
+        testo.outlineWidth = 0f;
+
+        if (testo is TextMeshProUGUI)
+        {
+            Shadow[] effetti = testo.GetComponents<Shadow>();
+            foreach (Shadow effetto in effetti)
+            {
+                effetto.enabled = false;
+            }
+        }
+    }
+
+    public static void ApplicaTestoMondo(TMP_Text testo, Color colore)
+    {
+        if (testo == null) return;
+
+        TMP_FontAsset font = FontInterfaccia;
+        if (font != null)
+        {
+            testo.font = font;
+        }
+        testo.color = colore;
+        testo.extraPadding = true;
+        testo.outlineColor = new Color32(28, 15, 10, 245);
+        testo.outlineWidth = 0.1f;
     }
 
     private static Sprite CreaPannelloLegno()

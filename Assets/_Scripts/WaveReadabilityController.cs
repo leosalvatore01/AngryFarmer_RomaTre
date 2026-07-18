@@ -550,8 +550,13 @@ public sealed class WaveReadabilityController : MonoBehaviour
             }
             if (sfondiChipTipi[i] != null)
             {
-                Color colore = FoxVariantStyle.ColoreUi(tipo);
-                colore.a = quantita > 0 ? 0.82f : 0.22f;
+                Color coloreTipo = FoxVariantStyle.ColoreUi(tipo);
+                Color colore = Color.Lerp(
+                    FarmPixelUI.ColoreCartaFlat,
+                    coloreTipo,
+                    quantita > 0 ? 0.28f : 0.08f
+                );
+                colore.a = quantita > 0 ? 1f : 0.78f;
                 sfondiChipTipi[i].color = colore;
             }
         }
@@ -675,9 +680,11 @@ public sealed class WaveReadabilityController : MonoBehaviour
                 indicatore.immagineFreccia.color = contieneMinacce
                     ? coloreTipo
                     : Color.Lerp(coloreTipo, Color.white, 0.34f);
-                indicatore.sfondo.color = contieneMinacce
-                    ? Color.Lerp(coloreTipo, Color.white, 0.24f)
-                    : Color.Lerp(coloreTipo, Color.white, 0.62f);
+                indicatore.sfondo.color = Color.Lerp(
+                    FarmPixelUI.ColoreCartaFlat,
+                    coloreTipo,
+                    contieneMinacce ? 0.32f : 0.18f
+                );
             }
 
             indicatore.quantitaVisualizzata = quantita;
@@ -992,7 +999,7 @@ public sealed class WaveReadabilityController : MonoBehaviour
             new Vector2(1f, 1f),
             new Vector2(1f, 1f),
             new Vector2(-18f, -18f),
-            new Vector2(350f, 154f),
+            new Vector2(400f, 174f),
             false
         );
 
@@ -1000,8 +1007,8 @@ public sealed class WaveReadabilityController : MonoBehaviour
             schedaHud.transform,
             "IconaVolpe",
             FarmPixelIcon.Volpe,
-            new Vector2(-139f, 27f),
-            new Vector2(54f, 54f)
+            new Vector2(-160f, 38f),
+            new Vector2(56f, 56f)
         );
 
         CreaTesto(
@@ -1009,9 +1016,9 @@ public sealed class WaveReadabilityController : MonoBehaviour
             schedaHud.transform,
             "VOLPI RIMASTE",
             font,
-            new Vector2(38f, 49f),
-            new Vector2(244f, 25f),
-            18f,
+            new Vector2(42f, 58f),
+            new Vector2(286f, 28f),
+            20f,
             new Color32(255, 220, 143, 255),
             TextAlignmentOptions.Center,
             FontStyles.Bold
@@ -1021,9 +1028,9 @@ public sealed class WaveReadabilityController : MonoBehaviour
             schedaHud.transform,
             "RIMASTE  0 / 0",
             font,
-            new Vector2(38f, 23f),
-            new Vector2(244f, 28f),
-            23f,
+            new Vector2(42f, 27f),
+            new Vector2(286f, 32f),
+            25f,
             new Color32(255, 181, 67, 255),
             TextAlignmentOptions.Center,
             FontStyles.Bold
@@ -1033,9 +1040,9 @@ public sealed class WaveReadabilityController : MonoBehaviour
             schedaHud.transform,
             string.Empty,
             font,
-            new Vector2(-139f, -17f),
-            new Vector2(70f, 18f),
-            11f,
+            new Vector2(-140f, -12f),
+            new Vector2(116f, 24f),
+            16f,
             new Color32(242, 211, 157, 255),
             TextAlignmentOptions.Center,
             FontStyles.Bold
@@ -1047,14 +1054,14 @@ public sealed class WaveReadabilityController : MonoBehaviour
             new Vector2(0.5f, 0.5f),
             new Vector2(0.5f, 0.5f),
             new Vector2(0.5f, 0.5f),
-            new Vector2(38f, -17f),
-            new Vector2(244f, 22f),
+            new Vector2(42f, -12f),
+            new Vector2(284f, 22f),
             true
         );
 
         segmentiBarra = new Image[SegmentiBarra];
-        const float larghezza = 14f;
-        const float spazio = 2f;
+        const float larghezza = 22f;
+        const float spazio = 3f;
         float totale = SegmentiBarra * larghezza +
                        (SegmentiBarra - 1) * spazio;
         float primoX = -totale * 0.5f + larghezza * 0.5f;
@@ -1071,7 +1078,7 @@ public sealed class WaveReadabilityController : MonoBehaviour
             ImpostaRectCentrato(
                 rect,
                 new Vector2(primoX + i * (larghezza + spazio), 0f),
-                new Vector2(larghezza, 10f)
+                new Vector2(larghezza, 12f)
             );
             Image immagine = segmento.GetComponent<Image>();
             immagine.raycastTarget = false;
@@ -1086,8 +1093,8 @@ public sealed class WaveReadabilityController : MonoBehaviour
     {
         chipTipi = new TMP_Text[5];
         sfondiChipTipi = new Image[5];
-        const float larghezza = 58f;
-        const float spazio = 7f;
+        const float larghezza = 68f;
+        const float spazio = 5f;
         float totale = chipTipi.Length * larghezza +
                        (chipTipi.Length - 1) * spazio;
         float primoX = -totale * 0.5f + larghezza * 0.5f;
@@ -1102,8 +1109,8 @@ public sealed class WaveReadabilityController : MonoBehaviour
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
-                new Vector2(primoX + i * (larghezza + spazio), -57f),
-                new Vector2(larghezza, 25f),
+                new Vector2(primoX + i * (larghezza + spazio), -64f),
+                new Vector2(larghezza, 30f),
                 true
             );
             Image sfondo = pannello.GetComponent<Image>();
@@ -1116,8 +1123,8 @@ public sealed class WaveReadabilityController : MonoBehaviour
                 FoxVariantStyle.Abbreviazione(tipo) + "  0",
                 font,
                 Vector2.zero,
-                new Vector2(larghezza - 5f, 21f),
-                12f,
+                new Vector2(larghezza - 4f, 25f),
+                16f,
                 new Color32(255, 247, 216, 255),
                 TextAlignmentOptions.Center,
                 FontStyles.Bold
@@ -1132,9 +1139,9 @@ public sealed class WaveReadabilityController : MonoBehaviour
         Vector2[] ancore =
         {
             new Vector2(0.945f, 0.50f),
-            new Vector2(0.82f, 0.84f),
-            new Vector2(0.50f, 0.925f),
-            new Vector2(0.24f, 0.84f),
+            new Vector2(0.70f, 0.78f),
+            new Vector2(0.50f, 0.90f),
+            new Vector2(0.30f, 0.78f),
             new Vector2(0.055f, 0.50f),
             new Vector2(0.105f, 0.135f),
             new Vector2(0.50f, 0.075f),
@@ -1151,7 +1158,7 @@ public sealed class WaveReadabilityController : MonoBehaviour
                 ancore[i],
                 new Vector2(0.5f, 0.5f),
                 Vector2.zero,
-                new Vector2(74f, 42f),
+                new Vector2(94f, 48f),
                 false
             );
 
@@ -1165,8 +1172,8 @@ public sealed class WaveReadabilityController : MonoBehaviour
             RectTransform frecciaRect = freccia.GetComponent<RectTransform>();
             ImpostaRectCentrato(
                 frecciaRect,
-                new Vector2(-19f, 0f),
-                new Vector2(25f, 25f)
+                new Vector2(-27f, 0f),
+                new Vector2(28f, 28f)
             );
             frecciaRect.localRotation = Quaternion.Euler(0f, 0f, i * 45f);
             Image immagineFreccia = freccia.GetComponent<Image>();
@@ -1180,8 +1187,8 @@ public sealed class WaveReadabilityController : MonoBehaviour
                 pannello.transform,
                 "x1",
                 font,
-                new Vector2(14f, 0f),
-                new Vector2(42f, 31f),
+                new Vector2(16f, 0f),
+                new Vector2(56f, 34f),
                 24f,
                 new Color32(255, 229, 169, 255),
                 TextAlignmentOptions.Center,
@@ -1208,8 +1215,8 @@ public sealed class WaveReadabilityController : MonoBehaviour
             new Vector2(0.5f, 1f),
             new Vector2(0.5f, 1f),
             new Vector2(0.5f, 1f),
-            new Vector2(0f, -96f),
-            new Vector2(370f, 68f),
+            new Vector2(0f, -118f),
+            new Vector2(430f, 76f),
             false
         );
         gruppoSegnale = pannelloSegnale.AddComponent<CanvasGroup>();
@@ -1220,15 +1227,15 @@ public sealed class WaveReadabilityController : MonoBehaviour
             pannelloSegnale.transform,
             "VolpeSinistra",
             FarmPixelIcon.Volpe,
-            new Vector2(-153f, 0f),
-            new Vector2(43f, 43f)
+            new Vector2(-180f, 0f),
+            new Vector2(46f, 46f)
         );
         FarmPixelUI.AggiungiIcona(
             pannelloSegnale.transform,
             "VolpeDestra",
             FarmPixelIcon.Volpe,
-            new Vector2(153f, 0f),
-            new Vector2(43f, 43f)
+            new Vector2(180f, 0f),
+            new Vector2(46f, 46f)
         );
         testoSegnale = CreaTesto(
             "TestoSegnale",
@@ -1236,8 +1243,8 @@ public sealed class WaveReadabilityController : MonoBehaviour
             "ULTIME VOLPI!",
             font,
             Vector2.zero,
-            new Vector2(278f, 46f),
-            29f,
+            new Vector2(332f, 50f),
+            31f,
             new Color32(255, 182, 63, 255),
             TextAlignmentOptions.Center,
             FontStyles.Bold
@@ -1260,8 +1267,7 @@ public sealed class WaveReadabilityController : MonoBehaviour
             nome,
             typeof(RectTransform),
             typeof(CanvasRenderer),
-            typeof(Image),
-            typeof(Shadow)
+            typeof(Image)
         );
         oggetto.transform.SetParent(parent, false);
         RectTransform rect = oggetto.GetComponent<RectTransform>();
@@ -1273,10 +1279,6 @@ public sealed class WaveReadabilityController : MonoBehaviour
 
         Image immagine = oggetto.GetComponent<Image>();
         FarmPixelUI.ApplicaPannello(immagine, incassato, false);
-        Shadow ombra = oggetto.GetComponent<Shadow>();
-        ombra.effectColor = new Color(0.08f, 0.035f, 0.018f, 0.86f);
-        ombra.effectDistance = new Vector2(4f, -4f);
-        ombra.useGraphicAlpha = true;
         return oggetto;
     }
 

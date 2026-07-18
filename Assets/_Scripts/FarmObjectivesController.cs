@@ -397,10 +397,10 @@ public sealed class FarmObjectivesController : MonoBehaviour
         testoProgresso.text = ProgressoCorrente();
 
         Color colore = stato == StatoObiettivoFattoria.Completato
-            ? new Color(0.49f, 0.95f, 0.42f, 1f)
+            ? FarmPixelUI.TestoConfrontoFlat
             : stato == StatoObiettivoFattoria.Fallito
-                ? new Color(1f, 0.35f, 0.24f, 1f)
-                : new Color(1f, 0.79f, 0.27f, 1f);
+                ? FarmPixelUI.TestoErroreFlat
+                : FarmPixelUI.TestoTitoloFlat;
         testoTitolo.color = colore;
         barraProgresso.color = colore;
 
@@ -491,8 +491,7 @@ public sealed class FarmObjectivesController : MonoBehaviour
             "PannelloObiettivoFattoria",
             typeof(RectTransform),
             typeof(CanvasRenderer),
-            typeof(Image),
-            typeof(Shadow)
+            typeof(Image)
         );
         pannello.transform.SetParent(interfaccia.transform, false);
 
@@ -500,46 +499,46 @@ public sealed class FarmObjectivesController : MonoBehaviour
         rect.anchorMin = new Vector2(1f, 1f);
         rect.anchorMax = new Vector2(1f, 1f);
         rect.pivot = new Vector2(1f, 1f);
-        rect.anchoredPosition = new Vector2(-18f, -190f);
-        rect.sizeDelta = new Vector2(454f, 142f);
+        rect.anchoredPosition = new Vector2(-18f, -206f);
+        rect.sizeDelta = new Vector2(480f, 178f);
 
         FarmPixelUI.ApplicaPannello(
             pannello.GetComponent<Image>(),
             false,
             false
         );
-        Shadow ombra = pannello.GetComponent<Shadow>();
-        ombra.effectColor = new Color(0.09f, 0.04f, 0.018f, 0.9f);
-        ombra.effectDistance = new Vector2(5f, -5f);
-
         FarmPixelUI.AggiungiIcona(
             pannello.transform,
             "IconaObiettivo",
             FarmPixelIcon.Obiettivo,
-            new Vector2(-194f, 43f),
-            new Vector2(38f, 38f)
+            new Vector2(-207f, 61f),
+            new Vector2(42f, 42f)
         );
         testoTitolo = CreaTesto(
             "Titolo",
-            new Vector2(18f, 45f),
-            new Vector2(370f, 30f),
-            21f,
+            new Vector2(20f, 63f),
+            new Vector2(402f, 34f),
+            22f,
             FontStyles.Bold
         );
         testoDescrizione = CreaTesto(
             "Descrizione",
-            new Vector2(0f, 8f),
-            new Vector2(414f, 38f),
-            16f,
+            new Vector2(0f, 19f),
+            new Vector2(444f, 54f),
+            18f,
             FontStyles.Normal
         );
+        testoDescrizione.textWrappingMode = TextWrappingModes.Normal;
+        testoDescrizione.overflowMode = TextOverflowModes.Ellipsis;
+        testoDescrizione.maxVisibleLines = 2;
         testoProgresso = CreaTesto(
             "Progresso",
-            new Vector2(0f, -29f),
-            new Vector2(414f, 28f),
-            15f,
+            new Vector2(0f, -34f),
+            new Vector2(444f, 30f),
+            18f,
             FontStyles.Bold
         );
+        testoProgresso.overflowMode = TextOverflowModes.Ellipsis;
 
         GameObject contenitoreBarra = new GameObject(
             "BarraProgresso",
@@ -553,8 +552,8 @@ public sealed class FarmObjectivesController : MonoBehaviour
         barraRect.anchorMin = new Vector2(0.5f, 0.5f);
         barraRect.anchorMax = new Vector2(0.5f, 0.5f);
         barraRect.pivot = new Vector2(0.5f, 0.5f);
-        barraRect.anchoredPosition = new Vector2(0f, -58f);
-        barraRect.sizeDelta = new Vector2(414f, 10f);
+        barraRect.anchoredPosition = new Vector2(0f, -71f);
+        barraRect.sizeDelta = new Vector2(444f, 12f);
         Image sfondoBarra = contenitoreBarra.GetComponent<Image>();
         sfondoBarra.color = new Color(0.16f, 0.07f, 0.025f, 0.95f);
         sfondoBarra.raycastTarget = false;
@@ -609,7 +608,7 @@ public sealed class FarmObjectivesController : MonoBehaviour
         testo.fontStyle = stile;
         testo.alignment = TextAlignmentOptions.Center;
         testo.textWrappingMode = TextWrappingModes.NoWrap;
-        testo.overflowMode = TextOverflowModes.Overflow;
+        testo.overflowMode = TextOverflowModes.Ellipsis;
         testo.raycastTarget = false;
         FarmPixelUI.ApplicaTesto(
             testo,
