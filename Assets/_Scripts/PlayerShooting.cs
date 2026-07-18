@@ -145,7 +145,7 @@ public class PlayerShooting : MonoBehaviour
         if (GameManager.instance != null &&
             !GameManager.instance.GameplayAttivo)
         {
-            attendiRilascioMouse = true;
+            attendiRilascioMouse = Input.GetMouseButton(0);
             return;
         }
 

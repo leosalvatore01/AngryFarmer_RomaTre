@@ -50,14 +50,19 @@ public class GameManager : MonoBehaviour
     public bool UltimoObiettivoCompletato { get; private set; }
     public int UovaUltimoObiettivo { get; private set; }
     public StatoPartita StatoCorrente { get; private set; } = StatoPartita.Onda;
+    public bool PausaManualeAttiva { get; private set; }
     public bool GameplayAttivo =>
-        !isGameOver && StatoCorrente == StatoPartita.Onda;
+        !isGameOver &&
+        StatoCorrente == StatoPartita.Onda &&
+        !PausaManualeAttiva;
     public bool PausaInterOndataAttiva =>
         !isGameOver && StatoCorrente == StatoPartita.Intervallo;
 
     public event Action<int> MoneteCambiate;
     public event Action<int> UovaCambiate;
     public event Action<int, int> GallineCambiate;
+    public event Action<StatoPartita> StatoPartitaCambiato;
+    public event Action<bool> PausaManualeCambiata;
 
     void Awake()
     {
@@ -664,6 +669,7 @@ public class GameManager : MonoBehaviour
 
     void GameOver()
     {
+        FarmAudioController.RiproduciPericolo();
         MostraFinePartita("FATTORIA PERDUTA");
     }
 
@@ -672,6 +678,7 @@ public class GameManager : MonoBehaviour
         if (isGameOver) return;
 
         Debug.Log("Game over: il contadino e stato sconfitto.");
+        FarmAudioController.RiproduciPericolo();
         MostraFinePartita("CONTADINO SCONFITTO");
     }
 
@@ -699,6 +706,7 @@ public class GameManager : MonoBehaviour
 
     public void Riprova()
     {
+        ImpostaPausaManuale(false);
         ImpostaStatoPartita(StatoPartita.Onda);
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
@@ -712,6 +720,7 @@ public class GameManager : MonoBehaviour
         MoneteRaccolte += quantitaValida;
         AggiornaContatoreMonete();
         MoneteCambiate?.Invoke(monete);
+        FarmAudioController.RiproduciMoneta();
     }
 
     public bool ProvaSpendiMonete(int costo)
@@ -736,6 +745,7 @@ public class GameManager : MonoBehaviour
     public void Vittoria()
     {
         if (isGameOver) return;
+        FarmAudioController.RiproduciSuccesso();
         MostraFinePartita("FATTORIA SALVA!");
     }
 
@@ -823,7 +833,12 @@ public class GameManager : MonoBehaviour
 
     public void ContinuaConOndataSuccessiva()
     {
-        if (isGameOver || StatoCorrente != StatoPartita.Intervallo) return;
+        if (isGameOver ||
+            PausaManualeAttiva ||
+            StatoCorrente != StatoPartita.Intervallo)
+        {
+            return;
+        }
 
         EnemySpawner spawner = FindFirstObjectByType<EnemySpawner>();
         if (spawner != null)
@@ -838,9 +853,36 @@ public class GameManager : MonoBehaviour
         ImpostaStatoPartita(StatoPartita.Onda);
     }
 
+    public void ImpostaPausaManuale(bool attiva)
+    {
+        if (PausaManualeAttiva == attiva)
+        {
+            AggiornaScalaTemporale();
+            return;
+        }
+
+        PausaManualeAttiva = attiva;
+        AggiornaScalaTemporale();
+        PausaManualeCambiata?.Invoke(attiva);
+    }
+
     void ImpostaStatoPartita(StatoPartita nuovoStato)
     {
+        bool cambiato = StatoCorrente != nuovoStato;
         StatoCorrente = nuovoStato;
-        Time.timeScale = nuovoStato == StatoPartita.Onda ? 1f : 0f;
+        AggiornaScalaTemporale();
+        if (cambiato)
+        {
+            StatoPartitaCambiato?.Invoke(nuovoStato);
+        }
+    }
+
+    void AggiornaScalaTemporale()
+    {
+        Time.timeScale =
+            StatoCorrente == StatoPartita.Onda &&
+            !PausaManualeAttiva
+                ? 1f
+                : 0f;
     }
 }

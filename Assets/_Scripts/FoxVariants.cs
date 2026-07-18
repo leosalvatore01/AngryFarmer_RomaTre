@@ -975,6 +975,7 @@ internal sealed class FoxVariantAudioController : MonoBehaviour
 
     public void RiproduciCaricaAlfa(Vector2 posizione)
     {
+        FarmAudioController.RiproduciPericolo(0.9f);
         Riproduci(clipCaricaAlfa, posizione, 1f);
     }
 
@@ -985,6 +986,7 @@ internal sealed class FoxVariantAudioController : MonoBehaviour
 
     public void RiproduciPredazione(TipoVolpe tipo, Vector2 posizione)
     {
+        FarmAudioController.RiproduciPericolo(0.78f);
         Riproduci(
             tipo == TipoVolpe.Ladra ? clipPredazione : versiSpawn[(int)tipo],
             posizione,
@@ -1007,7 +1009,12 @@ internal sealed class FoxVariantAudioController : MonoBehaviour
         FoxVariantsBalanceSettings varianti = GameBalanceConfig.Corrente.VariantiVolpe;
         AudioSource sorgente = OttieniSorgente();
         sorgente.panStereo = CalcolaPan(posizione);
-        sorgente.volume = Mathf.Clamp01(varianti.volumeVersi * intensita);
+        float volumeEffetti = GameOptionsController.Instance != null
+            ? GameOptionsController.Instance.VolumeEffetti
+            : 1f;
+        sorgente.volume = Mathf.Clamp01(
+            varianti.volumeVersi * intensita * volumeEffetti
+        );
         sorgente.pitch = 1f;
         // Ogni sorgente riproduce una sola voce: se tutte sono occupate,
         // la piu vecchia viene sostituita e la polifonia resta limitata.

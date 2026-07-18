@@ -13,6 +13,7 @@ public sealed class PlayerBalanceSettings
     [Header("Salute")]
     [Min(1)] public int vitaMassima = 5;
     [Min(0)] public int frequenzaBloccoBase;
+    [Range(0f, 2f)] public float durataInvulnerabilitaDopoColpo = 0.65f;
 
     [Header("Sparo")]
     [Min(0.01f)] public float intervalloSparo = 0.4f;
@@ -367,7 +368,7 @@ public sealed class GameBalanceConfig : ScriptableObject
 
     [SerializeField]
     private string versioneRiferimento =
-        "Blocco 6 - Galline, uova e obiettivi - 2026-07-16";
+        "Blocco 7 - Audio, opzioni e accessibilita - 2026-07-18";
 
     [SerializeField] private PlayerBalanceSettings giocatore =
         new PlayerBalanceSettings();
@@ -472,6 +473,11 @@ public sealed class GameBalanceConfig : ScriptableObject
         giocatore.intervalloSparo = Mathf.Max(
             giocatore.intervalloSparoMinimo,
             giocatore.intervalloSparo
+        );
+        giocatore.durataInvulnerabilitaDopoColpo = Mathf.Clamp(
+            giocatore.durataInvulnerabilitaDopoColpo,
+            0f,
+            2f
         );
         maialino.cambioDirezioneMassimo = Mathf.Max(
             maialino.cambioDirezioneMinimo,

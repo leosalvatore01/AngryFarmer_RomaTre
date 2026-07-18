@@ -15,6 +15,10 @@ public class PlayerHealth : MonoBehaviour
     private int frequenzaBloccoBase;
     private int frequenzaBloccoBonus;
     private int colpiContati;
+    private float durataInvulnerabilita;
+    private float invulnerabileFinoA;
+    private bool invulnerabilitaSegnalata;
+    private PlayerInvulnerabilityFeedback feedbackInvulnerabilita;
 
     public int VitaCorrente => vitaCorrente;
     public int VitaMassimaBase => vitaMassimaBase;
@@ -23,6 +27,11 @@ public class PlayerHealth : MonoBehaviour
         Mathf.Max(1, vitaMassimaBase + bonusVitaMassima);
     public int VitaMassima => VitaMassimaFinale;
     public bool VitaPiena => vitaCorrente >= VitaMassimaFinale;
+    public bool Invulnerabile =>
+        durataInvulnerabilita > 0f && Time.time < invulnerabileFinoA;
+    public float TempoInvulnerabilitaRimasto => Invulnerabile
+        ? Mathf.Max(0f, invulnerabileFinoA - Time.time)
+        : 0f;
 
     public int FrequenzaBloccoBase => frequenzaBloccoBase;
     public int BonusFrequenzaBlocco => frequenzaBloccoBonus;
@@ -42,6 +51,7 @@ public class PlayerHealth : MonoBehaviour
 
     public event Action VitaCambiata;
     public event Action<int> DannoSubito;
+    public event Action<bool> InvulnerabilitaCambiata;
 
     void Awake()
     {
@@ -52,18 +62,39 @@ public class PlayerHealth : MonoBehaviour
             0,
             configurazione.frequenzaBloccoBase
         );
+        durataInvulnerabilita = Mathf.Clamp(
+            configurazione.durataInvulnerabilitaDopoColpo,
+            0f,
+            2f
+        );
     }
 
     void Start()
     {
         vitaCorrente = VitaMassimaFinale;
         testoVita = GameManager.TrovaTestoInterfaccia("VitaText");
+        feedbackInvulnerabilita =
+            PlayerInvulnerabilityFeedback.AggiungiOTrova(gameObject);
         AggiornaInterfaccia();
+    }
+
+    void Update()
+    {
+        if (invulnerabilitaSegnalata && !Invulnerabile)
+        {
+            invulnerabilitaSegnalata = false;
+            InvulnerabilitaCambiata?.Invoke(false);
+        }
     }
 
     public void SubisciDanno(int danno)
     {
-        if (danno <= 0 || vitaCorrente <= 0) return;
+        ProvaSubireDanno(danno);
+    }
+
+    public bool ProvaSubireDanno(int danno)
+    {
+        if (danno <= 0 || vitaCorrente <= 0 || Invulnerabile) return false;
 
         int frequenzaBlocco = FrequenzaBloccoFinale;
         if (frequenzaBlocco > 0)
@@ -73,7 +104,7 @@ public class PlayerHealth : MonoBehaviour
             {
                 colpiContati = 0;
                 Debug.Log("Il contadino ha resistito al colpo.", this);
-                return;
+                return false;
             }
         }
 
@@ -84,13 +115,26 @@ public class PlayerHealth : MonoBehaviour
         VitaCambiata?.Invoke();
         if (dannoEffettivo > 0)
         {
+            if (durataInvulnerabilita > 0f && vitaCorrente > 0)
+            {
+                invulnerabileFinoA = Time.time + durataInvulnerabilita;
+                invulnerabilitaSegnalata = true;
+                feedbackInvulnerabilita?.Avvia(durataInvulnerabilita);
+                InvulnerabilitaCambiata?.Invoke(true);
+            }
             DannoSubito?.Invoke(dannoEffettivo);
+            DamageNumberFeedback.MostraGiocatore(
+                transform.position,
+                dannoEffettivo
+            );
+            FarmAudioController.RiproduciPericolo();
         }
 
         if (vitaCorrente <= 0 && GameManager.instance != null)
         {
             GameManager.instance.GameOverGiocatore();
         }
+        return dannoEffettivo > 0;
     }
 
     public void Cura(int quantita)

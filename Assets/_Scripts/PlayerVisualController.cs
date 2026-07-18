@@ -136,7 +136,10 @@ public class PlayerVisualController : MonoBehaviour
         direzioneCorrente = OttieniDirezione(direzioneRinculo);
         tempoFeedbackSparo = Mathf.Max(0.01f, durataFeedbackSparo);
 
-        if (rendererLampo != null)
+        bool flashConsentito =
+            GameOptionsController.Instance == null ||
+            GameOptionsController.Instance.FlashAttivi;
+        if (rendererLampo != null && flashConsentito)
         {
             float angolo = Mathf.Atan2(
                 direzioneRinculo.y,
@@ -178,6 +181,11 @@ public class PlayerVisualController : MonoBehaviour
     private void AggiornaLampoSparo()
     {
         if (rendererLampo == null || !rendererLampo.enabled) return;
+        if (GameManager.instance != null &&
+            GameManager.instance.PausaManualeAttiva)
+        {
+            return;
+        }
 
         float durataFrame = Mathf.Max(0.01f, durataFrameLampo);
         tempoLampo = Mathf.Max(
@@ -371,7 +379,7 @@ public class PlayerVisualController : MonoBehaviour
             forzaSparo *= forzaSparo;
             tempoFeedbackSparo = Mathf.Max(
                 0f,
-                tempoFeedbackSparo - Time.unscaledDeltaTime
+                tempoFeedbackSparo - Time.deltaTime
             );
         }
 

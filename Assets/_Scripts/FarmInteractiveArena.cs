@@ -937,6 +937,7 @@ public abstract class FarmInteractiveProp : MonoBehaviour, IDanneggiabile
             return EsitoDanno.NessunDanno;
         }
 
+        int vitaPrecedente = vitaCorrente;
         vitaCorrente = Mathf.Max(0, vitaCorrente - quantita);
         bool eliminato = vitaCorrente <= 0;
         if (eliminato)
@@ -945,10 +946,21 @@ public abstract class FarmInteractiveProp : MonoBehaviour, IDanneggiabile
         }
         else
         {
-            if (flashRoutine != null) StopCoroutine(flashRoutine);
-            flashRoutine = StartCoroutine(FlashDanno());
+            bool flashConsentito =
+                GameOptionsController.Instance == null ||
+                GameOptionsController.Instance.FlashAttivi;
+            if (flashConsentito)
+            {
+                if (flashRoutine != null) StopCoroutine(flashRoutine);
+                flashRoutine = StartCoroutine(FlashDanno());
+            }
         }
-        return new EsitoDanno(true, eliminato, eliminato);
+        return new EsitoDanno(
+            true,
+            eliminato,
+            eliminato,
+            vitaPrecedente - vitaCorrente
+        );
     }
 
     protected virtual bool PuoRicevereDanno()

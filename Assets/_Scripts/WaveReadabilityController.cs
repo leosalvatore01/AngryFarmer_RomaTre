@@ -436,7 +436,10 @@ public sealed class WaveReadabilityController : MonoBehaviour
         CombatFeedbackController feedback = CombatFeedbackController.Instance;
         if (feedback != null && !feedback.AudioAbilitato) return;
 
-        sorgenteAudio.volume = volumeSegnale;
+        float volumeEffetti = GameOptionsController.Instance != null
+            ? GameOptionsController.Instance.VolumeEffetti
+            : 1f;
+        sorgenteAudio.volume = volumeSegnale * volumeEffetti;
         sorgenteAudio.Stop();
         sorgenteAudio.clip = clipSegnale;
         sorgenteAudio.Play();

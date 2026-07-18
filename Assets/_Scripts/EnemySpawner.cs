@@ -244,6 +244,9 @@ public class EnemySpawner : MonoBehaviour
                 leggibilita.IniziaOnda(anteprima);
             }
             NotificaProgresso();
+            FarmAudioController.RiproduciPericolo(
+                currentWaveIndex >= ondate.Length - 1 ? 1f : 0.64f
+            );
 
             MostraMessaggio(CreaTestoBanner(anteprima));
             float durataBanner = avvioRapidoRichiesto

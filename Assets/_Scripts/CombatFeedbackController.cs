@@ -15,6 +15,7 @@ public sealed class CombatFeedbackController : MonoBehaviour
     private AudioClip[] clipSparo;
     private AudioClip[] clipImpatto;
     private PixelImpactBurst[] poolBurst;
+    private GameOptionsController opzioniGioco;
     private readonly System.Random casualitaCosmetica =
         new System.Random(1847);
 
@@ -29,6 +30,7 @@ public sealed class CombatFeedbackController : MonoBehaviour
     public bool AudioAbilitato { get; set; }
     public bool VfxAbilitati { get; set; }
     public bool VibrazioneAbilitata { get; set; }
+    public bool FlashAbilitati { get; private set; } = true;
 
     public int SpariRegistrati { get; private set; }
     public int ImpattiRegistrati { get; private set; }
@@ -96,6 +98,8 @@ public sealed class CombatFeedbackController : MonoBehaviour
 
     void Update()
     {
+        CollegaOpzioniSeNecessario();
+
         if (Input.GetKeyDown(KeyCode.F4))
         {
             ImpostaVibrazione(!VibrazioneAbilitata);
@@ -251,6 +255,40 @@ public sealed class CombatFeedbackController : MonoBehaviour
         rect.sizeDelta = new Vector2(dimensione, dimensione);
     }
 
+    private void CollegaOpzioniSeNecessario()
+    {
+        if (opzioniGioco == GameOptionsController.Instance) return;
+
+        if (opzioniGioco != null)
+        {
+            opzioniGioco.ImpostazioniCambiate -= ApplicaOpzioni;
+        }
+        opzioniGioco = GameOptionsController.Instance;
+        if (opzioniGioco != null)
+        {
+            opzioniGioco.ImpostazioniCambiate += ApplicaOpzioni;
+            ApplicaOpzioni();
+        }
+    }
+
+    private void ApplicaOpzioni()
+    {
+        if (opzioniGioco == null) return;
+
+        FlashAbilitati = opzioniGioco.FlashAttivi;
+        ImpostaVibrazione(opzioniGioco.VibrazioneAttiva);
+        if (immagineMirino != null)
+        {
+            float dimensione = Mathf.Clamp(
+                opzioniGioco.DimensioneMirino,
+                14f,
+                48f
+            );
+            immagineMirino.rectTransform.sizeDelta =
+                new Vector2(dimensione, dimensione);
+        }
+    }
+
     private void AggiornaMirino()
     {
         if (immagineMirino == null) return;
@@ -355,9 +393,12 @@ public sealed class CombatFeedbackController : MonoBehaviour
         sorgente.transform.position = posizione;
         sorgente.clip = clip[variante];
         sorgente.pitch = pitch;
-        sorgente.volume = impatto
+        float volumeEffetti = opzioniGioco != null
+            ? opzioniGioco.VolumeEffetti
+            : 1f;
+        sorgente.volume = (impatto
             ? impostazioni.volumeImpatto
-            : impostazioni.volumeSparo;
+            : impostazioni.volumeSparo) * volumeEffetti;
         sorgente.spatialBlend = impatto ? 0.22f : 0f;
         sorgente.Play();
 
@@ -573,6 +614,10 @@ public sealed class CombatFeedbackController : MonoBehaviour
     void OnDestroy()
     {
         if (Instance != this) return;
+        if (opzioniGioco != null)
+        {
+            opzioniGioco.ImpostazioniCambiate -= ApplicaOpzioni;
+        }
         Instance = null;
         ImpostaVisibilitaCursoreSistema(true);
     }
@@ -658,7 +703,11 @@ public sealed class CombatHitFeedback2D : MonoBehaviour
             0.03f,
             impostazioni.durataRinculoBersaglio
         );
-        durataFlash = Mathf.Max(0.03f, impostazioni.durataFlashBersaglio);
+        bool flashConsentito =
+            controller == null || controller.FlashAbilitati;
+        durataFlash = flashConsentito
+            ? Mathf.Max(0.03f, impostazioni.durataFlashBersaglio)
+            : 0f;
         tempoRinculo = durataRinculo;
         tempoFlash = durataFlash;
         effettoPerforante = perforante;
@@ -668,7 +717,12 @@ public sealed class CombatHitFeedback2D : MonoBehaviour
 
     void Update()
     {
-        AggiornaFeedbackVisivo(Time.unscaledDeltaTime);
+        float delta =
+            GameManager.instance != null &&
+            GameManager.instance.PausaManualeAttiva
+                ? 0f
+                : Time.unscaledDeltaTime;
+        AggiornaFeedbackVisivo(delta);
     }
 
     void LateUpdate()
@@ -678,6 +732,14 @@ public sealed class CombatHitFeedback2D : MonoBehaviour
 
     private void AggiornaFeedbackVisivo(float delta)
     {
+        CombatFeedbackController controller =
+            CombatFeedbackController.Instance;
+        if (controller != null && !controller.FlashAbilitati)
+        {
+            tempoFlash = 0f;
+            if (rendererFlash != null) rendererFlash.enabled = false;
+        }
+
         if (tempoRinculo > 0f)
         {
             tempoRinculo = Mathf.Max(0f, tempoRinculo - delta);
@@ -838,7 +900,11 @@ public sealed class PixelImpactBurst : MonoBehaviour
 
     void Update()
     {
-        float delta = Time.unscaledDeltaTime;
+        float delta =
+            GameManager.instance != null &&
+            GameManager.instance.PausaManualeAttiva
+                ? 0f
+                : Time.unscaledDeltaTime;
         tempo += delta;
         float progresso = Mathf.Clamp01(tempo / durata);
 

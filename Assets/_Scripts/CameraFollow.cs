@@ -145,6 +145,13 @@ public class CameraFollow : MonoBehaviour
 
     private void AggiornaVibrazione()
     {
+        if (GameManager.instance != null &&
+            GameManager.instance.PausaManualeAttiva)
+        {
+            offsetVibrazione = Vector2.zero;
+            return;
+        }
+
         if (!vibrazioneAbilitata || tempoVibrazione <= 0f)
         {
             tempoVibrazione = 0f;

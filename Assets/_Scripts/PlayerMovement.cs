@@ -78,10 +78,30 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
-        DirezioneMovimento = Vector2.ClampMagnitude(new Vector2(
-            Input.GetAxisRaw("Horizontal"),
-            Input.GetAxisRaw("Vertical")
-        ), 1f);
+        float orizzontale = 0f;
+        if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow))
+        {
+            orizzontale -= 1f;
+        }
+        if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow))
+        {
+            orizzontale += 1f;
+        }
+
+        float verticale = 0f;
+        if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow))
+        {
+            verticale -= 1f;
+        }
+        if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow))
+        {
+            verticale += 1f;
+        }
+
+        DirezioneMovimento = Vector2.ClampMagnitude(
+            new Vector2(orizzontale, verticale),
+            1f
+        );
     }
 
     void FixedUpdate()

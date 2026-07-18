@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71eb059f1b8bf85479410b9626b3361b, type: 3}
   m_Name: GameBalanceConfig
   m_EditorClassIdentifier: Assembly-CSharp::GameBalanceConfig
-  versioneRiferimento: Blocco 6 - Galline, uova e obiettivi - 2026-07-16
+  versioneRiferimento: Blocco 7 - Audio, opzioni e accessibilita - 2026-07-18
   giocatore:
     velocitaMovimento: 8
     accelerazione: 45
@@ -20,6 +20,7 @@ MonoBehaviour:
     moltiplicatoreInversione: 1.35
     vitaMassima: 5
     frequenzaBloccoBase: 0
+    durataInvulnerabilitaDopoColpo: 0.65
     intervalloSparo: 0.4
     intervalloSparoMinimo: 0.12
     velocitaProiettile: 10

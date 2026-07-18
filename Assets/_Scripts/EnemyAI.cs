@@ -603,9 +603,11 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
                     distanza <= distanzaAttacco * 1.18f)
                 {
                     scattoAlfaHaColpito = true;
-                    FarmObjectivesController.Instance?.
-                        NotificaAlfaHaColpito();
-                    playerHealth.SubisciDanno(danno);
+                    if (playerHealth.ProvaSubireDanno(danno))
+                    {
+                        FarmObjectivesController.Instance?.
+                            NotificaAlfaHaColpito();
+                    }
                 }
                 if (timerStatoAlfa <= 0f)
                 {
@@ -897,6 +899,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     {
         if (morto || quantita <= 0) return EsitoDanno.NessunDanno;
 
+        int vitaPrecedente = vitaCorrente;
         vitaCorrente = Mathf.Max(0, vitaCorrente - quantita);
         AggiornaBarraVita();
         AvviaFlashDanno();
@@ -907,12 +910,22 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
             Die();
         }
 
-        return new EsitoDanno(true, ucciso, ucciso);
+        return new EsitoDanno(
+            true,
+            ucciso,
+            ucciso,
+            vitaPrecedente - vitaCorrente
+        );
     }
 
     void AvviaFlashDanno()
     {
         if (spriteRendererVisibile == null) return;
+        if (GameOptionsController.Instance != null &&
+            !GameOptionsController.Instance.FlashAttivi)
+        {
+            return;
+        }
 
         if (flashDannoRoutine != null)
         {

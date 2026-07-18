@@ -308,6 +308,7 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
     {
         if (morto || quantita <= 0) return EsitoDanno.NessunDanno;
 
+        int vitaPrecedente = vitaCorrente;
         vitaCorrente = Mathf.Max(0, vitaCorrente - quantita);
         AggiornaBarraVita();
         AvviaFlashDanno();
@@ -318,12 +319,22 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
             StartCoroutine(RompiSalvadanaio());
         }
 
-        return new EsitoDanno(true, ucciso, false);
+        return new EsitoDanno(
+            true,
+            ucciso,
+            false,
+            vitaPrecedente - vitaCorrente
+        );
     }
 
     void AvviaFlashDanno()
     {
         if (spriteRendererVisibile == null) return;
+        if (GameOptionsController.Instance != null &&
+            !GameOptionsController.Instance.FlashAttivi)
+        {
+            return;
+        }
 
         if (flashRoutine != null)
         {
@@ -336,7 +347,7 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
 
     IEnumerator RipristinaColore()
     {
-        yield return new WaitForSecondsRealtime(durataFlashDanno);
+        yield return new WaitForSeconds(durataFlashDanno);
         if (spriteRendererVisibile != null)
         {
             spriteRendererVisibile.color = coloreBase;
@@ -390,7 +401,7 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
 
         while (tempo < durataRottura)
         {
-            tempo += Time.unscaledDeltaTime;
+            tempo += Time.deltaTime;
             float t = Mathf.Clamp01(tempo / durataRottura);
             float curva = t * t;
 
@@ -406,7 +417,7 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
             if (testoBonus != null)
             {
                 testoBonus.transform.position +=
-                    Vector3.up * Time.unscaledDeltaTime * 0.9f;
+                    Vector3.up * Time.deltaTime * 0.9f;
             }
 
             yield return null;
@@ -422,7 +433,7 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
         float tempo = 0f;
         while (tempo < durata)
         {
-            tempo += Time.unscaledDeltaTime;
+            tempo += Time.deltaTime;
             grafica.localScale = Vector3.Lerp(
                 da,
                 a,
@@ -541,7 +552,7 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
         const float durata = 0.18f;
         while (tempo < durata)
         {
-            tempo += Time.unscaledDeltaTime;
+            tempo += Time.deltaTime;
             grafica.localScale = Vector3.Lerp(
                 scalaIniziale,
                 Vector3.zero,
@@ -789,7 +800,7 @@ public class AutoDistruzioneRealtime : MonoBehaviour
 
     IEnumerator Start()
     {
-        yield return new WaitForSecondsRealtime(durata);
+        yield return new WaitForSeconds(durata);
         Destroy(gameObject);
     }
 }

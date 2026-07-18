@@ -165,6 +165,11 @@ public class Proiettile : MonoBehaviour
         Vector2 posizioneImpatto = other.ClosestPoint(transform.position);
         EsitoDanno esito = bersaglio.ProvaSubireDanno(danno);
         if (!esito.Applicato) return;
+        DamageNumberFeedback.Mostra(
+            posizioneImpatto,
+            esito.DannoApplicato > 0 ? esito.DannoApplicato : danno,
+            colpoCritico
+        );
 
         Vector2 direzioneColpo = OttieniDirezioneColpo();
         ApplicaControllo(
@@ -271,7 +276,20 @@ public class Proiettile : MonoBehaviour
             Component componente = bersaglio as Component;
             int id = OttieniIdBersaglio(componente, collider);
             if (!bersagliColpiti.Add(id)) continue;
-            bersaglio.ProvaSubireDanno(dannoEsplosione);
+            EsitoDanno esito = bersaglio.ProvaSubireDanno(dannoEsplosione);
+            if (esito.Applicato)
+            {
+                Vector2 posizioneNumero = componente != null
+                    ? componente.transform.position
+                    : collider.ClosestPoint(posizione);
+                DamageNumberFeedback.Mostra(
+                    posizioneNumero,
+                    esito.DannoApplicato > 0
+                        ? esito.DannoApplicato
+                        : dannoEsplosione,
+                    colpoCritico
+                );
+            }
         }
         BuildCombatVfx.CreaEsplosione(
             posizione,

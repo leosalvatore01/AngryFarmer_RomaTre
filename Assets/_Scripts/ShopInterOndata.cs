@@ -126,6 +126,7 @@ public class ShopInterOndata : MonoBehaviour
     void Update()
     {
         if (GameManager.instance == null ||
+            GameManager.instance.PausaManualeAttiva ||
             GameManager.instance.StatoCorrente != StatoPartita.Intervallo)
         {
             return;
@@ -193,6 +194,7 @@ public class ShopInterOndata : MonoBehaviour
         gameObject.SetActive(true);
         transform.SetAsLastSibling();
         AggiornaInterfaccia();
+        FarmAudioController.RiproduciSuccesso(0.8f);
     }
 
     public void Nascondi()
@@ -225,6 +227,7 @@ public class ShopInterOndata : MonoBehaviour
         PreparaPotenziamentiGiocatore();
         pannelloRiepilogo.SetActive(false);
         pannelloBottega.SetActive(true);
+        FarmAudioController.RiproduciInterfaccia();
         testoMessaggioBottega.text =
             "Le offerte acquistate durano per tutta la partita.";
         AggiornaInterfaccia();
@@ -234,6 +237,7 @@ public class ShopInterOndata : MonoBehaviour
     {
         pannelloBottega.SetActive(false);
         pannelloRiepilogo.SetActive(true);
+        FarmAudioController.RiproduciInterfaccia();
         AggiornaInterfaccia();
     }
 
@@ -241,6 +245,7 @@ public class ShopInterOndata : MonoBehaviour
     {
         if (GameManager.instance != null)
         {
+            FarmAudioController.RiproduciInterfaccia();
             GameManager.instance.ContinuaConOndataSuccessiva();
         }
     }
@@ -262,6 +267,7 @@ public class ShopInterOndata : MonoBehaviour
         List<TipoPotenziamento> precedenti =
             new List<TipoPotenziamento>(offerteCorrenti);
         numeroReroll++;
+        FarmAudioController.RiproduciAcquisto(0.82f);
         GeneraOfferte(precedenti);
         testoMessaggioBottega.text =
             "Nuove offerte arrivate. Il prossimo reroll costerà " +
@@ -285,6 +291,7 @@ public class ShopInterOndata : MonoBehaviour
         );
         if (acquistato)
         {
+            FarmAudioController.RiproduciAcquisto();
             carta.acquistata = true;
             acquistiIntervallo++;
             testoMessaggioBottega.text =
@@ -309,6 +316,10 @@ public class ShopInterOndata : MonoBehaviour
         testoMessaggioBottega.text = acquistato
             ? messaggio + "  Rimedio della nonna"
             : messaggio;
+        if (acquistato)
+        {
+            FarmAudioController.RiproduciAcquisto();
+        }
         AggiornaInterfaccia();
     }
 
