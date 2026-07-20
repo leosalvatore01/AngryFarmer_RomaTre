@@ -54,24 +54,9 @@ public class Gallina : MonoBehaviour
 
     void Awake()
     {
-        posizioneCasa = transform.position;
-        rendererGallina = GetComponent<SpriteRenderer>();
-        if (rendererGallina == null)
-        {
-            rendererGallina = gameObject.AddComponent<SpriteRenderer>();
-        }
-        rendererGallina.sprite = OttieniSpriteGallina();
-        rendererGallina.color = Color.white;
-
-        colliderGallina = GetComponent<Collider2D>();
-        if (colliderGallina == null)
-        {
-            BoxCollider2D nuovoCollider = gameObject.AddComponent<BoxCollider2D>();
-            nuovoCollider.size = new Vector2(0.72f, 0.72f);
-            colliderGallina = nuovoCollider;
-        }
-        colliderGallina.isTrigger = true;
-        CreaNido();
+        // Le galline appartenevano alla vecchia modalita di difesa.
+        gameObject.SetActive(false);
+        Destroy(gameObject);
     }
 
     void OnEnable()

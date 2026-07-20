@@ -127,13 +127,9 @@ public class GameManager : MonoBehaviour
     {
         ImpostaStatoPartita(StatoPartita.Onda);
 
-        testoUova = TrovaTestoInterfaccia("UovaText");
-        testoUovaSalvate = TrovaTestoInterfaccia("UovaSalvateText");
         testoMonete = TrovaTestoInterfaccia("MoneteText");
 
         ConfiguraHUD();
-        AggiornaContatoreUova();
-        AggiornaContatoreUovaSalvate();
         AggiornaContatoreMonete();
 
         ConfiguraPannelloFinale();
@@ -148,8 +144,12 @@ public class GameManager : MonoBehaviour
         }
 
         shopInterOndata = ShopInterOndata.CreaOTrova();
-        FarmInteractiveArena.CreaOTrova();
-        FarmObjectivesController.CreaOTrova();
+        // Survival puro: nessun blocco interattivo o obiettivo-uovo.
+        foreach (Gallina gallina in FindObjectsByType<Gallina>(FindObjectsSortMode.None))
+        {
+            if (gallina != null) Destroy(gallina.gameObject);
+        }
+        gallineRimaste = 0;
     }
 
     void Update()
@@ -234,7 +234,7 @@ public class GameManager : MonoBehaviour
         rect.anchorMax = new Vector2(0f, 1f);
         rect.pivot = new Vector2(0f, 1f);
         rect.anchoredPosition = new Vector2(18f, -18f);
-        rect.sizeDelta = new Vector2(376f, 278f);
+        rect.sizeDelta = new Vector2(376f, 194f);
 
         Image immagine = pannello.GetComponent<Image>();
         FarmPixelUI.ApplicaPannello(immagine, false, false);
@@ -258,31 +258,8 @@ public class GameManager : MonoBehaviour
             FarmPixelIcon.Moneta,
             -152f
         );
-        schedaUovaHud = CreaSchedaHUD(
-            pannello.transform,
-            "SchedaUova",
-            FarmPixelIcon.Gallina,
-            -194f
-        );
-        schedaUovaSalvateHud = CreaSchedaHUD(
-            pannello.transform,
-            "SchedaUovaSalvate",
-            FarmPixelIcon.Uovo,
-            -236f
-        );
-
-        if (testoUovaSalvate == null)
-        {
-            testoUovaSalvate = CreaTestoHUDRuntime(
-                interfaccia.transform,
-                "UovaSalvateText"
-            );
-        }
-
-        if (schedaUovaHud != null)
-        {
-            schedaUovaHud.SetActive(gallineRimaste > 0);
-        }
+        schedaUovaHud = null;
+        schedaUovaSalvateHud = null;
 
         ConfiguraTestoHUD(
             TrovaTestoInterfaccia("OndataText"),
@@ -299,25 +276,6 @@ public class GameManager : MonoBehaviour
             new Vector2(82f, -170f),
             new Color(1f, 0.9f, 0.24f, 1f)
         );
-        ConfiguraTestoHUD(
-            testoUova,
-            new Vector2(82f, -212f),
-            new Color(1f, 0.94f, 0.76f, 1f)
-        );
-        ConfiguraTestoHUD(
-            testoUovaSalvate,
-            new Vector2(82f, -254f),
-            new Color(1f, 0.82f, 0.28f, 1f)
-        );
-
-        if (testoUova != null)
-        {
-            testoUova.gameObject.SetActive(gallineRimaste > 0);
-        }
-        if (schedaUovaSalvateHud != null)
-        {
-            schedaUovaSalvateHud.SetActive(true);
-        }
     }
 
     void CreaTitoloHUD(Transform parent)
@@ -342,7 +300,7 @@ public class GameManager : MonoBehaviour
         TextMeshProUGUI titolo = oggetto.GetComponent<TextMeshProUGUI>();
         TMP_Text riferimento = TrovaTestoInterfaccia("OndataText");
         if (riferimento != null) titolo.font = riferimento.font;
-        titolo.text = "FATTORIA";
+        titolo.text = "SOPRAVVIVENZA";
         titolo.fontSize = 24f;
         titolo.fontStyle = FontStyles.Bold;
         titolo.alignment = TextAlignmentOptions.Center;
@@ -922,24 +880,7 @@ public class GameManager : MonoBehaviour
 
     public void RegistraGallina()
     {
-        gallineRimaste++;
-        gallineTotali++;
-
-        if (testoUova == null)
-        {
-            testoUova = TrovaTestoInterfaccia("UovaText");
-        }
-        if (testoUova != null)
-        {
-            testoUova.gameObject.SetActive(true);
-        }
-        if (schedaUovaHud != null)
-        {
-            schedaUovaHud.SetActive(true);
-        }
-
-        AggiornaContatoreUova();
-        GallineCambiate?.Invoke(GallineAlSicuro, gallineTotali);
+        // Le galline della vecchia scena non partecipano al survival.
     }
 
     public void GallinaMorta()
@@ -953,10 +894,7 @@ public class GameManager : MonoBehaviour
         AggiornaContatoreUovaSalvate();
         GallineCambiate?.Invoke(GallineAlSicuro, gallineTotali);
 
-        if (gallineRimaste <= 0)
-        {
-            GameOver();
-        }
+        // Le galline non sono una condizione di sconfitta nel survival.
     }
 
     void AggiornaContatoreUova()
@@ -1209,19 +1147,12 @@ public class GameManager : MonoBehaviour
             "\nMONETE RACCOLTE  " + MoneteRaccolte +
             "  |  SPESE  " + MoneteSpese +
             "  |  RIMASTE  " + monete +
-            "\nGALLINE SALVE  " + GallineAlSicuro +
-            " / " + gallineTotali +
-            "  |  UOVA SALVATE  " + UovaSalvate +
-            "  |  SERIE  x" + MiglioreSerieSalvataggi +
-            "\nOBIETTIVI  " + ObiettiviCompletati +
-            " COMPLETATI  |  " + ObiettiviFalliti + " FALLITI" +
+            "\nONDATE SUPERATE  " + ondateCompletate +
             "\nPUNTEGGIO  " + punteggioFinale +
             nuovoRecordPunteggio + altriRecord +
             "\nRECORD " + profilo.Nome + "  " +
             recordFinali.MigliorPunteggio + " PT  |  " +
-            recordFinali.MassimoVolpi + " VOLPI  |  " +
-            recordFinali.MigliorePercentualeGalline + "% GALLINE" +
-            "\nMIGLIOR TEMPO VITTORIA  " + migliorTempo +
+            recordFinali.MassimoVolpi + " VOLPI" +
             "\n------------------------------" +
             "\nBUILD FINALE" +
             "\n" + buildLeggibile;

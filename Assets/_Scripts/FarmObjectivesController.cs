@@ -51,25 +51,20 @@ public sealed class FarmObjectivesController : MonoBehaviour
 
     public static FarmObjectivesController CreaOTrova()
     {
-        if (Instance != null) return Instance;
-
-        FarmObjectivesController esistente =
-            FindFirstObjectByType<FarmObjectivesController>();
-        if (esistente != null) return esistente;
-
-        GameObject oggetto = new GameObject("ObiettiviFattoria");
-        return oggetto.AddComponent<FarmObjectivesController>();
+        // Nessun obiettivo secondario nella modalita survival.
+        if (Instance != null)
+        {
+            Instance.gameObject.SetActive(false);
+            Destroy(Instance.gameObject);
+            Instance = null;
+        }
+        return null;
     }
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        Instance = this;
-        CostruisciHUD();
+        gameObject.SetActive(false);
+        Destroy(gameObject);
     }
 
     public void IniziaOnda(AnteprimaOndata anteprima)

@@ -331,7 +331,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
             return;
         }
 
-        if (tipo == TipoVolpe.Ladra && GestisciLadra()) return;
+        // Nel survival ogni variante, inclusa la Ladra, caccia il contadino.
         if (!ProvaAcquisireGiocatore())
         {
             InterrompiAttaccoAlfa();
@@ -1110,7 +1110,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     public void Die()
     {
         if (morto) return;
-        bool richiedeRecupero = LasciaUovoRecuperabile();
+        bool richiedeRecupero = false;
         if (!richiedeRecupero)
         {
             RilasciaGallinaSeNecessario();

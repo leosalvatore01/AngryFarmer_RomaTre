@@ -194,33 +194,14 @@ public class ShopInterOndata : MonoBehaviour
         int bonus = GameManager.instance != null
             ? GameManager.instance.UltimoBonusCompletamento
             : 0;
-        int uovaOnda = GameManager.instance != null
-            ? GameManager.instance.UovaUltimaOnda
-            : 0;
-        string esitoObiettivo = "OBIETTIVO NON VALUTATO";
-        if (GameManager.instance != null &&
-            GameManager.instance.UltimoObiettivoValutato)
-        {
-            esitoObiettivo =
-                (GameManager.instance.UltimoObiettivoCompletato
-                    ? "OBIETTIVO COMPLETATO: "
-                    : "OBIETTIVO FALLITO: ") +
-                GameManager.instance.UltimoObiettivo.ToUpperInvariant();
-        }
         testoRiepilogo.text =
-            "Ondata " + ondaCompletata + " di " + totaleOndate +
-            " superata  -  +" + bonus + " moneta  -  +" +
-            uovaOnda + " uova\n" +
-            esitoObiettivo +
-            (GameManager.instance != null
-                ? "  -  SERIE x" +
-                  GameManager.instance.SerieSalvataggi
-                : string.Empty);
+            "Ondata " + ondaCompletata +
+            " superata  -  +" + bonus + " moneta";
         string anteprima = FormattaAnteprima(prossimaOnda);
         testoAnteprimaRiepilogo.text = anteprima;
         testoAnteprimaBottega.text = anteprima;
         testoMessaggioBottega.text =
-            "Lo shop usa monete. Le uova misurano salvataggi e obiettivi.";
+            "Usa le monete per prepararti alla prossima ondata.";
 
         pannelloRiepilogo.SetActive(true);
         pannelloBottega.SetActive(false);
@@ -393,40 +374,15 @@ public class ShopInterOndata : MonoBehaviour
             return "PROSSIMA ONDATA PRONTA";
         }
 
-        string bonus;
-        if (anteprima.NumeroMaialini > 0)
-        {
-            int premioMassimo =
-                anteprima.NumeroMaialini * anteprima.MoneteMaialino;
-            int premioUova =
-                anteprima.NumeroMaialini *
-                GameBalanceConfig.Corrente.ObiettiviFattoria
-                    .uovaPerMaialino;
-            bonus =
-                "BONUS: " + anteprima.NumeroMaialini +
-                (anteprima.NumeroMaialini == 1
-                    ? " MAIALINO"
-                    : " MAIALINI") +
-                "  |  FINO A +" + premioMassimo + " MONETE / +" +
-                premioUova + " UOVA";
-        }
-        else
-        {
-            bonus = "BONUS: NESSUN MAIALINO";
-        }
         string gruppi = anteprima.NumeroGruppi == 1
             ? "1 GRUPPO"
             : anteprima.NumeroGruppi + " GRUPPI";
 
         return
-            "PROSSIMA ONDATA  " + anteprima.Indice + " / " +
-            anteprima.Totale + "  |  " +
+            "PROSSIMA ONDATA  " + anteprima.Indice + "  |  " +
             anteprima.Nome.ToUpperInvariant() +
             "\n" + anteprima.NumeroVolpi + " VOLPI  |  " + gruppi +
-            "  |  TIPI: " + anteprima.Composizione.FormattaCompatta() +
-            "\n" + bonus +
-            "\nOBIETTIVO: " +
-            FarmObjectivesController.DescriviAnteprima(anteprima);
+            "  |  TIPI: " + anteprima.Composizione.FormattaCompatta();
     }
 
     void PreparaPotenziamentiGiocatore()
@@ -453,11 +409,7 @@ public class ShopInterOndata : MonoBehaviour
         int monete = GameManager.instance != null
             ? GameManager.instance.monete
             : 0;
-        int uova = GameManager.instance != null
-            ? GameManager.instance.UovaSalvate
-            : 0;
-        string testoMonete =
-            "MONETE  " + monete + "   |   UOVA  " + uova;
+        string testoMonete = "MONETE  " + monete;
 
         if (testoMoneteRiepilogo != null)
         {

@@ -218,22 +218,14 @@ public class FarmBackgroundDecorator : MonoBehaviour
             scalaMin = 0.7f;
             scalaMax = 1.2f;
         }
-        else if (scelta < 970)
-        {
-            sprite = paglia;
-            ordine = ordineTerreno + 6;
-            scalaMin = 0.72f;
-            scalaMax = 1.02f;
-        }
         else if (scelta < 990)
         {
-            int varianteFattoria = casuale.Next(3);
-            sprite = varianteFattoria == 0
-                ? cassetta
-                : varianteFattoria == 1 ? paglia : zucche;
-            ordine = ordineTerreno + 6;
-            scalaMin = 0.72f;
-            scalaMax = 0.98f;
+            // Nel survival lo sfondo non deve simulare casse, balle o
+            // zucche: restano soltanto dettagli naturali non interattivi.
+            sprite = sassolini;
+            ordine = ordineTerreno + 2;
+            scalaMin = 0.7f;
+            scalaMax = 1.2f;
         }
         else
         {

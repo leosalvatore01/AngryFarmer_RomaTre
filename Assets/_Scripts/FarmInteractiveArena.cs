@@ -346,39 +346,25 @@ public sealed class FarmInteractiveArena : MonoBehaviour
 
     public static FarmInteractiveArena CreaOTrova()
     {
-        if (instance != null) return instance;
-
-        FarmInteractiveArena esistente =
-            FindFirstObjectByType<FarmInteractiveArena>();
-        if (esistente != null)
+        // La modalita survival non crea oggetti interattivi nell'arena.
+        if (instance != null)
         {
-            instance = esistente;
-            esistente.Costruisci();
-            return esistente;
+            instance.gameObject.SetActive(false);
+            Destroy(instance.gameObject);
+            instance = null;
         }
-
-        GameObject radice = new GameObject("FattoriaInterattiva");
-        FarmInteractiveArena arena =
-            radice.AddComponent<FarmInteractiveArena>();
-        arena.Costruisci();
-        return arena;
+        return null;
     }
 
     void Awake()
     {
-        if (instance == null)
-        {
-            instance = this;
-        }
-        else if (instance != this)
-        {
-            Destroy(gameObject);
-        }
+        gameObject.SetActive(false);
+        Destroy(gameObject);
     }
 
     void Start()
     {
-        Costruisci();
+        // Disabilitato nel survival puro.
     }
 
     public void Costruisci()

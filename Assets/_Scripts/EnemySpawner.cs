@@ -9,6 +9,7 @@ public class Wave
 {
     public string nomeOndata;
     [Min(0)] public int numeroNemici;
+    [HideInInspector] public int indiceSurvival;
     [Tooltip("Ordine deterministico dei tipi. Se assente, usa volpi comuni.")]
     public TipoVolpe[] sequenzaVolpi;
     [Header("Ritmo gruppi")]
@@ -152,12 +153,11 @@ public class EnemySpawner : MonoBehaviour
     private bool ondaAttiva;
     private bool avvioRapidoRichiesto;
     private WaveReadabilityController leggibilita;
-    private FarmObjectivesController obiettivi;
     private ProfiloDifficolta profiloDifficolta;
 
     public WaveRuntimeDiagnostics Diagnostica => diagnostica;
     public int IndiceOndaCorrente => currentWaveIndex;
-    public int TotaleOndate => ondate != null ? ondate.Length : 0;
+    public int TotaleOndate => int.MaxValue;
     public int NemiciDaSpawnare => nemiciDaSpawnare;
     public int MinacceAttive => minacceAttive.Count;
     public int NemiciRimasti => nemiciDaSpawnare + minacceAttive.Count;
@@ -199,7 +199,6 @@ public class EnemySpawner : MonoBehaviour
         ConfiguraPannelloMessaggio();
         NascondiMessaggio();
         ConfiguraLeggibilita();
-        obiettivi = FarmObjectivesController.CreaOTrova();
         StartCoroutine(GestoreOndate());
     }
 
@@ -221,7 +220,7 @@ public class EnemySpawner : MonoBehaviour
         ApplicaDifficoltaAllaCurva();
         VerificaSequenzeConfigurate();
 
-        while (currentWaveIndex < ondate.Length)
+        while (!PartitaTerminata())
         {
             if (PartitaTerminata())
             {
@@ -233,19 +232,14 @@ public class EnemySpawner : MonoBehaviour
             }
 
             int tokenCorrente = ++tokenOndata;
-            Wave ondataCorrente = ondate[currentWaveIndex];
+            Wave ondataCorrente = OttieniOndata(currentWaveIndex);
             AnteprimaOndata anteprima =
                 OttieniAnteprima(currentWaveIndex);
 
             IniziaStatoOnda(ondataCorrente, anteprima);
-            if (obiettivi == null)
-            {
-                obiettivi = FarmObjectivesController.CreaOTrova();
-            }
-            obiettivi?.IniziaOnda(anteprima);
             diagnostica.IniziaOndata(
                 currentWaveIndex + 1,
-                ondate.Length,
+                int.MaxValue,
                 ondataCorrente.nomeOndata,
                 ondataCorrente.numeroNemici,
                 ondataCorrente.numeroMaialiniBonus
@@ -276,13 +270,6 @@ public class EnemySpawner : MonoBehaviour
 
             NascondiMessaggio();
             diagnostica.AvviaCombattimento();
-
-            if (ondataCorrente.numeroMaialiniBonus > 0)
-            {
-                StartCoroutine(
-                    SpawnMaialiniGraduali(ondataCorrente, tokenCorrente)
-                );
-            }
 
             int indiceSpawn = 0;
             for (int gruppo = 0; gruppo < totaleGruppi; gruppo++)
@@ -398,11 +385,7 @@ public class EnemySpawner : MonoBehaviour
             while (
                 minacceAttive.Count > 0 ||
                 GameObject.FindGameObjectWithTag("Nemico") != null ||
-                UovoRecuperabile.RecuperiAttivi > 0 ||
-                (obiettivi != null &&
-                 obiettivi.RichiedeMaialino &&
-                 (maialiniDaSpawnare > 0 ||
-                  MaialinoBonus.NumeroAttivi > 0))
+                false
             )
             {
                 diagnostica.CampionaNemiciVivi();
@@ -435,7 +418,6 @@ public class EnemySpawner : MonoBehaviour
             diagnostica.TerminaOndata(
                 EsitoDiagnosticaOndata.Completata
             );
-            obiettivi?.ConcludiOnda();
             ConcludiStatoOnda();
             if (GameManager.instance != null)
             {
@@ -444,7 +426,7 @@ public class EnemySpawner : MonoBehaviour
                 );
             }
 
-            if (currentWaveIndex < ondate.Length - 1)
+            if (!PartitaTerminata())
             {
                 tokenOndata++;
                 PulisciEntitaTraOndate();
@@ -459,7 +441,7 @@ public class EnemySpawner : MonoBehaviour
                 {
                     GameManager.instance.IniziaIntervallo(
                         currentWaveIndex + 1,
-                        ondate.Length,
+                        int.MaxValue,
                         OttieniAnteprima(currentWaveIndex + 1)
                     );
 
@@ -479,10 +461,49 @@ public class EnemySpawner : MonoBehaviour
         PulisciEntitaTraOndate();
         NascondiMessaggio();
 
-        if (GameManager.instance != null)
+    }
+
+    Wave OttieniOndata(int indice)
+    {
+        if (ondate == null || ondate.Length == 0 || indice < 0)
         {
-            GameManager.instance.Vittoria();
+            return null;
         }
+
+        if (indice < ondate.Length) return ondate[indice];
+
+        Wave baseFinale = ondate[ondate.Length - 1];
+        int numero = indice + 1;
+        int extra = indice - ondate.Length + 1;
+        int incrementiGruppo =
+            numero / 4 - ondate.Length / 4;
+        float accelerazione = Mathf.Pow(0.97f, extra);
+        return new Wave
+        {
+            nomeOndata = "Sopravvivenza " + numero,
+            numeroNemici = Mathf.Max(
+                1,
+                baseFinale.numeroNemici + extra * 2
+            ),
+            indiceSurvival = numero,
+            sequenzaVolpi = null,
+            intervalloTraNemici = Mathf.Max(
+                0.18f,
+                baseFinale.intervalloTraNemici * accelerazione
+            ),
+            dimensioneMassimaGruppo = Mathf.Clamp(
+                baseFinale.dimensioneMassimaGruppo + incrementiGruppo,
+                1,
+                4
+            ),
+            intervalloTraGruppi = Mathf.Max(
+                0.45f,
+                baseFinale.intervalloTraGruppi * accelerazione
+            ),
+            numeroMaialiniBonus = 0,
+            vitaMaialinoBonus = 1,
+            moneteMaialinoBonus = 0
+        };
     }
 
     IEnumerator SpawnMaialiniGraduali(Wave ondata, int tokenCorrente)
@@ -564,6 +585,11 @@ public class EnemySpawner : MonoBehaviour
             difficolta
         );
         ondate = CreaOndatePerDifficolta(ondate, profiloDifficolta);
+        if (ondate == null) return;
+        for (int i = 0; i < ondate.Length; i++)
+        {
+            if (ondate[i] != null) ondate[i].numeroMaialiniBonus = 0;
+        }
     }
 
     public static Wave[] CreaOndatePerDifficolta(
@@ -719,15 +745,12 @@ public class EnemySpawner : MonoBehaviour
 
     public AnteprimaOndata OttieniAnteprima(int indiceZeroBased)
     {
-        if (ondate == null ||
-            indiceZeroBased < 0 ||
-            indiceZeroBased >= ondate.Length ||
-            ondate[indiceZeroBased] == null)
+        Wave onda = OttieniOndata(indiceZeroBased);
+        if (onda == null)
         {
             return default;
         }
 
-        Wave onda = ondate[indiceZeroBased];
         int numeroVolpi = Mathf.Max(0, onda.numeroNemici);
         int numeroGruppi = CalcolaNumeroGruppi(
             numeroVolpi,
@@ -738,14 +761,14 @@ public class EnemySpawner : MonoBehaviour
 
         return new AnteprimaOndata(
             indiceZeroBased + 1,
-            ondate.Length,
+            indiceZeroBased + 1,
             string.IsNullOrWhiteSpace(onda.nomeOndata)
                 ? "Ondata " + (indiceZeroBased + 1)
                 : onda.nomeOndata,
             numeroVolpi,
             vitaVolpi,
             composizione,
-            Mathf.Max(0, onda.numeroMaialiniBonus),
+            0,
             Mathf.Max(1, onda.vitaMaialinoBonus),
             Mathf.Max(0, onda.moneteMaialinoBonus),
             numeroGruppi
@@ -762,7 +785,7 @@ public class EnemySpawner : MonoBehaviour
         SganciaMinacce();
         totaleNemiciOnda = anteprima.NumeroVolpi;
         nemiciDaSpawnare = anteprima.NumeroVolpi;
-        maialiniDaSpawnare = Mathf.Max(0, onda.numeroMaialiniBonus);
+        maialiniDaSpawnare = 0;
         composizioneTotaleOnda = anteprima.Composizione;
         composizioneDaSpawnare = anteprima.Composizione;
         gruppoCorrente = 0;
@@ -794,7 +817,6 @@ public class EnemySpawner : MonoBehaviour
 
     void InterrompiStatoOnda()
     {
-        obiettivi?.InterrompiOnda();
         ConcludiStatoOnda();
         NascondiMessaggio();
     }
@@ -843,18 +865,14 @@ public class EnemySpawner : MonoBehaviour
     ProgressoOndata CreaProgressoCorrente()
     {
         string nome = string.Empty;
-        if (ondate != null &&
-            currentWaveIndex >= 0 &&
-            currentWaveIndex < ondate.Length &&
-            ondate[currentWaveIndex] != null)
+        Wave ondaCorrente = OttieniOndata(currentWaveIndex);
+        if (ondaCorrente != null)
         {
-            nome = ondate[currentWaveIndex].nomeOndata;
+            nome = ondaCorrente.nomeOndata;
         }
 
-        int totale = ondate != null ? ondate.Length : 0;
-        int indiceVisualizzato = totale > 0
-            ? Mathf.Clamp(currentWaveIndex + 1, 1, totale)
-            : 0;
+        int totale = int.MaxValue;
+        int indiceVisualizzato = currentWaveIndex + 1;
 
         return new ProgressoOndata(
             tokenOndata,
@@ -883,14 +901,13 @@ public class EnemySpawner : MonoBehaviour
         int indiceSpawnZeroBased
     )
     {
-        if (ondate == null ||
-            indiceOndaZeroBased < 0 ||
-            indiceOndaZeroBased >= ondate.Length)
+        Wave onda = OttieniOndata(indiceOndaZeroBased);
+        if (onda == null)
         {
             return TipoVolpe.Comune;
         }
         return OttieniTipoVolpe(
-            ondate[indiceOndaZeroBased],
+            onda,
             indiceSpawnZeroBased
         );
     }
@@ -902,11 +919,22 @@ public class EnemySpawner : MonoBehaviour
     {
         if (onda == null ||
             indiceSpawnZeroBased < 0 ||
-            indiceSpawnZeroBased >= Mathf.Max(0, onda.numeroNemici) ||
-            onda.sequenzaVolpi == null ||
-            indiceSpawnZeroBased >= onda.sequenzaVolpi.Length)
+            indiceSpawnZeroBased >= Mathf.Max(0, onda.numeroNemici))
         {
             return TipoVolpe.Comune;
+        }
+
+        if (onda.sequenzaVolpi == null ||
+            indiceSpawnZeroBased >= onda.sequenzaVolpi.Length)
+        {
+            if (onda.indiceSurvival <= 0) return TipoVolpe.Comune;
+            switch ((indiceSpawnZeroBased + onda.indiceSurvival) % 4)
+            {
+                case 1: return TipoVolpe.Agile;
+                case 2: return TipoVolpe.Ladra;
+                case 3: return TipoVolpe.Alfa;
+                default: return TipoVolpe.Comune;
+            }
         }
         return FoxVariantStyle.Normalizza(
             onda.sequenzaVolpi[indiceSpawnZeroBased]
@@ -928,28 +956,10 @@ public class EnemySpawner : MonoBehaviour
 
     string CreaTestoBanner(AnteprimaOndata anteprima)
     {
-        string bonus;
-        if (anteprima.NumeroMaialini > 0)
-        {
-            int moneteMassime =
-                anteprima.NumeroMaialini * anteprima.MoneteMaialino;
-            bonus =
-                anteprima.NumeroMaialini +
-                (anteprima.NumeroMaialini == 1
-                    ? " MAIALINO BONUS"
-                    : " MAIALINI BONUS") +
-                "  (FINO A +" + moneteMassime + ")";
-        }
-        else
-        {
-            bonus = "NESSUN MAIALINO BONUS";
-        }
-
         return
-            "ONDATA " + anteprima.Indice + " / " + anteprima.Totale +
+            "ONDATA " + anteprima.Indice +
             "\n" + anteprima.Nome.ToUpperInvariant() +
-            "\n" + anteprima.Composizione.FormattaCompatta() +
-            "\n" + bonus;
+            "\n" + anteprima.Composizione.FormattaCompatta();
     }
 
     IEnumerator AttendiConToken(float durata, int tokenCorrente)
@@ -1018,7 +1028,7 @@ public class EnemySpawner : MonoBehaviour
         if (testoOndata != null)
         {
             testoOndata.text =
-                "Ondata   " + (currentWaveIndex + 1) + " / " + ondate.Length;
+                "Ondata   " + (currentWaveIndex + 1);
         }
     }
 
@@ -1216,7 +1226,6 @@ public class EnemySpawner : MonoBehaviour
         }
 
         MaialinoBonus.RimuoviTuttiSenzaPremio();
-        UovoRecuperabile.RimuoviTuttiSenzaEsito();
     }
 
     static Vector2 DirezioneCasuale()
