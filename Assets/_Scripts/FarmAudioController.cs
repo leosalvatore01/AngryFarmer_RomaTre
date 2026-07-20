@@ -215,9 +215,7 @@ public sealed class FarmAudioController : MonoBehaviour
     private static bool OndaAttiva()
     {
         GameManager gestore = GameManager.instance;
-        return gestore != null &&
-               !gestore.isGameOver &&
-               gestore.StatoCorrente == StatoPartita.Onda;
+        return gestore != null && gestore.GameplayAttivo;
     }
 
     private bool SuonaMoneta(float intensita)

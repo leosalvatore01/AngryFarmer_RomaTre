@@ -751,6 +751,9 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         profiloVariante = varianti.Ottieni(tipo);
 
         speed *= profiloVariante.moltiplicatoreVelocita;
+        speed *= GameBalanceConfig.Corrente.Difficolta.Ottieni(
+            ProgressionePartita.DifficoltaCorrente
+        ).moltiplicatoreVelocita;
         accelerazione *= profiloVariante.moltiplicatoreAccelerazione;
         decelerazione *= profiloVariante.moltiplicatoreDecelerazione;
         intervalloAttacco *=
@@ -1149,6 +1152,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
 
         if (GameManager.instance != null)
         {
+            GameManager.instance.RegistraVolpeEliminata(tipo);
             GameManager.instance.AggiungiMonete(monetePerEliminazione);
         }
         if (Random.Range(0f, 100f) < dropChance)

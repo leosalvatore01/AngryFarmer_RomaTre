@@ -25,11 +25,22 @@ public class GameManager : MonoBehaviour
     private TMP_Text titoloFinePartita;
     private TMP_Text riepilogoFinePartita;
     private Button pulsanteRiprova;
+    private Button pulsanteCambiaDifficolta;
+    private GameObject selettoreDifficolta;
     private ShopInterOndata shopInterOndata;
     private GameObject schedaUovaHud;
     private GameObject schedaUovaSalvateHud;
     private int gallineTotali;
     private int uovaInizioOnda;
+    private float durataPartita;
+    private int volpiEliminate;
+    private int proiettiliSparati;
+    private int proiettiliACentro;
+    private int ondateCompletate;
+    private int punteggioFinale;
+    private bool ultimaPartitaVinta;
+    private bool recordFinaliCalcolati;
+    private EsitoRecordPartita recordFinali;
 
     public int monete = 0;
     public int MoneteRaccolte { get; private set; }
@@ -45,6 +56,17 @@ public class GameManager : MonoBehaviour
     public int UovaUltimaOnda { get; private set; }
     public int ObiettiviCompletati { get; private set; }
     public int ObiettiviFalliti { get; private set; }
+    public float DurataPartita => durataPartita;
+    public int VolpiEliminate => volpiEliminate;
+    public int ProiettiliSparati => proiettiliSparati;
+    public int ProiettiliACentro => proiettiliACentro;
+    public float Precisione => proiettiliSparati > 0
+        ? Mathf.Clamp01(proiettiliACentro / (float)proiettiliSparati)
+        : 0f;
+    public int OndateCompletate => ondateCompletate;
+    public int PunteggioFinale => punteggioFinale;
+    public DifficoltaPartita DifficoltaCorrente { get; private set; }
+    public bool DifficoltaConfermata { get; private set; }
     public string UltimoObiettivo { get; private set; } = string.Empty;
     public bool UltimoObiettivoValutato { get; private set; }
     public bool UltimoObiettivoCompletato { get; private set; }
@@ -53,6 +75,7 @@ public class GameManager : MonoBehaviour
     public bool PausaManualeAttiva { get; private set; }
     public bool GameplayAttivo =>
         !isGameOver &&
+        DifficoltaConfermata &&
         StatoCorrente == StatoPartita.Onda &&
         !PausaManualeAttiva;
     public bool PausaInterOndataAttiva =>
@@ -83,6 +106,16 @@ public class GameManager : MonoBehaviour
             UovaUltimaOnda = 0;
             ObiettiviCompletati = 0;
             ObiettiviFalliti = 0;
+            durataPartita = 0f;
+            volpiEliminate = 0;
+            proiettiliSparati = 0;
+            proiettiliACentro = 0;
+            ondateCompletate = 0;
+            punteggioFinale = 0;
+            recordFinaliCalcolati = false;
+            DifficoltaCorrente = ProgressionePartita.DifficoltaCorrente;
+            DifficoltaConfermata =
+                ProgressionePartita.ConsumaRiavvioImmediato();
         }
         else
         {
@@ -109,9 +142,47 @@ public class GameManager : MonoBehaviour
             gameOverPanel.SetActive(false);
         }
 
+        if (!DifficoltaConfermata)
+        {
+            MostraSelettoreDifficolta();
+        }
+
         shopInterOndata = ShopInterOndata.CreaOTrova();
         FarmInteractiveArena.CreaOTrova();
         FarmObjectivesController.CreaOTrova();
+    }
+
+    void Update()
+    {
+        if (!DifficoltaConfermata)
+        {
+            if (Input.GetKeyDown(KeyCode.Alpha1) ||
+                Input.GetKeyDown(KeyCode.Keypad1))
+            {
+                ConfermaDifficolta(DifficoltaPartita.Tranquilla);
+            }
+            else if (Input.GetKeyDown(KeyCode.Alpha2) ||
+                     Input.GetKeyDown(KeyCode.Keypad2))
+            {
+                ConfermaDifficolta(DifficoltaPartita.Normale);
+            }
+            else if (Input.GetKeyDown(KeyCode.Alpha3) ||
+                     Input.GetKeyDown(KeyCode.Keypad3))
+            {
+                ConfermaDifficolta(DifficoltaPartita.Difficile);
+            }
+            return;
+        }
+
+        if (!isGameOver && !PausaManualeAttiva)
+        {
+            durataPartita += Time.unscaledDeltaTime;
+        }
+
+        if (isGameOver && Input.GetKeyDown(KeyCode.R))
+        {
+            Riprova();
+        }
     }
 
     public static TMP_Text TrovaTestoInterfaccia(string nome)
@@ -408,7 +479,7 @@ public class GameManager : MonoBehaviour
         pannelloRiepilogoRect.anchorMax = new Vector2(0.5f, 0.5f);
         pannelloRiepilogoRect.pivot = new Vector2(0.5f, 0.5f);
         pannelloRiepilogoRect.anchoredPosition = Vector2.zero;
-        pannelloRiepilogoRect.sizeDelta = new Vector2(920f, 560f);
+        pannelloRiepilogoRect.sizeDelta = new Vector2(980f, 720f);
 
         FarmPixelUI.ApplicaPannello(
             pannelloRiepilogoOggetto.GetComponent<Image>(),
@@ -428,7 +499,7 @@ public class GameManager : MonoBehaviour
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.anchoredPosition = new Vector2(0f, 210f);
+            rect.anchoredPosition = new Vector2(0f, 290f);
             rect.sizeDelta = new Vector2(620f, 90f);
 
             titoloFinePartita.fontSize = 50f;
@@ -468,14 +539,14 @@ public class GameManager : MonoBehaviour
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.anchoredPosition = Vector2.zero;
-            rect.sizeDelta = new Vector2(840f, 320f);
+            rect.anchoredPosition = new Vector2(0f, 12f);
+            rect.sizeDelta = new Vector2(900f, 480f);
 
             if (titoloFinePartita != null)
             {
                 riepilogoFinePartita.font = titoloFinePartita.font;
             }
-            riepilogoFinePartita.fontSize = 22f;
+            riepilogoFinePartita.fontSize = 19f;
             riepilogoFinePartita.fontStyle = FontStyles.Bold;
             riepilogoFinePartita.alignment =
                 TextAlignmentOptions.Center;
@@ -497,15 +568,15 @@ public class GameManager : MonoBehaviour
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.anchoredPosition = new Vector2(0f, -230f);
-            rect.sizeDelta = new Vector2(240f, 58f);
+            rect.anchoredPosition = new Vector2(150f, -310f);
+            rect.sizeDelta = new Vector2(270f, 58f);
 
             TMP_Text testoPulsante =
                 pulsanteRiprova.GetComponentInChildren<TMP_Text>(true);
             if (testoPulsante != null)
             {
-                testoPulsante.text = "RIPROVA";
-                testoPulsante.fontSize = 25f;
+                testoPulsante.text = "RIPROVA  [R]";
+                testoPulsante.fontSize = 23f;
                 testoPulsante.fontStyle = FontStyles.Bold;
                 FarmPixelUI.ApplicaTesto(
                     testoPulsante,
@@ -519,6 +590,334 @@ public class GameManager : MonoBehaviour
             );
             pulsanteRiprova.onClick.AddListener(Riprova);
         }
+
+        Transform cambiaEsistente =
+            gameOverPanel.transform.Find("PulsanteCambiaDifficolta");
+        GameObject cambiaOggetto;
+        if (cambiaEsistente == null)
+        {
+            cambiaOggetto = new GameObject(
+                "PulsanteCambiaDifficolta",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image),
+                typeof(Button)
+            );
+            cambiaOggetto.transform.SetParent(gameOverPanel.transform, false);
+        }
+        else
+        {
+            cambiaOggetto = cambiaEsistente.gameObject;
+        }
+
+        RectTransform cambiaRect = cambiaOggetto.GetComponent<RectTransform>();
+        cambiaRect.anchorMin = new Vector2(0.5f, 0.5f);
+        cambiaRect.anchorMax = new Vector2(0.5f, 0.5f);
+        cambiaRect.pivot = new Vector2(0.5f, 0.5f);
+        cambiaRect.anchoredPosition = new Vector2(-150f, -310f);
+        cambiaRect.sizeDelta = new Vector2(270f, 58f);
+
+        pulsanteCambiaDifficolta = cambiaOggetto.GetComponent<Button>();
+        TMP_Text testoCambia =
+            cambiaOggetto.GetComponentInChildren<TMP_Text>(true);
+        if (testoCambia == null)
+        {
+            testoCambia = CreaTestoPannello(
+                cambiaOggetto.transform,
+                "TestoCambiaDifficolta",
+                "CAMBIA DIFFICOLTA",
+                19f
+            );
+            RectTransform testoRect = testoCambia.rectTransform;
+            testoRect.anchorMin = Vector2.zero;
+            testoRect.anchorMax = Vector2.one;
+            testoRect.offsetMin = new Vector2(10f, 4f);
+            testoRect.offsetMax = new Vector2(-10f, -4f);
+        }
+        else
+        {
+            testoCambia.text = "CAMBIA DIFFICOLTA";
+        }
+        FarmPixelUI.ApplicaTesto(
+            testoCambia,
+            FarmPixelUI.TestoPulsanteFlat
+        );
+        FarmPixelUI.ApplicaPulsante(
+            pulsanteCambiaDifficolta,
+            FarmPixelUI.ColorePulsanteNeutroFlat
+        );
+        pulsanteCambiaDifficolta.onClick.RemoveAllListeners();
+        pulsanteCambiaDifficolta.onClick.AddListener(CambiaDifficolta);
+    }
+
+    void MostraSelettoreDifficolta()
+    {
+        if (selettoreDifficolta == null)
+        {
+            CostruisciSelettoreDifficolta();
+        }
+        if (selettoreDifficolta == null) return;
+
+        selettoreDifficolta.SetActive(true);
+        selettoreDifficolta.transform.SetAsLastSibling();
+        AggiornaScalaTemporale();
+    }
+
+    void CostruisciSelettoreDifficolta()
+    {
+        Transform parent = gameOverPanel != null
+            ? gameOverPanel.transform.parent
+            : null;
+        if (parent == null)
+        {
+            Canvas canvas = FindFirstObjectByType<Canvas>();
+            if (canvas != null) parent = canvas.transform;
+        }
+        if (parent == null)
+        {
+            Debug.LogError(
+                "Impossibile creare il selettore della difficolta: " +
+                "Canvas non trovato."
+            );
+            return;
+        }
+
+        selettoreDifficolta = new GameObject(
+            "SelettoreDifficolta",
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(Image)
+        );
+        selettoreDifficolta.transform.SetParent(parent, false);
+        RectTransform overlayRect =
+            selettoreDifficolta.GetComponent<RectTransform>();
+        overlayRect.anchorMin = Vector2.zero;
+        overlayRect.anchorMax = Vector2.one;
+        overlayRect.offsetMin = Vector2.zero;
+        overlayRect.offsetMax = Vector2.zero;
+        Image overlay = selettoreDifficolta.GetComponent<Image>();
+        overlay.sprite = null;
+        overlay.type = Image.Type.Simple;
+        overlay.color = FarmPixelUI.ColoreVeloFlat;
+        overlay.raycastTarget = true;
+
+        GameObject pannello = new GameObject(
+            "PannelloDifficolta",
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(Image)
+        );
+        pannello.transform.SetParent(selettoreDifficolta.transform, false);
+        RectTransform pannelloRect = pannello.GetComponent<RectTransform>();
+        pannelloRect.anchorMin = new Vector2(0.5f, 0.5f);
+        pannelloRect.anchorMax = new Vector2(0.5f, 0.5f);
+        pannelloRect.pivot = new Vector2(0.5f, 0.5f);
+        pannelloRect.anchoredPosition = Vector2.zero;
+        pannelloRect.sizeDelta = new Vector2(900f, 650f);
+        FarmPixelUI.ApplicaPannello(
+            pannello.GetComponent<Image>(),
+            false,
+            false
+        );
+
+        TMP_Text titolo = CreaTestoPannello(
+            pannello.transform,
+            "TitoloDifficolta",
+            "SCEGLI LA DIFFICOLTA",
+            38f
+        );
+        ConfiguraRettangoloCentrato(
+            titolo.rectTransform,
+            new Vector2(0f, 255f),
+            new Vector2(760f, 70f)
+        );
+        FarmPixelUI.ApplicaTesto(titolo, FarmPixelUI.TestoTitoloFlat);
+
+        TMP_Text sottotitolo = CreaTestoPannello(
+            pannello.transform,
+            "SottotitoloDifficolta",
+            "La scelta cambia vita, velocita e ritmo delle volpi.",
+            20f
+        );
+        ConfiguraRettangoloCentrato(
+            sottotitolo.rectTransform,
+            new Vector2(0f, 205f),
+            new Vector2(760f, 42f)
+        );
+        FarmPixelUI.ApplicaTesto(
+            sottotitolo,
+            FarmPixelUI.TestoChiaroFlat
+        );
+
+        BilanciamentoDifficolta bilanciamento =
+            GameBalanceConfig.Corrente.Difficolta;
+        CreaPulsanteDifficolta(
+            pannello.transform,
+            DifficoltaPartita.Tranquilla,
+            bilanciamento.Ottieni(DifficoltaPartita.Tranquilla),
+            new Vector2(0f, 105f),
+            FarmPixelUI.ColorePulsanteNeutroFlat,
+            "1"
+        );
+        CreaPulsanteDifficolta(
+            pannello.transform,
+            DifficoltaPartita.Normale,
+            bilanciamento.Ottieni(DifficoltaPartita.Normale),
+            new Vector2(0f, -10f),
+            FarmPixelUI.ColorePulsanteVerdeFlat,
+            "2"
+        );
+        CreaPulsanteDifficolta(
+            pannello.transform,
+            DifficoltaPartita.Difficile,
+            bilanciamento.Ottieni(DifficoltaPartita.Difficile),
+            new Vector2(0f, -125f),
+            FarmPixelUI.ColorePulsanteViolaFlat,
+            "3"
+        );
+
+        TMP_Text nota = CreaTestoPannello(
+            pannello.transform,
+            "NotaDifficolta",
+            "Puoi usare i tasti 1, 2 e 3. Il record e separato per difficolta.",
+            17f
+        );
+        ConfiguraRettangoloCentrato(
+            nota.rectTransform,
+            new Vector2(0f, -250f),
+            new Vector2(790f, 46f)
+        );
+        FarmPixelUI.ApplicaTesto(nota, FarmPixelUI.TestoMetaFlat);
+    }
+
+    void CreaPulsanteDifficolta(
+        Transform parent,
+        DifficoltaPartita difficolta,
+        ProfiloDifficolta profilo,
+        Vector2 posizione,
+        Color colore,
+        string tasto
+    )
+    {
+        GameObject oggetto = new GameObject(
+            "Difficolta_" + difficolta,
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(Image),
+            typeof(Button)
+        );
+        oggetto.transform.SetParent(parent, false);
+        RectTransform rect = oggetto.GetComponent<RectTransform>();
+        ConfiguraRettangoloCentrato(
+            rect,
+            posizione,
+            new Vector2(700f, 92f)
+        );
+
+        Button pulsante = oggetto.GetComponent<Button>();
+        FarmPixelUI.ApplicaPulsante(pulsante, colore);
+        pulsante.onClick.AddListener(() => ConfermaDifficolta(difficolta));
+
+        string descrizione = profilo != null
+            ? profilo.descrizione
+            : string.Empty;
+        string nome = profilo != null
+            ? profilo.Nome
+            : difficolta.ToString().ToUpperInvariant();
+        TMP_Text testo = CreaTestoPannello(
+            oggetto.transform,
+            "Testo",
+            "[" + tasto + "]  " + nome + "\n" + descrizione,
+            20f
+        );
+        testo.lineSpacing = -5f;
+        RectTransform testoRect = testo.rectTransform;
+        testoRect.anchorMin = Vector2.zero;
+        testoRect.anchorMax = Vector2.one;
+        testoRect.offsetMin = new Vector2(18f, 7f);
+        testoRect.offsetMax = new Vector2(-18f, -7f);
+        FarmPixelUI.ApplicaTesto(
+            testo,
+            FarmPixelUI.TestoPulsanteFlat
+        );
+    }
+
+    TMP_Text CreaTestoPannello(
+        Transform parent,
+        string nome,
+        string contenuto,
+        float dimensione
+    )
+    {
+        GameObject oggetto = new GameObject(
+            nome,
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(TextMeshProUGUI)
+        );
+        oggetto.transform.SetParent(parent, false);
+        TMP_Text testo = oggetto.GetComponent<TextMeshProUGUI>();
+        testo.text = contenuto;
+        testo.fontSize = dimensione;
+        testo.fontStyle = FontStyles.Bold;
+        testo.alignment = TextAlignmentOptions.Center;
+        testo.textWrappingMode = TextWrappingModes.Normal;
+        testo.raycastTarget = false;
+        if (titoloFinePartita != null)
+        {
+            testo.font = titoloFinePartita.font;
+        }
+        FarmPixelUI.ApplicaTesto(testo, FarmPixelUI.TestoChiaroFlat);
+        return testo;
+    }
+
+    static void ConfiguraRettangoloCentrato(
+        RectTransform rect,
+        Vector2 posizione,
+        Vector2 dimensione
+    )
+    {
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = posizione;
+        rect.sizeDelta = dimensione;
+    }
+
+    public void ConfermaDifficolta(DifficoltaPartita difficolta)
+    {
+        if (DifficoltaConfermata) return;
+
+        DifficoltaCorrente = difficolta;
+        ProgressionePartita.ImpostaDifficolta(difficolta);
+        DifficoltaConfermata = true;
+        if (selettoreDifficolta != null)
+        {
+            selettoreDifficolta.SetActive(false);
+        }
+        AggiornaScalaTemporale();
+        FarmAudioController.RiproduciInterfaccia();
+    }
+
+    public void RegistraProiettileSparato()
+    {
+        if (isGameOver || !DifficoltaConfermata) return;
+        proiettiliSparati++;
+    }
+
+    public void RegistraProiettileACentro()
+    {
+        if (isGameOver || !DifficoltaConfermata) return;
+        proiettiliACentro = Mathf.Min(
+            proiettiliSparati,
+            proiettiliACentro + 1
+        );
+    }
+
+    public void RegistraVolpeEliminata(TipoVolpe tipo)
+    {
+        if (isGameOver || !DifficoltaConfermata) return;
+        volpiEliminate++;
     }
 
     public void RegistraGallina()
@@ -678,6 +1077,7 @@ public class GameManager : MonoBehaviour
         if (isGameOver) return;
 
         isGameOver = true;
+        ultimaPartitaVinta = titolo == "FATTORIA SALVA!";
         if (shopInterOndata != null)
         {
             shopInterOndata.Nascondi();
@@ -686,6 +1086,7 @@ public class GameManager : MonoBehaviour
         {
             titoloFinePartita.text = titolo;
         }
+        CalcolaRecordFinali();
         AggiornaRiepilogoFinale();
         if (gameOverPanel != null)
         {
@@ -697,8 +1098,17 @@ public class GameManager : MonoBehaviour
 
     public void Riprova()
     {
+        ProgressionePartita.ImpostaDifficolta(DifficoltaCorrente);
+        ProgressionePartita.PreparaRiavvioImmediato();
         ImpostaPausaManuale(false);
         ImpostaStatoPartita(StatoPartita.Onda);
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    public void CambiaDifficolta()
+    {
+        ProgressionePartita.PreparaCambioDifficolta();
+        ImpostaPausaManuale(false);
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
@@ -748,6 +1158,8 @@ public class GameManager : MonoBehaviour
             return 0;
         }
 
+        ondateCompletate = Mathf.Max(ondateCompletate, indiceOnda);
+
         int bonus = Mathf.Max(
             0,
             GameBalanceConfig.Corrente.Shop.bonusCompletamentoOnda
@@ -772,19 +1184,89 @@ public class GameManager : MonoBehaviour
         string buildLeggibile = build
             .Replace("  |  ", "\n")
             .Replace("  •  ", "\n");
+        ProfiloDifficolta profilo =
+            GameBalanceConfig.Corrente.Difficolta.Ottieni(
+                DifficoltaCorrente
+            );
+        string migliorTempo = recordFinali.MigliorTempoVittoria > 0f
+            ? ProgressionePartita.FormattaTempo(
+                recordFinali.MigliorTempoVittoria
+            )
+            : "--:--";
+        string nuovoRecordPunteggio = recordFinali.NuovoPunteggio
+            ? "  NUOVO RECORD!"
+            : string.Empty;
+        string altriRecord = DescriviAltriRecordFinali();
+
         riepilogoFinePartita.text =
-            "MONETE RACCOLTE  " + MoneteRaccolte +
+            "DIFFICOLTA  " + profilo.Nome +
+            "  |  TEMPO  " +
+            ProgressionePartita.FormattaTempo(durataPartita) +
+            "\nVOLPI ELIMINATE  " + volpiEliminate +
+            "  |  PRECISIONE  " +
+            Mathf.RoundToInt(Precisione * 100f) + "%  (" +
+            proiettiliACentro + " / " + proiettiliSparati + ")" +
+            "\nMONETE RACCOLTE  " + MoneteRaccolte +
             "  |  SPESE  " + MoneteSpese +
-            "\nMONETE RIMASTE  " + monete +
-            "  |  GALLINE SALVE  " + Mathf.Max(0, gallineRimaste) +
+            "  |  RIMASTE  " + monete +
+            "\nGALLINE SALVE  " + GallineAlSicuro +
             " / " + gallineTotali +
-            "\nUOVA SALVATE  " + UovaSalvate +
-            "  |  SERIE MIGLIORE  x" + MiglioreSerieSalvataggi +
+            "  |  UOVA SALVATE  " + UovaSalvate +
+            "  |  SERIE  x" + MiglioreSerieSalvataggi +
             "\nOBIETTIVI  " + ObiettiviCompletati +
             " COMPLETATI  |  " + ObiettiviFalliti + " FALLITI" +
+            "\nPUNTEGGIO  " + punteggioFinale +
+            nuovoRecordPunteggio + altriRecord +
+            "\nRECORD " + profilo.Nome + "  " +
+            recordFinali.MigliorPunteggio + " PT  |  " +
+            recordFinali.MassimoVolpi + " VOLPI  |  " +
+            recordFinali.MigliorePercentualeGalline + "% GALLINE" +
+            "\nMIGLIOR TEMPO VITTORIA  " + migliorTempo +
             "\n------------------------------" +
             "\nBUILD FINALE" +
             "\n" + buildLeggibile;
+    }
+
+    private string DescriviAltriRecordFinali()
+    {
+        string record = string.Empty;
+        if (recordFinali.NuovoRecordVolpi) record += "VOLPI ";
+        if (recordFinali.NuovoRecordGalline) record += "GALLINE ";
+        if (recordFinali.NuovoRecordTempo) record += "TEMPO ";
+        return string.IsNullOrEmpty(record)
+            ? string.Empty
+            : "\nNUOVI RECORD  " + record.TrimEnd();
+    }
+
+    void CalcolaRecordFinali()
+    {
+        if (recordFinaliCalcolati) return;
+
+        ProfiloDifficolta profilo =
+            GameBalanceConfig.Corrente.Difficolta.Ottieni(
+                DifficoltaCorrente
+            );
+        punteggioFinale = ProgressionePartita.CalcolaPunteggio(
+            ultimaPartitaVinta,
+            volpiEliminate,
+            ondateCompletate,
+            MoneteRaccolte,
+            GallineAlSicuro,
+            UovaSalvate,
+            ObiettiviCompletati,
+            Precisione,
+            profilo.moltiplicatorePunteggio
+        );
+        recordFinali = ProgressionePartita.SalvaRecord(
+            DifficoltaCorrente,
+            ultimaPartitaVinta,
+            punteggioFinale,
+            durataPartita,
+            volpiEliminate,
+            GallineAlSicuro,
+            gallineTotali
+        );
+        recordFinaliCalcolati = true;
     }
 
     public void IniziaIntervallo(int ondaCompletata, int totaleOndate)
@@ -875,6 +1357,7 @@ public class GameManager : MonoBehaviour
     void AggiornaScalaTemporale()
     {
         Time.timeScale =
+            DifficoltaConfermata &&
             StatoCorrente == StatoPartita.Onda &&
             !PausaManualeAttiva
                 ? 1f

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71eb059f1b8bf85479410b9626b3361b, type: 3}
   m_Name: GameBalanceConfig
   m_EditorClassIdentifier: Assembly-CSharp::GameBalanceConfig
-  versioneRiferimento: Blocco 7 - Audio, opzioni e accessibilita - 2026-07-18
+  versioneRiferimento: Blocco 8 - Fine partita e bilanciamento - 2026-07-20
   giocatore:
     velocitaMovimento: 8
     accelerazione: 45
@@ -144,16 +144,16 @@ MonoBehaviour:
     costiMovimento: 030000000500000008000000
     costiResistenza: 04000000070000000a000000
     costiSalute: 04000000070000000a000000
-    costiDanno: 080000000e000000
+    costiDanno: 0a00000010000000
     costiCadenza: 030000000600000009000000
-    costiPenetrazione: 05000000080000000c000000
+    costiPenetrazione: 030000000500000007000000
     costoCura: 2
     costiColpoAggiuntivo: 060000000a000000
     costiRafficaRaccolto: 0b000000
     costiPatataGigante: 0400000007000000
     costiPatataEsplosiva: 0c000000
-    costiCritico: 04000000070000000a000000
-    costiRimbalzo: 060000000a000000
+    costiCritico: 030000000500000007000000
+    costiRimbalzo: 080000000e000000
     costiRallentamento: 0300000006000000
     costiSpinta: 030000000600000009000000
     incrementoMovimento: 0.5
@@ -170,11 +170,13 @@ MonoBehaviour:
     angoloColpoAggiuntivo: 7
     incrementoScalaPatataGigante: 0.2
     riduzioneVelocitaPatataGigante: 0.06
+    forzaSpintaPatataGigantePerLivello: 1.1
     raggioEsplosione: 1.25
     moltiplicatoreDannoEsplosione: 0.5
     probabilitaCriticoPerLivello: 0.12
     moltiplicatoreDannoCritico: 2
-    raggioRicercaRimbalzo: 3.8
+    raggioRicercaRimbalzo: 2.4
+    moltiplicatoreDannoRimbalzo: 0.65
     rallentamentoPrimoLivello: 0.72
     riduzioneRallentamentoPerLivello: 0.12
     durataRallentamentoBase: 1.1
@@ -221,6 +223,31 @@ MonoBehaviour:
     vibrazioneCameraAttiva: 1
     intensitaVibrazione: 0.045
     durataVibrazione: 0.075
+  difficolta:
+    tranquilla:
+      nomeVisualizzato: TRANQUILLA
+      descrizione: Volpi piu lente, meno resistenti e piu distanziate.
+      moltiplicatoreVita: 0.85
+      moltiplicatoreQuantita: 1
+      moltiplicatoreIntervalli: 1.15
+      moltiplicatoreVelocita: 0.9
+      moltiplicatorePunteggio: 0.85
+    normale:
+      nomeVisualizzato: NORMALE
+      descrizione: La difficolta consigliata per la prima partita.
+      moltiplicatoreVita: 1
+      moltiplicatoreQuantita: 1
+      moltiplicatoreIntervalli: 1
+      moltiplicatoreVelocita: 1
+      moltiplicatorePunteggio: 1
+    difficile:
+      nomeVisualizzato: DIFFICILE
+      descrizione: Volpi piu rapide, resistenti e meno distanziate.
+      moltiplicatoreVita: 1.2
+      moltiplicatoreQuantita: 1
+      moltiplicatoreIntervalli: 0.88
+      moltiplicatoreVelocita: 1.08
+      moltiplicatorePunteggio: 1.2
   ondate:
     distanzaSpawnVolpi: 10
     distanzaSpawnMaialini: 5.2

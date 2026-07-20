@@ -7,9 +7,12 @@ public sealed class DamageNumberFeedback : MonoBehaviour
     private const int LimitePool = 28;
     private readonly Queue<DamageNumberPopup> pool =
         new Queue<DamageNumberPopup>();
+    private int popupCreati;
 
     public static DamageNumberFeedback Instance { get; private set; }
     public int NumeriMostrati { get; private set; }
+    public int NumeriSaltati { get; private set; }
+    public int PopupCreati => popupCreati;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void AzzeraStatici()
@@ -82,13 +85,23 @@ public sealed class DamageNumberFeedback : MonoBehaviour
         while (pool.Count > 0 && popup == null)
         {
             popup = pool.Dequeue();
+            if (popup == null)
+            {
+                popupCreati = Mathf.Max(0, popupCreati - 1);
+            }
         }
-        if (popup == null)
+        if (popup == null && popupCreati < LimitePool)
         {
             GameObject oggetto = new GameObject("NumeroDannoPixel");
             oggetto.transform.SetParent(transform, false);
             popup = oggetto.AddComponent<DamageNumberPopup>();
             popup.Configura(this);
+            popupCreati++;
+        }
+        if (popup == null)
+        {
+            NumeriSaltati++;
+            return;
         }
 
         popup.gameObject.SetActive(true);
@@ -100,14 +113,7 @@ public sealed class DamageNumberFeedback : MonoBehaviour
     {
         if (popup == null) return;
         popup.gameObject.SetActive(false);
-        if (pool.Count < LimitePool)
-        {
-            pool.Enqueue(popup);
-        }
-        else
-        {
-            Destroy(popup.gameObject);
-        }
+        pool.Enqueue(popup);
     }
 
     void OnDestroy()

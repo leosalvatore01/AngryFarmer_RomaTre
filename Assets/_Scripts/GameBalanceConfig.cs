@@ -94,7 +94,7 @@ public sealed class ShopBalanceSettings
 {
     [Header("Offerte e ritmo della bottega")]
     [Range(3, 4)] public int numeroOfferte = 4;
-    [Min(0)] public int costoRerollBase = 1;
+    [Min(1)] public int costoRerollBase = 1;
     [Min(0)] public int incrementoCostoReroll = 1;
     [Min(0)] public int bonusCompletamentoOnda = 1;
 
@@ -102,24 +102,24 @@ public sealed class ShopBalanceSettings
     public int[] costiMovimento = { 3, 5, 8 };
     public int[] costiResistenza = { 4, 7, 10 };
     public int[] costiSalute = { 4, 7, 10 };
-    public int[] costiDanno = { 8, 14 };
+    public int[] costiDanno = { 10, 16 };
     public int[] costiCadenza = { 3, 6, 9 };
-    public int[] costiPenetrazione = { 5, 8, 12 };
-    [Min(0)] public int costoCura = 2;
+    public int[] costiPenetrazione = { 3, 5, 7 };
+    [Min(1)] public int costoCura = 2;
 
     [Header("Prezzi modificatori speciali")]
     public int[] costiColpoAggiuntivo = { 6, 10 };
     public int[] costiRafficaRaccolto = { 11 };
     public int[] costiPatataGigante = { 4, 7 };
     public int[] costiPatataEsplosiva = { 12 };
-    public int[] costiCritico = { 4, 7, 10 };
-    public int[] costiRimbalzo = { 6, 10 };
+    public int[] costiCritico = { 3, 5, 7 };
+    public int[] costiRimbalzo = { 8, 14 };
     public int[] costiRallentamento = { 3, 6 };
     public int[] costiSpinta = { 3, 6, 9 };
 
     [Header("Effetti")]
     [Min(0f)] public float incrementoMovimento = 0.5f;
-    public int[] frequenzeBlocco = { 5, 4, 3 };
+    [Min(2)] public int[] frequenzeBlocco = { 5, 4, 3 };
     [Min(0)] public int incrementoSaluteMassima = 1;
     [Min(0)] public int curaSuIncrementoSalute = 1;
     [Min(0)] public int quantitaCura = 2;
@@ -136,13 +136,15 @@ public sealed class ShopBalanceSettings
     [Header("Effetti build Artiglieria")]
     [Range(0f, 1f)] public float incrementoScalaPatataGigante = 0.2f;
     [Range(0f, 0.4f)] public float riduzioneVelocitaPatataGigante = 0.06f;
+    [Range(0f, 2f)] public float forzaSpintaPatataGigantePerLivello = 1.1f;
     [Min(0.2f)] public float raggioEsplosione = 1.25f;
     [Range(0.1f, 2f)] public float moltiplicatoreDannoEsplosione = 0.5f;
 
     [Header("Effetti build Perforazione")]
     [Range(0f, 1f)] public float probabilitaCriticoPerLivello = 0.12f;
     [Min(1f)] public float moltiplicatoreDannoCritico = 2f;
-    [Min(0.5f)] public float raggioRicercaRimbalzo = 3.8f;
+    [Range(1.5f, 3.2f)] public float raggioRicercaRimbalzo = 2.4f;
+    [Range(0.5f, 1f)] public float moltiplicatoreDannoRimbalzo = 0.65f;
 
     [Header("Effetti build Controllo")]
     [Range(0.1f, 0.95f)] public float rallentamentoPrimoLivello = 0.72f;
@@ -368,7 +370,7 @@ public sealed class GameBalanceConfig : ScriptableObject
 
     [SerializeField]
     private string versioneRiferimento =
-        "Blocco 7 - Audio, opzioni e accessibilita - 2026-07-18";
+        "Blocco 8 - Fine partita e bilanciamento - 2026-07-20";
 
     [SerializeField] private PlayerBalanceSettings giocatore =
         new PlayerBalanceSettings();
@@ -386,6 +388,8 @@ public sealed class GameBalanceConfig : ScriptableObject
         new FarmInteractiveBalanceSettings();
     [SerializeField] private WaveBalanceSettings ondate =
         new WaveBalanceSettings();
+    [SerializeField] private BilanciamentoDifficolta difficolta =
+        new BilanciamentoDifficolta();
     [SerializeField] private CombatFeedbackSettings feedbackCombattimento =
         new CombatFeedbackSettings();
 
@@ -406,6 +410,8 @@ public sealed class GameBalanceConfig : ScriptableObject
     public FarmInteractiveBalanceSettings Fattoria =>
         fattoria ?? (fattoria = new FarmInteractiveBalanceSettings());
     public WaveBalanceSettings Ondate => ondate;
+    public BilanciamentoDifficolta Difficolta =>
+        difficolta ?? (difficolta = new BilanciamentoDifficolta());
     public CombatFeedbackSettings FeedbackCombattimento =>
         feedbackCombattimento ??
         (feedbackCombattimento = new CombatFeedbackSettings());
@@ -465,6 +471,11 @@ public sealed class GameBalanceConfig : ScriptableObject
         {
             obiettiviFattoria = new FarmObjectivesBalanceSettings();
         }
+        if (difficolta == null)
+        {
+            difficolta = new BilanciamentoDifficolta();
+        }
+        difficolta.Normalizza();
 
         giocatore.intervalloSparoMinimo = Mathf.Max(
             0.01f,
@@ -530,11 +541,12 @@ public sealed class GameBalanceConfig : ScriptableObject
         NormalizzaArrayNonNegativo(shop.costiRallentamento);
         NormalizzaArrayNonNegativo(shop.costiSpinta);
         shop.numeroOfferte = Mathf.Clamp(shop.numeroOfferte, 3, 4);
-        shop.costoRerollBase = Mathf.Max(0, shop.costoRerollBase);
+        shop.costoRerollBase = Mathf.Max(1, shop.costoRerollBase);
         shop.incrementoCostoReroll = Mathf.Max(
-            0,
+            1,
             shop.incrementoCostoReroll
         );
+        shop.costoCura = Mathf.Max(1, shop.costoCura);
         shop.bonusCompletamentoOnda = Mathf.Max(
             0,
             shop.bonusCompletamentoOnda
@@ -544,13 +556,24 @@ public sealed class GameBalanceConfig : ScriptableObject
             shop.colpiPerRafficaRaccolto
         );
         shop.raggioEsplosione = Mathf.Max(0.2f, shop.raggioEsplosione);
+        shop.forzaSpintaPatataGigantePerLivello = Mathf.Clamp(
+            shop.forzaSpintaPatataGigantePerLivello,
+            0f,
+            2f
+        );
         shop.moltiplicatoreDannoCritico = Mathf.Max(
             1f,
             shop.moltiplicatoreDannoCritico
         );
-        shop.raggioRicercaRimbalzo = Mathf.Max(
+        shop.raggioRicercaRimbalzo = Mathf.Clamp(
+            shop.raggioRicercaRimbalzo,
+            1.5f,
+            3.2f
+        );
+        shop.moltiplicatoreDannoRimbalzo = Mathf.Clamp(
+            shop.moltiplicatoreDannoRimbalzo,
             0.5f,
-            shop.raggioRicercaRimbalzo
+            1f
         );
         shop.durataRallentamentoBase = Mathf.Max(
             0.1f,
@@ -724,9 +747,14 @@ public sealed class GameBalanceConfig : ScriptableObject
         {
             for (int i = 0; i < shop.frequenzeBlocco.Length; i++)
             {
-                shop.frequenzeBlocco[i] = Mathf.Max(
-                    1,
-                    shop.frequenzeBlocco[i]
+                int minimo = 2 + shop.frequenzeBlocco.Length - 1 - i;
+                int massimo = i == 0
+                    ? int.MaxValue
+                    : shop.frequenzeBlocco[i - 1] - 1;
+                shop.frequenzeBlocco[i] = Mathf.Clamp(
+                    shop.frequenzeBlocco[i],
+                    minimo,
+                    massimo
                 );
             }
         }
@@ -775,7 +803,8 @@ public sealed class GameBalanceConfig : ScriptableObject
         if (valori == null) return;
         for (int i = 0; i < valori.Length; i++)
         {
-            valori[i] = Mathf.Max(0, valori[i]);
+            int minimo = i == 0 ? 1 : valori[i - 1] + 1;
+            valori[i] = Mathf.Max(minimo, valori[i]);
         }
     }
 

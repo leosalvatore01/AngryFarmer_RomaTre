@@ -153,6 +153,7 @@ public class EnemySpawner : MonoBehaviour
     private bool avvioRapidoRichiesto;
     private WaveReadabilityController leggibilita;
     private FarmObjectivesController obiettivi;
+    private ProfiloDifficolta profiloDifficolta;
 
     public WaveRuntimeDiagnostics Diagnostica => diagnostica;
     public int IndiceOndaCorrente => currentWaveIndex;
@@ -169,6 +170,11 @@ public class EnemySpawner : MonoBehaviour
     public bool OndaAttiva => ondaAttiva;
     public IEnumerable<EnemyAI> MinacceOnda => minacceAttive;
     public WaveReadabilityController Leggibilita => leggibilita;
+    public ProfiloDifficolta ProfiloDifficoltaCorrente =>
+        profiloDifficolta ??
+        GameBalanceConfig.Corrente.Difficolta.Ottieni(
+            DifficoltaPartita.Normale
+        );
     public ProgressoOndata ProgressoCorrente => CreaProgressoCorrente();
     public AnteprimaOndata AnteprimaCorrente =>
         OttieniAnteprima(currentWaveIndex);
@@ -178,7 +184,6 @@ public class EnemySpawner : MonoBehaviour
     void Start()
     {
         ApplicaConfigurazioneBilanciamento();
-        VerificaSequenzeConfigurate();
         ConfiguraDiagnostica();
 
         testoOndata = GameManager.TrovaTestoInterfaccia("OndataText");
@@ -208,6 +213,13 @@ public class EnemySpawner : MonoBehaviour
         // Garantisce che GameManager e galline completino Start prima
         // di fotografare lo stato iniziale del primo obiettivo.
         yield return null;
+
+        yield return new WaitUntil(
+            () => GameManager.instance == null ||
+                  GameManager.instance.DifficoltaConfermata
+        );
+        ApplicaDifficoltaAllaCurva();
+        VerificaSequenzeConfigurate();
 
         while (currentWaveIndex < ondate.Length)
         {
@@ -384,6 +396,7 @@ public class EnemySpawner : MonoBehaviour
             diagnostica.SegnaFineSpawn();
 
             while (
+                minacceAttive.Count > 0 ||
                 GameObject.FindGameObjectWithTag("Nemico") != null ||
                 UovoRecuperabile.RecuperiAttivi > 0 ||
                 (obiettivi != null &&
@@ -542,6 +555,121 @@ public class EnemySpawner : MonoBehaviour
         }
     }
 
+    void ApplicaDifficoltaAllaCurva()
+    {
+        DifficoltaPartita difficolta = GameManager.instance != null
+            ? GameManager.instance.DifficoltaCorrente
+            : ProgressionePartita.DifficoltaCorrente;
+        profiloDifficolta = GameBalanceConfig.Corrente.Difficolta.Ottieni(
+            difficolta
+        );
+        ondate = CreaOndatePerDifficolta(ondate, profiloDifficolta);
+    }
+
+    public static Wave[] CreaOndatePerDifficolta(
+        Wave[] ondateBase,
+        ProfiloDifficolta profilo
+    )
+    {
+        if (ondateBase == null) return System.Array.Empty<Wave>();
+        ProfiloDifficolta profiloValido = profilo ??
+            new ProfiloDifficolta();
+        Wave[] risultato = new Wave[ondateBase.Length];
+        for (int i = 0; i < ondateBase.Length; i++)
+        {
+            Wave originale = ondateBase[i];
+            if (originale == null) continue;
+
+            int quantitaBase = Mathf.Max(0, originale.numeroNemici);
+            int nuovaQuantita = profiloValido.ApplicaQuantita(
+                quantitaBase
+            );
+            TipoVolpe[] sequenzaBase = new TipoVolpe[quantitaBase];
+            for (int slot = 0; slot < quantitaBase; slot++)
+            {
+                sequenzaBase[slot] = OttieniTipoVolpe(originale, slot);
+            }
+
+            risultato[i] = new Wave
+            {
+                nomeOndata = originale.nomeOndata,
+                numeroNemici = nuovaQuantita,
+                sequenzaVolpi = AdattaSequenza(
+                    sequenzaBase,
+                    nuovaQuantita
+                ),
+                intervalloTraNemici = profiloValido.ApplicaIntervallo(
+                    originale.intervalloTraNemici
+                ),
+                dimensioneMassimaGruppo = Mathf.Clamp(
+                    originale.dimensioneMassimaGruppo,
+                    1,
+                    4
+                ),
+                intervalloTraGruppi = profiloValido.ApplicaIntervallo(
+                    originale.intervalloTraGruppi
+                ),
+                numeroMaialiniBonus = Mathf.Max(
+                    0,
+                    originale.numeroMaialiniBonus
+                ),
+                vitaMaialinoBonus = Mathf.Max(
+                    1,
+                    originale.vitaMaialinoBonus
+                ),
+                moneteMaialinoBonus = Mathf.Max(
+                    0,
+                    originale.moneteMaialinoBonus
+                )
+            };
+        }
+        return risultato;
+    }
+
+    public static TipoVolpe[] AdattaSequenza(
+        TipoVolpe[] sequenzaBase,
+        int nuovaQuantita
+    )
+    {
+        int quantita = Mathf.Max(0, nuovaQuantita);
+        TipoVolpe[] risultato = new TipoVolpe[quantita];
+        if (quantita == 0 || sequenzaBase == null ||
+            sequenzaBase.Length == 0)
+        {
+            return risultato;
+        }
+
+        int origine = sequenzaBase.Length;
+        if (quantita == 1)
+        {
+            risultato[0] = FoxVariantStyle.Normalizza(
+                sequenzaBase[origine - 1]
+            );
+            return risultato;
+        }
+
+        for (int i = 0; i < quantita; i++)
+        {
+            int indiceOrigine = quantita < origine
+                ? Mathf.RoundToInt(i * (origine - 1f) / (quantita - 1f))
+                : Mathf.FloorToInt(i * origine / (float)quantita);
+            risultato[i] = FoxVariantStyle.Normalizza(
+                sequenzaBase[Mathf.Clamp(indiceOrigine, 0, origine - 1)]
+            );
+        }
+        return risultato;
+    }
+
+    int CalcolaVitaOnda(int indiceZeroBased)
+    {
+        int vitaBase = Mathf.Max(
+            1,
+            vitaPrimaOndata +
+            Mathf.Max(0, indiceZeroBased) * vitaAggiuntivaPerOndata
+        );
+        return ProfiloDifficoltaCorrente.ApplicaVita(vitaBase);
+    }
+
     void ConfiguraDiagnostica()
     {
         if (diagnostica == null)
@@ -605,11 +733,7 @@ public class EnemySpawner : MonoBehaviour
             numeroVolpi,
             onda.dimensioneMassimaGruppo
         );
-        int vitaVolpi = Mathf.Max(
-            1,
-            vitaPrimaOndata +
-            indiceZeroBased * vitaAggiuntivaPerOndata
-        );
+        int vitaVolpi = CalcolaVitaOnda(indiceZeroBased);
         ComposizioneVolpi composizione = CalcolaComposizione(onda);
 
         return new AnteprimaOndata(
@@ -1032,10 +1156,7 @@ public class EnemySpawner : MonoBehaviour
             return null;
         }
 
-        int vitaOndata = Mathf.Max(
-            1,
-            vitaPrimaOndata + currentWaveIndex * vitaAggiuntivaPerOndata
-        );
+        int vitaOndata = CalcolaVitaOnda(currentWaveIndex);
         nemico.InizializzaVariante(
             tipo,
             vitaOndata,

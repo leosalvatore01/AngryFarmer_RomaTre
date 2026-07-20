@@ -124,20 +124,44 @@ public sealed class PauseSettingsMenu : MonoBehaviour
 
     private void Update()
     {
+        AggiornaVisibilitaPulsanteApri();
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             AlternaMenu();
         }
     }
 
+    private void AggiornaVisibilitaPulsanteApri()
+    {
+        if (pulsanteApri == null || Aperto) return;
+        GameManager gestore = GameManager.instance;
+        bool visibile = gestore == null || gestore.DifficoltaConfermata;
+        if (pulsanteApri.gameObject.activeSelf != visibile)
+        {
+            pulsanteApri.gameObject.SetActive(visibile);
+        }
+    }
+
     public void AlternaMenu()
     {
+        GameManager gestore = GameManager.instance;
+        if (!Aperto && gestore != null &&
+            !gestore.DifficoltaConfermata)
+        {
+            return;
+        }
         if (Aperto) Nascondi();
         else Mostra();
     }
 
     public void Mostra()
     {
+        GameManager gestoreSelezione = GameManager.instance;
+        if (gestoreSelezione != null &&
+            !gestoreSelezione.DifficoltaConfermata)
+        {
+            return;
+        }
         if (!costruito || Aperto) return;
 
         pannelloOverlay.SetActive(true);

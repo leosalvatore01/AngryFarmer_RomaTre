@@ -348,6 +348,7 @@ public class PlayerShooting : MonoBehaviour
                 Mathf.Max(0.1f, profilo.MoltiplicatoreVelocita);
         }
         UltimoNumeroProiettiliCreati++;
+        GameManager.instance?.RegistraProiettileSparato();
     }
 
     private bool EstraiProbabilita(float probabilita)

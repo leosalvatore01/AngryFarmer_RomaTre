@@ -283,7 +283,7 @@ public class PlayerUpgrades : MonoBehaviour
             case TipoPotenziamento.Critico:
                 return "Possibilità di infliggere danno doppio.";
             case TipoPotenziamento.Rimbalzo:
-                return "Un colpo fermato cerca una nuova volpe vicina.";
+                return "Cerca una nuova volpe, perdendo potenza a ogni salto.";
             case TipoPotenziamento.Rallentamento:
                 return "Le volpi colpite restano rallentate per un po'.";
             case TipoPotenziamento.Spinta:
@@ -418,12 +418,23 @@ public class PlayerUpgrades : MonoBehaviour
                     " spari"
                 );
             case TipoPotenziamento.PatataGigante:
-                return ConfrontoPercentuale(
-                    1f + livelloPatataGigante *
-                    configurazione.incrementoScalaPatataGigante,
-                    1f + (livelloPatataGigante + 1) *
-                    configurazione.incrementoScalaPatataGigante,
-                    true
+                return Confronto(
+                    FormattaPercentuale(
+                        1f + livelloPatataGigante *
+                        configurazione.incrementoScalaPatataGigante,
+                        true
+                    ) + " / spinta " + FormattaDecimale(
+                        livelloPatataGigante *
+                        configurazione.forzaSpintaPatataGigantePerLivello
+                    ),
+                    FormattaPercentuale(
+                        1f + (livelloPatataGigante + 1) *
+                        configurazione.incrementoScalaPatataGigante,
+                        true
+                    ) + " / spinta " + FormattaDecimale(
+                        (livelloPatataGigante + 1) *
+                        configurazione.forzaSpintaPatataGigantePerLivello
+                    )
                 );
             case TipoPotenziamento.PatataEsplosiva:
                 return Confronto(
@@ -515,6 +526,9 @@ public class PlayerUpgrades : MonoBehaviour
                     1f + livelloPatataGigante *
                     configurazione.incrementoScalaPatataGigante,
                     true
+                ) + " / spinta " + FormattaDecimale(
+                    livelloPatataGigante *
+                    configurazione.forzaSpintaPatataGigantePerLivello
                 );
             case TipoPotenziamento.PatataEsplosiva:
                 return "raggio " +
@@ -659,6 +673,8 @@ public class PlayerUpgrades : MonoBehaviour
             Critico = critico,
             Rimbalzi = livelloRimbalzo,
             RaggioRimbalzo = configurazione.raggioRicercaRimbalzo,
+            MoltiplicatoreDannoRimbalzo =
+                configurazione.moltiplicatoreDannoRimbalzo,
             RaggioEsplosione = livelloPatataEsplosiva > 0
                 ? configurazione.raggioEsplosione
                 : 0f,
@@ -667,7 +683,9 @@ public class PlayerUpgrades : MonoBehaviour
             DurataRallentamento =
                 CalcolaDurataRallentamento(livelloRallentamento),
             ForzaSpinta =
-                livelloSpinta * configurazione.forzaSpintaPerLivello
+                livelloSpinta * configurazione.forzaSpintaPerLivello +
+                livelloPatataGigante *
+                configurazione.forzaSpintaPatataGigantePerLivello
         };
 
         if (critico)

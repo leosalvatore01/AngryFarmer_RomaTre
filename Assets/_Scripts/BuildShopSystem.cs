@@ -284,7 +284,8 @@ public sealed class GeneratoreOfferteBuild
             risultato,
             2,
             candidati,
-            tuttiCandidati
+            tuttiCandidati,
+            potenziamenti
         );
 
         while (risultato.Count < numeroOfferte)
@@ -362,16 +363,25 @@ public sealed class GeneratoreOfferteBuild
         List<TipoPotenziamento> risultato,
         int quantitaDesiderata,
         List<DefinizionePotenziamentoBuild> preferiti,
-        List<DefinizionePotenziamentoBuild> fallback
+        List<DefinizionePotenziamentoBuild> fallback,
+        PlayerUpgrades potenziamenti
     )
     {
         while (ContaModificatori(risultato) < quantitaDesiderata)
         {
             DefinizionePotenziamentoBuild scelta =
-                EstraiModificatore(preferiti, risultato);
+                EstraiModificatore(
+                    preferiti,
+                    risultato,
+                    potenziamenti
+                );
             if (scelta == null)
             {
-                scelta = EstraiModificatore(fallback, risultato);
+                scelta = EstraiModificatore(
+                    fallback,
+                    risultato,
+                    potenziamenti
+                );
             }
             if (scelta == null) return;
             risultato.Add(scelta.Tipo);
@@ -402,7 +412,8 @@ public sealed class GeneratoreOfferteBuild
 
     private DefinizionePotenziamentoBuild EstraiModificatore(
         List<DefinizionePotenziamentoBuild> sorgente,
-        List<TipoPotenziamento> giaScelte
+        List<TipoPotenziamento> giaScelte,
+        PlayerUpgrades potenziamenti
     )
     {
         selezionabili.Clear();
@@ -413,7 +424,11 @@ public sealed class GeneratoreOfferteBuild
                 selezionabili.Add(sorgente[i]);
             }
         }
-        return EstraiPesataDaLista(selezionabili, giaScelte, null);
+        return EstraiPesataDaLista(
+            selezionabili,
+            giaScelte,
+            potenziamenti
+        );
     }
 
     private static int ContaModificatori(
@@ -505,6 +520,7 @@ public struct ProfiloProiettileBuild
     public bool Critico;
     public int Rimbalzi;
     public float RaggioRimbalzo;
+    public float MoltiplicatoreDannoRimbalzo;
     public float RaggioEsplosione;
     public int DannoEsplosione;
     public float MoltiplicatoreRallentamento;

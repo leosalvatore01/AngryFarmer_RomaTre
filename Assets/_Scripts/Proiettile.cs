@@ -20,6 +20,7 @@ public class Proiettile : MonoBehaviour
     private int penetrazioniIniziali;
     private int rimbalziRimasti;
     private float raggioRimbalzo;
+    private float moltiplicatoreDannoRimbalzo = 0.65f;
     private float raggioEsplosione;
     private int dannoEsplosione;
     private float moltiplicatoreRallentamento = 1f;
@@ -36,6 +37,7 @@ public class Proiettile : MonoBehaviour
     private bool colpoCritico;
     private bool esplosioneUsata;
     private bool consumato;
+    private bool precisioneRegistrata;
 
     public int PenetrazioniRimaste => penetrazioniRimaste;
     public int RimbalziRimasti => rimbalziRimasti;
@@ -107,6 +109,13 @@ public class Proiettile : MonoBehaviour
         penetrazioniIniziali = penetrazioniRimaste;
         rimbalziRimasti = Mathf.Max(0, profilo.Rimbalzi);
         raggioRimbalzo = Mathf.Max(0.5f, profilo.RaggioRimbalzo);
+        moltiplicatoreDannoRimbalzo = Mathf.Clamp(
+            profilo.MoltiplicatoreDannoRimbalzo <= 0f
+                ? 0.65f
+                : profilo.MoltiplicatoreDannoRimbalzo,
+            0.5f,
+            1f
+        );
         raggioEsplosione = Mathf.Max(0f, profilo.RaggioEsplosione);
         dannoEsplosione = Mathf.Max(0, profilo.DannoEsplosione);
         moltiplicatoreRallentamento = Mathf.Clamp(
@@ -165,6 +174,7 @@ public class Proiettile : MonoBehaviour
         Vector2 posizioneImpatto = other.ClosestPoint(transform.position);
         EsitoDanno esito = bersaglio.ProvaSubireDanno(danno);
         if (!esito.Applicato) return;
+        RegistraPrecisioneACentro();
         DamageNumberFeedback.Mostra(
             posizioneImpatto,
             esito.DannoApplicato > 0 ? esito.DannoApplicato : danno,
@@ -225,6 +235,14 @@ public class Proiettile : MonoBehaviour
         );
     }
 
+    private void RegistraPrecisioneACentro()
+    {
+        if (precisioneRegistrata) return;
+
+        precisioneRegistrata = true;
+        GameManager.instance?.RegistraProiettileACentro();
+    }
+
     private void ApplicaControllo(
         Component componenteBersaglio,
         Vector2 direzioneColpo
@@ -279,6 +297,7 @@ public class Proiettile : MonoBehaviour
             EsitoDanno esito = bersaglio.ProvaSubireDanno(dannoEsplosione);
             if (esito.Applicato)
             {
+                RegistraPrecisioneACentro();
                 Vector2 posizioneNumero = componente != null
                     ? componente.transform.position
                     : collider.ClosestPoint(posizione);
@@ -342,6 +361,10 @@ public class Proiettile : MonoBehaviour
             0f,
             0f,
             Mathf.Atan2(direzione.y, direzione.x) * Mathf.Rad2Deg
+        );
+        danno = Mathf.Max(
+            1,
+            Mathf.RoundToInt(danno * moltiplicatoreDannoRimbalzo)
         );
         rimbalziRimasti--;
         return true;
@@ -447,8 +470,10 @@ public class Proiettile : MonoBehaviour
 
 internal static class BuildCombatVfx
 {
+    private const int LimiteEsplosioniAttive = 12;
     private static readonly Queue<BuildExplosionBurst> pool =
         new Queue<BuildExplosionBurst>();
+    private static int esplosioniAttive;
 
     public static void CreaEsplosione(
         Vector2 posizione,
@@ -456,6 +481,8 @@ internal static class BuildCombatVfx
         bool critico
     )
     {
+        if (esplosioniAttive >= LimiteEsplosioniAttive) return;
+
         BuildExplosionBurst effetto = null;
         while (pool.Count > 0 && effetto == null)
         {
@@ -466,15 +493,25 @@ internal static class BuildCombatVfx
             GameObject oggetto = new GameObject("EsplosionePatataPixel");
             effetto = oggetto.AddComponent<BuildExplosionBurst>();
         }
+        esplosioniAttive++;
         effetto.gameObject.SetActive(true);
         effetto.Attiva(posizione, raggio, critico);
     }
 
     public static void Rilascia(BuildExplosionBurst effetto)
     {
-        if (effetto == null) return;
+        if (effetto == null || !effetto.InUso) return;
+        effetto.SegnaRilasciato();
+        esplosioniAttive = Mathf.Max(0, esplosioniAttive - 1);
         effetto.gameObject.SetActive(false);
         pool.Enqueue(effetto);
+    }
+
+    public static void NotificaDistrutto(BuildExplosionBurst effetto)
+    {
+        if (effetto == null || !effetto.InUso) return;
+        effetto.SegnaRilasciato();
+        esplosioniAttive = Mathf.Max(0, esplosioniAttive - 1);
     }
 }
 
@@ -491,6 +528,8 @@ internal sealed class BuildExplosionBurst : MonoBehaviour
     private float tempo;
     private bool critico;
 
+    public bool InUso { get; private set; }
+
     void Awake()
     {
         AssicuraParticelle();
@@ -499,11 +538,22 @@ internal sealed class BuildExplosionBurst : MonoBehaviour
     public void Attiva(Vector2 posizione, float nuovoRaggio, bool nuovoCritico)
     {
         AssicuraParticelle();
+        InUso = true;
         transform.position = posizione;
         raggio = Mathf.Max(0.2f, nuovoRaggio);
         critico = nuovoCritico;
         tempo = 0f;
         Aggiorna(0f);
+    }
+
+    public void SegnaRilasciato()
+    {
+        InUso = false;
+    }
+
+    void OnDestroy()
+    {
+        BuildCombatVfx.NotificaDistrutto(this);
     }
 
     private void AssicuraParticelle()
