@@ -154,6 +154,7 @@ public class EnemySpawner : MonoBehaviour
     private bool avvioRapidoRichiesto;
     private WaveReadabilityController leggibilita;
     private ProfiloDifficolta profiloDifficolta;
+    private bool difficoltaApplicata;
 
     public WaveRuntimeDiagnostics Diagnostica => diagnostica;
     public int IndiceOndaCorrente => currentWaveIndex;
@@ -175,6 +176,7 @@ public class EnemySpawner : MonoBehaviour
         GameBalanceConfig.Corrente.Difficolta.Ottieni(
             DifficoltaPartita.Normale
         );
+    public bool DifficoltaApplicata => difficoltaApplicata;
     public ProgressoOndata ProgressoCorrente => CreaProgressoCorrente();
     public AnteprimaOndata AnteprimaCorrente =>
         OttieniAnteprima(currentWaveIndex);
@@ -206,7 +208,21 @@ public class EnemySpawner : MonoBehaviour
     {
         if (ondate == null || ondate.Length == 0)
         {
-            yield break;
+            Debug.LogWarning(
+                "Nessuna ondata configurata: creo un'ondata survival di fallback.",
+                this
+            );
+            ondate = new[]
+            {
+                new Wave
+                {
+                    nomeOndata = "Primo assalto",
+                    numeroNemici = 4,
+                    intervalloTraNemici = 0.85f,
+                    dimensioneMassimaGruppo = 2,
+                    intervalloTraGruppi = 1.5f
+                }
+            };
         }
 
         // Garantisce che GameManager e galline completino Start prima
@@ -219,6 +235,13 @@ public class EnemySpawner : MonoBehaviour
         );
         ApplicaDifficoltaAllaCurva();
         VerificaSequenzeConfigurate();
+        difficoltaApplicata = true;
+
+        yield return new WaitUntil(
+            () => GameManager.instance == null ||
+                  (GameManager.instance.PreparazioneInizialeCompletata &&
+                   GameManager.instance.StatoCorrente == StatoPartita.Onda)
+        );
 
         while (!PartitaTerminata())
         {

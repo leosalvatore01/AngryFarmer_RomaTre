@@ -26,6 +26,14 @@ public enum TipoPotenziamento
 [DisallowMultipleComponent]
 public class PlayerUpgrades : MonoBehaviour
 {
+    private const int MassimoColpiAggiuntiviFisici = 6;
+    private const int MassimoColpiRafficaFisici = 7;
+    private const int MassimoRimbalziFisici = 6;
+    private const int MassimoLivelloRallentamentoFisico = 12;
+    private const float ScalaMassimaProiettile = 2.35f;
+    private const float ForzaSpintaMassima = 8f;
+    private const float ProbabilitaBloccoAsintotica = 0.82f;
+
     private PlayerMovement movimento;
     private PlayerHealth salute;
     private PlayerShooting sparo;
@@ -50,23 +58,51 @@ public class PlayerUpgrades : MonoBehaviour
 
     public event Action<TipoPotenziamento> PotenziamentoAcquistato;
 
-    public float ProbabilitaColpoAggiuntivo => Mathf.Clamp01(
+    public int LimiteColpiAggiuntiviFisici =>
+        MassimoColpiAggiuntiviFisici;
+    public int LimiteProiettiliRafficaFisici =>
+        MassimoColpiRafficaFisici;
+    public int LimiteRimbalziFisici => MassimoRimbalziFisici;
+    public float LimiteScalaProiettile => ScalaMassimaProiettile;
+    public float LimiteForzaSpinta => ForzaSpintaMassima;
+
+    public float ValoreColpiAggiuntivi => Mathf.Max(
+        0f,
         livelloColpoAggiuntivo *
-        Configurazione.probabilitaColpoAggiuntivoPerLivello
+        Mathf.Max(
+            0.05f,
+            Configurazione.probabilitaColpoAggiuntivoPerLivello
+        )
     );
+    public int ColpiAggiuntiviGarantiti => Mathf.Clamp(
+        Mathf.FloorToInt(ValoreColpiAggiuntivi),
+        0,
+        MassimoColpiAggiuntiviFisici
+    );
+    public float ProbabilitaColpoAggiuntivo =>
+        ColpiAggiuntiviGarantiti >= MassimoColpiAggiuntiviFisici
+            ? 0f
+            : Mathf.Repeat(ValoreColpiAggiuntivi, 1f);
     public bool HaRafficaRaccolto => livelloRafficaRaccolto > 0;
-    public int ColpiPerRafficaRaccolto => Mathf.Max(
-        2,
-        Configurazione.colpiPerRafficaRaccolto
-    );
+    public int ColpiPerRafficaRaccolto =>
+        CalcolaIntervalloRaffica(livelloRafficaRaccolto);
+    public int NumeroProiettiliRafficaRaccolto =>
+        CalcolaNumeroProiettiliRaffica(livelloRafficaRaccolto);
     public float AngoloColpoAggiuntivo => Mathf.Clamp(
         Configurazione.angoloColpoAggiuntivo,
         0f,
         30f
     );
-    public float ProbabilitaCritico => Mathf.Clamp01(
-        livelloCritico * Configurazione.probabilitaCriticoPerLivello
+    public float ValoreCritico => Mathf.Max(
+        0f,
+        livelloCritico * Mathf.Max(
+            0.01f,
+            Configurazione.probabilitaCriticoPerLivello
+        )
     );
+    public float ProbabilitaCritico => Mathf.Clamp01(ValoreCritico);
+    public float MoltiplicatoreDannoCriticoFinale =>
+        CalcolaMoltiplicatoreDannoCritico(livelloCritico);
 
     void Awake()
     {
@@ -96,7 +132,7 @@ public class PlayerUpgrades : MonoBehaviour
                     livelloSalute
                 );
             case TipoPotenziamento.Cura:
-                return Mathf.Max(0, configurazione.costoCura);
+                return Mathf.Max(1, configurazione.costoCura);
             case TipoPotenziamento.Danno:
                 return CostoLivello(
                     configurazione.costiDanno,
@@ -179,8 +215,7 @@ public class PlayerUpgrades : MonoBehaviour
                 break;
         }
 
-        return componenteDisponibile &&
-               OttieniLivello(tipo) < OttieniLivelloMassimo(tipo);
+        return componenteDisponibile;
     }
 
     public bool PuoComparire(TipoPotenziamento tipo)
@@ -198,7 +233,7 @@ public class PlayerUpgrades : MonoBehaviour
             messaggio = tipo == TipoPotenziamento.Cura &&
                         salute != null && salute.VitaPiena
                 ? "La salute è già al massimo."
-                : "Potenziamento già al massimo.";
+                : "Potenziamento non disponibile.";
             return false;
         }
 
@@ -219,6 +254,26 @@ public class PlayerUpgrades : MonoBehaviour
         Applica(tipo);
         PotenziamentoAcquistato?.Invoke(tipo);
         messaggio = "Acquistato!";
+        return true;
+    }
+
+    public bool ProvaApplicareGratis(
+        TipoPotenziamento tipo,
+        out string messaggio
+    )
+    {
+        if (!PuoAcquistare(tipo))
+        {
+            messaggio = tipo == TipoPotenziamento.Cura &&
+                        salute != null && salute.VitaPiena
+                ? "La salute è già al massimo."
+                : "Potenziamento non disponibile.";
+            return false;
+        }
+
+        Applica(tipo);
+        PotenziamentoAcquistato?.Invoke(tipo);
+        messaggio = "Ottenuto gratis!";
         return true;
     }
 
@@ -273,17 +328,17 @@ public class PlayerUpgrades : MonoBehaviour
             case TipoPotenziamento.Penetrazione:
                 return "Continua oltre una volpe eliminata.";
             case TipoPotenziamento.ColpoAggiuntivo:
-                return "Può aggiungere una seconda patata laterale.";
+                return "Aggiunge patate laterali e poi ne aumenta la potenza.";
             case TipoPotenziamento.RafficaRaccolto:
-                return "Ogni pochi spari libera un ventaglio di tre colpi.";
+                return "Genera raffiche sempre più frequenti e potenti.";
             case TipoPotenziamento.PatataGigante:
                 return "Proiettili più grandi, pesanti e leggermente lenti.";
             case TipoPotenziamento.PatataEsplosiva:
-                return "Il primo impatto danneggia anche le volpi vicine.";
+                return "Aumenta raggio e danno dell'esplosione all'impatto.";
             case TipoPotenziamento.Critico:
-                return "Possibilità di infliggere danno doppio.";
+                return "Aumenta la probabilità e poi il danno dei critici.";
             case TipoPotenziamento.Rimbalzo:
-                return "Cerca una nuova volpe, perdendo potenza a ogni salto.";
+                return "Aggiunge salti; oltre il limite ne migliora l'efficacia.";
             case TipoPotenziamento.Rallentamento:
                 return "Le volpi colpite restano rallentate per un po'.";
             case TipoPotenziamento.Spinta:
@@ -303,24 +358,12 @@ public class PlayerUpgrades : MonoBehaviour
                 : "Non disponibile";
         }
 
-        int livello = OttieniLivello(tipo);
-        int massimo = OttieniLivelloMassimo(tipo);
-        return livello >= massimo
-            ? "LIVELLO MASSIMO"
-            : "Livello " + livello + " / " + massimo;
+        return "Livello " + OttieniLivello(tipo);
     }
 
     public string OttieniConfronto(TipoPotenziamento tipo)
     {
         ShopBalanceSettings configurazione = Configurazione;
-        if (tipo != TipoPotenziamento.Cura &&
-            OttieniLivello(tipo) >= OttieniLivelloMassimo(tipo))
-        {
-            return "ORA  " +
-                   DescriviValoreAttuale(tipo, configurazione) +
-                   "   |   MASSIMO";
-        }
-
         switch (tipo)
         {
             case TipoPotenziamento.Movimento:
@@ -331,23 +374,18 @@ public class PlayerUpgrades : MonoBehaviour
                 return Confronto(
                     FormattaDecimale(attuale),
                     FormattaDecimale(
-                        attuale + configurazione.incrementoMovimento
+                        CalcolaVelocitaMovimento(livelloMovimento + 1)
                     )
                 );
             }
             case TipoPotenziamento.Resistenza:
             {
-                int attuale = salute != null
-                    ? salute.FrequenzaBloccoFinale
-                    : 0;
-                int prossimo = ValoreArray(
-                    configurazione.frequenzeBlocco,
-                    livelloResistenza,
-                    attuale
-                );
-                return Confronto(
-                    attuale > 0 ? "1 ogni " + attuale : "nessun blocco",
-                    "1 ogni " + Mathf.Max(1, prossimo)
+                float attuale = salute != null
+                    ? salute.ProbabilitaBloccoFinale
+                    : 0f;
+                return ConfrontoPercentuale(
+                    attuale,
+                    CalcolaProbabilitaBlocco(livelloResistenza + 1)
                 );
             }
             case TipoPotenziamento.SaluteMassima:
@@ -355,8 +393,10 @@ public class PlayerUpgrades : MonoBehaviour
                 int attuale = salute != null ? salute.VitaMassimaFinale : 0;
                 return Confronto(
                     attuale.ToString(),
-                    (attuale + configurazione.incrementoSaluteMassima)
-                    .ToString()
+                    SommaSicura(
+                        attuale,
+                        Mathf.Max(1, configurazione.incrementoSaluteMassima)
+                    ).ToString()
                 );
             }
             case TipoPotenziamento.Cura:
@@ -367,7 +407,7 @@ public class PlayerUpgrades : MonoBehaviour
                     attuale.ToString(),
                     Mathf.Min(
                         massimo,
-                        attuale + configurazione.quantitaCura
+                        SommaSicura(attuale, configurazione.quantitaCura)
                     ).ToString()
                 );
             }
@@ -376,7 +416,10 @@ public class PlayerUpgrades : MonoBehaviour
                 int attuale = sparo != null ? sparo.DannoFinale : 0;
                 return Confronto(
                     attuale.ToString(),
-                    (attuale + configurazione.incrementoDanno).ToString()
+                    SommaSicura(
+                        attuale,
+                        Mathf.Max(1, configurazione.incrementoDanno)
+                    ).ToString()
                 );
             }
             case TipoPotenziamento.Cadenza:
@@ -385,10 +428,7 @@ public class PlayerUpgrades : MonoBehaviour
                     ? sparo.IntervalloSparoFinale
                     : 0f;
                 float prossimo = sparo != null
-                    ? Mathf.Max(
-                        sparo.IntervalloSparoMinimo,
-                        attuale - configurazione.riduzioneIntervalloSparo
-                    )
+                    ? CalcolaIntervalloSparo(livelloCadenza + 1)
                     : 0f;
                 return Confronto(
                     FormattaDecimale(attuale) + " s",
@@ -400,60 +440,41 @@ public class PlayerUpgrades : MonoBehaviour
                 int attuale = sparo != null ? sparo.PenetrazioneFinale : 0;
                 return Confronto(
                     attuale.ToString(),
-                    (attuale + configurazione.incrementoPenetrazione)
-                    .ToString()
+                    SommaSicura(
+                        attuale,
+                        Mathf.Max(1, configurazione.incrementoPenetrazione)
+                    ).ToString()
                 );
             }
             case TipoPotenziamento.ColpoAggiuntivo:
-                return ConfrontoPercentuale(
-                    livelloColpoAggiuntivo *
-                    configurazione.probabilitaColpoAggiuntivoPerLivello,
-                    (livelloColpoAggiuntivo + 1) *
-                    configurazione.probabilitaColpoAggiuntivoPerLivello
+                return Confronto(
+                    DescriviColpiAggiuntivi(livelloColpoAggiuntivo),
+                    DescriviColpiAggiuntivi(livelloColpoAggiuntivo + 1)
                 );
             case TipoPotenziamento.RafficaRaccolto:
                 return Confronto(
-                    "disattiva",
-                    "ogni " + configurazione.colpiPerRafficaRaccolto +
-                    " spari"
+                    DescriviRaffica(livelloRafficaRaccolto),
+                    DescriviRaffica(livelloRafficaRaccolto + 1)
                 );
             case TipoPotenziamento.PatataGigante:
                 return Confronto(
-                    FormattaPercentuale(
-                        1f + livelloPatataGigante *
-                        configurazione.incrementoScalaPatataGigante,
-                        true
-                    ) + " / spinta " + FormattaDecimale(
-                        livelloPatataGigante *
-                        configurazione.forzaSpintaPatataGigantePerLivello
-                    ),
-                    FormattaPercentuale(
-                        1f + (livelloPatataGigante + 1) *
-                        configurazione.incrementoScalaPatataGigante,
-                        true
-                    ) + " / spinta " + FormattaDecimale(
-                        (livelloPatataGigante + 1) *
-                        configurazione.forzaSpintaPatataGigantePerLivello
-                    )
+                    DescriviPatataGigante(livelloPatataGigante),
+                    DescriviPatataGigante(livelloPatataGigante + 1)
                 );
             case TipoPotenziamento.PatataEsplosiva:
                 return Confronto(
-                    "nessuna",
-                    "raggio " + FormattaDecimale(
-                        configurazione.raggioEsplosione
-                    )
+                    DescriviEsplosione(livelloPatataEsplosiva),
+                    DescriviEsplosione(livelloPatataEsplosiva + 1)
                 );
             case TipoPotenziamento.Critico:
-                return ConfrontoPercentuale(
-                    livelloCritico *
-                    configurazione.probabilitaCriticoPerLivello,
-                    (livelloCritico + 1) *
-                    configurazione.probabilitaCriticoPerLivello
+                return Confronto(
+                    DescriviCritico(livelloCritico),
+                    DescriviCritico(livelloCritico + 1)
                 );
             case TipoPotenziamento.Rimbalzo:
                 return Confronto(
-                    livelloRimbalzo.ToString(),
-                    (livelloRimbalzo + 1).ToString()
+                    DescriviRimbalzo(livelloRimbalzo),
+                    DescriviRimbalzo(livelloRimbalzo + 1)
                 );
             case TipoPotenziamento.Rallentamento:
             {
@@ -467,13 +488,8 @@ public class PlayerUpgrades : MonoBehaviour
             }
             case TipoPotenziamento.Spinta:
                 return Confronto(
-                    FormattaDecimale(
-                        livelloSpinta * configurazione.forzaSpintaPerLivello
-                    ),
-                    FormattaDecimale(
-                        (livelloSpinta + 1) *
-                        configurazione.forzaSpintaPerLivello
-                    )
+                    DescriviSpinta(livelloSpinta),
+                    DescriviSpinta(livelloSpinta + 1)
                 );
             default:
                 return string.Empty;
@@ -580,43 +596,7 @@ public class PlayerUpgrades : MonoBehaviour
 
     public int OttieniLivelloMassimo(TipoPotenziamento tipo)
     {
-        ShopBalanceSettings configurazione = Configurazione;
-        switch (tipo)
-        {
-            case TipoPotenziamento.Movimento:
-                return Lunghezza(configurazione.costiMovimento);
-            case TipoPotenziamento.Resistenza:
-                return Mathf.Min(
-                    Lunghezza(configurazione.costiResistenza),
-                    Lunghezza(configurazione.frequenzeBlocco)
-                );
-            case TipoPotenziamento.SaluteMassima:
-                return Lunghezza(configurazione.costiSalute);
-            case TipoPotenziamento.Danno:
-                return Lunghezza(configurazione.costiDanno);
-            case TipoPotenziamento.Cadenza:
-                return Lunghezza(configurazione.costiCadenza);
-            case TipoPotenziamento.Penetrazione:
-                return Lunghezza(configurazione.costiPenetrazione);
-            case TipoPotenziamento.ColpoAggiuntivo:
-                return Lunghezza(configurazione.costiColpoAggiuntivo);
-            case TipoPotenziamento.RafficaRaccolto:
-                return Lunghezza(configurazione.costiRafficaRaccolto);
-            case TipoPotenziamento.PatataGigante:
-                return Lunghezza(configurazione.costiPatataGigante);
-            case TipoPotenziamento.PatataEsplosiva:
-                return Lunghezza(configurazione.costiPatataEsplosiva);
-            case TipoPotenziamento.Critico:
-                return Lunghezza(configurazione.costiCritico);
-            case TipoPotenziamento.Rimbalzo:
-                return Lunghezza(configurazione.costiRimbalzo);
-            case TipoPotenziamento.Rallentamento:
-                return Lunghezza(configurazione.costiRallentamento);
-            case TipoPotenziamento.Spinta:
-                return Lunghezza(configurazione.costiSpinta);
-            default:
-                return 0;
-        }
+        return tipo == TipoPotenziamento.Cura ? 0 : int.MaxValue;
     }
 
     public int OttieniPuntiPercorso(PercorsoBuild percorso)
@@ -654,57 +634,85 @@ public class PlayerUpgrades : MonoBehaviour
 
     public ProfiloProiettileBuild CreaProfiloProiettile(bool critico)
     {
+        return CreaProfiloProiettile(critico, false);
+    }
+
+    public ProfiloProiettileBuild CreaProfiloProiettile(
+        bool critico,
+        bool colpoRaffica
+    )
+    {
         ShopBalanceSettings configurazione = Configurazione;
+        int dannoBase = sparo != null ? sparo.DannoFinale : 1;
+        double moltiplicatoreDanno =
+            CalcolaMoltiplicatoreOverflowTecnico();
+        if (colpoRaffica && livelloRafficaRaccolto > 0)
+        {
+            moltiplicatoreDanno *= 1d +
+                0.1d * Math.Max(0, livelloRafficaRaccolto - 1);
+        }
+
         ProfiloProiettileBuild profilo = new ProfiloProiettileBuild
         {
-            Danno = sparo != null ? sparo.DannoFinale : 1,
+            Danno = SommaSicura(
+                MoltiplicaDannoSicuro(dannoBase, moltiplicatoreDanno),
+                CalcolaBonusDannoOverflowIntero()
+            ),
             Penetrazioni = sparo != null ? sparo.PenetrazioneFinale : 0,
-            Scala = Mathf.Max(
-                0.25f,
-                1f + livelloPatataGigante *
-                configurazione.incrementoScalaPatataGigante
-            ),
-            MoltiplicatoreVelocita = Mathf.Clamp(
-                1f - livelloPatataGigante *
-                configurazione.riduzioneVelocitaPatataGigante,
-                0.55f,
-                1f
-            ),
+            Scala = CalcolaScalaPatataGigante(livelloPatataGigante),
+            MoltiplicatoreVelocita =
+                CalcolaVelocitaPatataGigante(livelloPatataGigante),
             Critico = critico,
-            Rimbalzi = livelloRimbalzo,
-            RaggioRimbalzo = configurazione.raggioRicercaRimbalzo,
+            Rimbalzi = Mathf.Min(
+                livelloRimbalzo,
+                MassimoRimbalziFisici
+            ),
+            RaggioRimbalzo = CalcolaRaggioRimbalzo(livelloRimbalzo),
             MoltiplicatoreDannoRimbalzo =
-                configurazione.moltiplicatoreDannoRimbalzo,
-            RaggioEsplosione = livelloPatataEsplosiva > 0
-                ? configurazione.raggioEsplosione
-                : 0f,
+                CalcolaDannoRimbalzo(livelloRimbalzo),
+            RaggioEsplosione =
+                CalcolaRaggioEsplosione(livelloPatataEsplosiva),
             MoltiplicatoreRallentamento =
                 CalcolaMoltiplicatoreRallentamento(livelloRallentamento),
             DurataRallentamento =
                 CalcolaDurataRallentamento(livelloRallentamento),
-            ForzaSpinta =
-                livelloSpinta * configurazione.forzaSpintaPerLivello +
-                livelloPatataGigante *
-                configurazione.forzaSpintaPatataGigantePerLivello
+            ForzaSpinta = CalcolaForzaSpintaTotale(
+                livelloSpinta,
+                livelloPatataGigante
+            )
         };
 
         if (critico)
         {
-            profilo.Danno = Mathf.Max(
-                1,
-                Mathf.RoundToInt(
-                    profilo.Danno *
-                    Mathf.Max(1f, configurazione.moltiplicatoreDannoCritico)
-                )
+            profilo.Danno = SommaSicura(
+                MoltiplicaDannoSicuro(
+                    profilo.Danno,
+                    CalcolaMoltiplicatoreDannoCritico(livelloCritico)
+                ),
+                CalcolaBonusDannoCriticoIntero(livelloCritico)
+            );
+        }
+        if (colpoRaffica && livelloRafficaRaccolto > 1)
+        {
+            profilo.Danno = SommaSicura(
+                profilo.Danno,
+                livelloRafficaRaccolto - 1
             );
         }
         profilo.DannoEsplosione = profilo.RaggioEsplosione > 0f
-            ? Mathf.Max(
-                1,
-                Mathf.RoundToInt(
-                    profilo.Danno *
-                    configurazione.moltiplicatoreDannoEsplosione
-                )
+            ? SommaSicura(
+                MoltiplicaDannoSicuro(
+                    profilo.Danno,
+                    Math.Max(
+                        0.1d,
+                        configurazione.moltiplicatoreDannoEsplosione
+                    ) *
+                    (1d + 0.14d * Math.Max(
+                        0,
+                        livelloPatataEsplosiva - 1
+                    ))
+                ),
+                Math.Max(0, livelloPatataEsplosiva - 1)
             )
             : 0;
         return profilo;
@@ -716,24 +724,23 @@ public class PlayerUpgrades : MonoBehaviour
         switch (tipo)
         {
             case TipoPotenziamento.Movimento:
-                livelloMovimento++;
+                livelloMovimento = IncrementaLivello(livelloMovimento);
                 movimento.ImpostaBonusVelocita(
-                    livelloMovimento *
-                    Mathf.Max(0f, configurazione.incrementoMovimento)
+                    CalcolaBonusMovimento(livelloMovimento)
                 );
                 break;
             case TipoPotenziamento.Resistenza:
-                livelloResistenza++;
-                salute.ImpostaBonusFrequenzaBlocco(
-                    configurazione.frequenzeBlocco[livelloResistenza - 1]
+                livelloResistenza = IncrementaLivello(livelloResistenza);
+                salute.ImpostaProbabilitaBlocco(
+                    CalcolaProbabilitaBlocco(livelloResistenza)
                 );
                 break;
             case TipoPotenziamento.SaluteMassima:
-                livelloSalute++;
+                livelloSalute = IncrementaLivello(livelloSalute);
                 salute.ImpostaBonusVitaMassima(
-                    livelloSalute * Mathf.Max(
-                        0,
-                        configurazione.incrementoSaluteMassima
+                    ProdottoSicuro(
+                        livelloSalute,
+                        Mathf.Max(1, configurazione.incrementoSaluteMassima)
                     ),
                     Mathf.Max(0, configurazione.curaSuIncrementoSalute)
                 );
@@ -742,64 +749,400 @@ public class PlayerUpgrades : MonoBehaviour
                 salute.Cura(Mathf.Max(0, configurazione.quantitaCura));
                 break;
             case TipoPotenziamento.Danno:
-                livelloDanno++;
+                livelloDanno = IncrementaLivello(livelloDanno);
                 sparo.ImpostaBonusDanno(
-                    livelloDanno *
-                    Mathf.Max(0, configurazione.incrementoDanno)
+                    ProdottoSicuro(
+                        livelloDanno,
+                        Mathf.Max(1, configurazione.incrementoDanno)
+                    )
                 );
                 break;
             case TipoPotenziamento.Cadenza:
-                livelloCadenza++;
+                livelloCadenza = IncrementaLivello(livelloCadenza);
                 sparo.ImpostaBonusRiduzioneIntervalloSparo(
-                    livelloCadenza * Mathf.Max(
+                    Mathf.Max(
                         0f,
-                        configurazione.riduzioneIntervalloSparo
+                        sparo.IntervalloSparoBase -
+                        CalcolaIntervalloSparo(livelloCadenza)
                     )
                 );
                 break;
             case TipoPotenziamento.Penetrazione:
-                livelloPenetrazione++;
+                livelloPenetrazione = IncrementaLivello(livelloPenetrazione);
                 sparo.ImpostaBonusPenetrazione(
-                    livelloPenetrazione * Mathf.Max(
-                        0,
-                        configurazione.incrementoPenetrazione
+                    ProdottoSicuro(
+                        livelloPenetrazione,
+                        Mathf.Max(1, configurazione.incrementoPenetrazione)
                     )
                 );
                 break;
             case TipoPotenziamento.ColpoAggiuntivo:
-                livelloColpoAggiuntivo++;
+                livelloColpoAggiuntivo =
+                    IncrementaLivello(livelloColpoAggiuntivo);
                 break;
             case TipoPotenziamento.RafficaRaccolto:
-                livelloRafficaRaccolto++;
+                livelloRafficaRaccolto =
+                    IncrementaLivello(livelloRafficaRaccolto);
                 break;
             case TipoPotenziamento.PatataGigante:
-                livelloPatataGigante++;
+                livelloPatataGigante =
+                    IncrementaLivello(livelloPatataGigante);
                 break;
             case TipoPotenziamento.PatataEsplosiva:
-                livelloPatataEsplosiva++;
+                livelloPatataEsplosiva =
+                    IncrementaLivello(livelloPatataEsplosiva);
                 break;
             case TipoPotenziamento.Critico:
-                livelloCritico++;
+                livelloCritico = IncrementaLivello(livelloCritico);
                 break;
             case TipoPotenziamento.Rimbalzo:
-                livelloRimbalzo++;
+                livelloRimbalzo = IncrementaLivello(livelloRimbalzo);
                 break;
             case TipoPotenziamento.Rallentamento:
-                livelloRallentamento++;
+                livelloRallentamento =
+                    IncrementaLivello(livelloRallentamento);
                 break;
             case TipoPotenziamento.Spinta:
-                livelloSpinta++;
+                livelloSpinta = IncrementaLivello(livelloSpinta);
                 break;
         }
+    }
+
+    private float CalcolaBonusMovimento(int livello)
+    {
+        if (livello <= 0) return 0f;
+
+        float incremento = Mathf.Max(
+            0.01f,
+            Configurazione.incrementoMovimento
+        );
+        float velocitaBase = movimento != null
+            ? movimento.VelocitaBase
+            : 8f;
+        float limite = Mathf.Max(
+            incremento * 8f,
+            velocitaBase * 0.5f
+        );
+        double costante = Math.Max(1d, limite / incremento - 1d);
+        return (float)(limite * livello / (livello + costante));
+    }
+
+    private float CalcolaVelocitaMovimento(int livello)
+    {
+        float baseMovimento = movimento != null
+            ? movimento.VelocitaBase
+            : 0f;
+        return baseMovimento + CalcolaBonusMovimento(livello);
+    }
+
+    private float CalcolaIntervalloSparo(int livello)
+    {
+        if (sparo == null) return 0f;
+
+        float baseSparo = sparo.IntervalloSparoBase;
+        float minimo = sparo.IntervalloSparoMinimo;
+        if (livello <= 0 || baseSparo <= minimo) return baseSparo;
+
+        float spazio = baseSparo - minimo;
+        float primaRiduzione = Mathf.Clamp(
+            Mathf.Max(0.001f, Configurazione.riduzioneIntervalloSparo),
+            0.001f,
+            spazio * 0.75f
+        );
+        double costante = Math.Max(
+            1d / 3d,
+            spazio / primaRiduzione - 1d
+        );
+        return minimo + (float)(
+            spazio * costante / (livello + costante)
+        );
+    }
+
+    private float CalcolaProbabilitaBlocco(int livello)
+    {
+        if (livello <= 0) return 0f;
+
+        int[] frequenze = Configurazione.frequenzeBlocco;
+        int configurati = frequenze != null ? frequenze.Length : 0;
+        if (livello <= configurati)
+        {
+            return 1f / Mathf.Max(2, frequenze[livello - 1]);
+        }
+
+        float partenza = configurati > 0
+            ? 1f / Mathf.Max(2, frequenze[configurati - 1])
+            : 0f;
+        int livelliOltreConfigurazione = livello - configurati;
+        double progresso = livelliOltreConfigurazione /
+            (livelliOltreConfigurazione + 8d);
+        return Mathf.Clamp(
+            partenza +
+            (ProbabilitaBloccoAsintotica - partenza) * (float)progresso,
+            0f,
+            ProbabilitaBloccoAsintotica
+        );
+    }
+
+    private float CalcolaMoltiplicatoreDannoCritico(int livello)
+    {
+        float baseCritico = Mathf.Max(
+            1f,
+            Configurazione.moltiplicatoreDannoCritico
+        );
+        if (livello <= 0) return baseCritico;
+
+        double valoreCritico = livello * (double)Mathf.Max(
+            0.01f,
+            Configurazione.probabilitaCriticoPerLivello
+        );
+        double oltreCentoPercento = Math.Max(0d, valoreCritico - 1d);
+        return (float)Math.Min(
+            float.MaxValue,
+            baseCritico * (1d + 0.45d * oltreCentoPercento)
+        );
+    }
+
+    private float CalcolaScalaPatataGigante(int livello)
+    {
+        if (livello <= 0) return 1f;
+        double incremento = Math.Max(
+            0.02d,
+            Configurazione.incrementoScalaPatataGigante
+        );
+        return (float)Math.Min(
+            ScalaMassimaProiettile,
+            1d + livello * incremento
+        );
+    }
+
+    private float CalcolaVelocitaPatataGigante(int livello)
+    {
+        if (livello <= 0) return 1f;
+        float incrementoScala = Mathf.Max(
+            0.02f,
+            Configurazione.incrementoScalaPatataGigante
+        );
+        int livelliFisici = Mathf.Max(
+            1,
+            Mathf.CeilToInt(
+                (ScalaMassimaProiettile - 1f) / incrementoScala
+            )
+        );
+        int livelloEffettivo = Mathf.Min(livello, livelliFisici);
+        return Mathf.Clamp(
+            1f - livelloEffettivo * Mathf.Max(
+                0f,
+                Configurazione.riduzioneVelocitaPatataGigante
+            ),
+            0.55f,
+            1f
+        );
+    }
+
+    private float CalcolaRaggioEsplosione(int livello)
+    {
+        if (livello <= 0) return 0f;
+        float raggioBase = Mathf.Max(
+            0.2f,
+            Configurazione.raggioEsplosione
+        );
+        int livelliExtra = livello - 1;
+        double crescita = livelliExtra / (livelliExtra + 4d);
+        return raggioBase * (1f + 0.65f * (float)crescita);
+    }
+
+    private float CalcolaRaggioRimbalzo(int livello)
+    {
+        float raggioBase = Mathf.Max(
+            0.5f,
+            Configurazione.raggioRicercaRimbalzo
+        );
+        int overflow = Math.Max(0, livello - MassimoRimbalziFisici);
+        double crescita = overflow / (overflow + 5d);
+        return raggioBase * (1f + 0.35f * (float)crescita);
+    }
+
+    private float CalcolaDannoRimbalzo(int livello)
+    {
+        float baseRimbalzo = Mathf.Clamp(
+            Configurazione.moltiplicatoreDannoRimbalzo,
+            0.5f,
+            0.9f
+        );
+        int overflow = Math.Max(0, livello - MassimoRimbalziFisici);
+        double crescita = overflow / (overflow + 5d);
+        return Mathf.Lerp(baseRimbalzo, 0.94f, (float)crescita);
+    }
+
+    private float CalcolaForzaSpintaTotale(
+        int livelloSpinta,
+        int livelloGigante
+    )
+    {
+        double forza =
+            livelloSpinta * (double)Mathf.Max(
+                0.05f,
+                Configurazione.forzaSpintaPerLivello
+            ) +
+            livelloGigante * (double)Mathf.Max(
+                0.05f,
+                Configurazione.forzaSpintaPatataGigantePerLivello
+            );
+        return (float)Math.Min(ForzaSpintaMassima, forza);
+    }
+
+    private double CalcolaMoltiplicatoreOverflowTecnico()
+    {
+        ShopBalanceSettings configurazione = Configurazione;
+        double incrementoScala = Math.Max(
+            0.02d,
+            configurazione.incrementoScalaPatataGigante
+        );
+        double scalaDesiderata = 1d +
+            livelloPatataGigante * incrementoScala;
+        double overflowGigante = Math.Max(
+            0d,
+            (scalaDesiderata - ScalaMassimaProiettile) / incrementoScala
+        );
+        int overflowRimbalzo = Math.Max(
+            0,
+            livelloRimbalzo - MassimoRimbalziFisici
+        );
+        int overflowRallentamento = Math.Max(
+            0,
+            livelloRallentamento - MassimoLivelloRallentamentoFisico
+        );
+        double incrementoSpinta = Math.Max(
+            0.05d,
+            configurazione.forzaSpintaPerLivello
+        );
+        int livelliSpintaFisici = Math.Max(
+            1,
+            (int)Math.Ceiling(ForzaSpintaMassima / incrementoSpinta)
+        );
+        int overflowSpinta = Math.Max(
+            0,
+            livelloSpinta - livelliSpintaFisici
+        );
+        double overflowColpi = Math.Max(
+            0d,
+            ValoreColpiAggiuntivi - MassimoColpiAggiuntiviFisici
+        );
+
+        return 1d +
+            overflowGigante * 0.05d +
+            overflowRimbalzo * 0.035d +
+            overflowRallentamento * 0.025d +
+            overflowSpinta * 0.025d +
+            overflowColpi * 0.035d;
+    }
+
+    private int CalcolaBonusDannoOverflowIntero()
+    {
+        long bonus = 0L;
+        bonus += Math.Max(
+            0,
+            livelloPatataGigante - CalcolaLivelloCapPatataGigante()
+        );
+        bonus += Math.Max(
+            0,
+            livelloColpoAggiuntivo - CalcolaLivelloCapColpiAggiuntivi()
+        );
+        bonus += Math.Max(
+            0,
+            livelloRimbalzo - MassimoRimbalziFisici
+        );
+        bonus += Math.Max(
+            0,
+            livelloRallentamento - MassimoLivelloRallentamentoFisico
+        );
+        bonus += Math.Max(
+            0,
+            livelloSpinta - CalcolaLivelloCapSpinta()
+        );
+        return bonus >= int.MaxValue ? int.MaxValue : (int)bonus;
+    }
+
+    private int CalcolaLivelloCapColpiAggiuntivi()
+    {
+        double probabilitaPerLivello = Math.Max(
+            0.05d,
+            Configurazione.probabilitaColpoAggiuntivoPerLivello
+        );
+        return Math.Max(
+            1,
+            (int)Math.Ceiling(
+                MassimoColpiAggiuntiviFisici / probabilitaPerLivello
+            )
+        );
+    }
+
+    private int CalcolaLivelloCapPatataGigante()
+    {
+        double incrementoScala = Math.Max(
+            0.02d,
+            Configurazione.incrementoScalaPatataGigante
+        );
+        int capScala = Math.Max(
+            1,
+            (int)Math.Ceiling(
+                (ScalaMassimaProiettile - 1d) / incrementoScala
+            )
+        );
+        double incrementoSpinta = Math.Max(
+            0.05d,
+            Configurazione.forzaSpintaPatataGigantePerLivello
+        );
+        int capSpinta = Math.Max(
+            1,
+            (int)Math.Ceiling(ForzaSpintaMassima / incrementoSpinta)
+        );
+        return Math.Max(capScala, capSpinta);
+    }
+
+    private int CalcolaLivelloCapSpinta()
+    {
+        double incremento = Math.Max(
+            0.05d,
+            Configurazione.forzaSpintaPerLivello
+        );
+        return Math.Max(
+            1,
+            (int)Math.Ceiling(ForzaSpintaMassima / incremento)
+        );
+    }
+
+    private int CalcolaLivelloSogliaCriticoGarantito()
+    {
+        double probabilitaPerLivello = Math.Max(
+            0.01d,
+            Configurazione.probabilitaCriticoPerLivello
+        );
+        return Math.Max(
+            1,
+            (int)Math.Ceiling(1d / probabilitaPerLivello)
+        );
+    }
+
+    private int CalcolaBonusDannoCriticoIntero(int livello)
+    {
+        return Math.Max(
+            0,
+            livello - CalcolaLivelloSogliaCriticoGarantito()
+        );
     }
 
     private float CalcolaMoltiplicatoreRallentamento(int livello)
     {
         if (livello <= 0) return 1f;
         ShopBalanceSettings configurazione = Configurazione;
+        int livelloFisico = Mathf.Min(
+            livello,
+            MassimoLivelloRallentamentoFisico
+        );
         return Mathf.Clamp(
             configurazione.rallentamentoPrimoLivello -
-            (livello - 1) *
+            (livelloFisico - 1) *
             configurazione.riduzioneRallentamentoPerLivello,
             0.25f,
             0.95f
@@ -810,11 +1153,16 @@ public class PlayerUpgrades : MonoBehaviour
     {
         if (livello <= 0) return 0f;
         ShopBalanceSettings configurazione = Configurazione;
-        return Mathf.Max(
-            0.1f,
+        int livelloFisico = Mathf.Min(
+            livello,
+            MassimoLivelloRallentamentoFisico
+        );
+        return Mathf.Clamp(
             configurazione.durataRallentamentoBase +
-            (livello - 1) *
-            configurazione.durataRallentamentoPerLivello
+            (livelloFisico - 1) *
+            configurazione.durataRallentamentoPerLivello,
+            0.1f,
+            6f
         );
     }
 
@@ -823,8 +1171,181 @@ public class PlayerUpgrades : MonoBehaviour
         float moltiplicatore = CalcolaMoltiplicatoreRallentamento(livello);
         float durata = CalcolaDurataRallentamento(livello);
         int percentuale = Mathf.RoundToInt((1f - moltiplicatore) * 100f);
-        return "-" + percentuale + "% per " +
-               FormattaDecimale(durata) + " s";
+        string descrizione = "-" + percentuale + "% per " +
+            FormattaDecimale(durata) + " s";
+        int overflow = Math.Max(
+            0,
+            livello - MassimoLivelloRallentamentoFisico
+        );
+        return overflow > 0
+            ? descrizione + " / potenza +" + (overflow * 2.5f)
+                .ToString("0.#", CultureInfo.InvariantCulture) +
+              "% / danno +" + overflow
+            : descrizione;
+    }
+
+    private string DescriviColpiAggiuntivi(int livello)
+    {
+        if (livello <= 0) return "nessuno";
+        double valore = livello * (double)Mathf.Max(
+            0.05f,
+            Configurazione.probabilitaColpoAggiuntivoPerLivello
+        );
+        int garantiti = (int)Math.Min(
+            MassimoColpiAggiuntiviFisici,
+            Math.Floor(valore)
+        );
+        double probabilita = garantiti >= MassimoColpiAggiuntiviFisici
+            ? 0d
+            : valore - Math.Floor(valore);
+        double overflow = Math.Max(
+            0d,
+            valore - MassimoColpiAggiuntiviFisici
+        );
+        int bonusIntero = Math.Max(
+            0,
+            livello - CalcolaLivelloCapColpiAggiuntivi()
+        );
+
+        string risultato = garantiti > 0
+            ? garantiti + " sicuri"
+            : string.Empty;
+        if (probabilita > 0.0001d)
+        {
+            if (risultato.Length > 0) risultato += " + ";
+            risultato += Math.Round(probabilita * 100d) + "%";
+        }
+        if (overflow > 0d)
+        {
+            risultato += " / potenza +" +
+                Math.Round(overflow * 3.5d, 1) + "%";
+        }
+        if (bonusIntero > 0)
+        {
+            risultato += " / danno +" + bonusIntero;
+        }
+        return risultato.Length > 0 ? risultato : "nessuno";
+    }
+
+    private string DescriviRaffica(int livello)
+    {
+        if (livello <= 0) return "disattiva";
+        int intervallo = CalcolaIntervalloRaffica(livello);
+        int proiettili = CalcolaNumeroProiettiliRaffica(livello);
+        float bonusDanno = Mathf.Max(0, livello - 1) * 10f;
+        int bonusIntero = Math.Max(0, livello - 1);
+        return proiettili + " colpi ogni " + intervallo +
+            " spari / danno +" + FormattaDecimale(bonusDanno) +
+            "% e +" + bonusIntero;
+    }
+
+    private int CalcolaIntervalloRaffica(int livello)
+    {
+        int baseRaffica = Mathf.Max(
+            2,
+            Configurazione.colpiPerRafficaRaccolto
+        );
+        if (livello <= 0) return baseRaffica;
+        long valore = (long)baseRaffica - Math.Max(0, livello - 1);
+        return (int)Math.Max(2L, valore);
+    }
+
+    private int CalcolaNumeroProiettiliRaffica(int livello)
+    {
+        if (livello <= 0) return 0;
+        long gruppi = Math.Max(0L, ((long)livello - 1L) / 3L);
+        return (int)Math.Min(
+            MassimoColpiRafficaFisici,
+            3L + 2L * gruppi
+        );
+    }
+
+    private string DescriviPatataGigante(int livello)
+    {
+        if (livello <= 0) return "normale";
+        float scala = CalcolaScalaPatataGigante(livello);
+        float spinta = CalcolaForzaSpintaTotale(0, livello);
+        double incremento = Math.Max(
+            0.02d,
+            Configurazione.incrementoScalaPatataGigante
+        );
+        double overflow = Math.Max(
+            0d,
+            (1d + livello * incremento - ScalaMassimaProiettile) /
+            incremento
+        );
+        string testo = FormattaPercentuale(scala, true) +
+            " / spinta " + FormattaDecimale(spinta);
+        int bonusIntero = Math.Max(
+            0,
+            livello - CalcolaLivelloCapPatataGigante()
+        );
+        return overflow > 0d
+            ? testo + " / potenza +" + Math.Round(overflow * 5d, 1) +
+              "% / danno +" + bonusIntero
+            : testo;
+    }
+
+    private string DescriviEsplosione(int livello)
+    {
+        if (livello <= 0) return "nessuna";
+        double moltiplicatore = Math.Max(
+            0.1d,
+            Configurazione.moltiplicatoreDannoEsplosione
+        ) * (1d + 0.14d * Math.Max(0, livello - 1));
+        int bonusIntero = Math.Max(0, livello - 1);
+        return "raggio " +
+            FormattaDecimale(CalcolaRaggioEsplosione(livello)) +
+            " / danno " + Math.Round(moltiplicatore * 100d) +
+            "% e +" + bonusIntero;
+    }
+
+    private string DescriviCritico(int livello)
+    {
+        if (livello <= 0) return "nessuno";
+        double valore = livello * (double)Mathf.Max(
+            0.01f,
+            Configurazione.probabilitaCriticoPerLivello
+        );
+        int probabilita = (int)Math.Round(Math.Min(1d, valore) * 100d);
+        int bonusIntero = CalcolaBonusDannoCriticoIntero(livello);
+        return probabilita + "% / danno x" +
+            FormattaDecimale(CalcolaMoltiplicatoreDannoCritico(livello)) +
+            " e +" + bonusIntero;
+    }
+
+    private string DescriviRimbalzo(int livello)
+    {
+        if (livello <= 0) return "nessuno";
+        int fisici = Mathf.Min(livello, MassimoRimbalziFisici);
+        int bonusIntero = Math.Max(
+            0,
+            livello - MassimoRimbalziFisici
+        );
+        return fisici + " / potenza " +
+            FormattaPercentuale(CalcolaDannoRimbalzo(livello), true) +
+            " / raggio " + FormattaDecimale(
+                CalcolaRaggioRimbalzo(livello)
+            ) + " / danno +" + bonusIntero;
+    }
+
+    private string DescriviSpinta(int livello)
+    {
+        if (livello <= 0) return "nessuna";
+        float forza = CalcolaForzaSpintaTotale(livello, 0);
+        double incremento = Math.Max(
+            0.05d,
+            Configurazione.forzaSpintaPerLivello
+        );
+        int livelliFisici = Math.Max(
+            1,
+            (int)Math.Ceiling(ForzaSpintaMassima / incremento)
+        );
+        int overflow = Math.Max(0, livello - livelliFisici);
+        return overflow > 0
+            ? FormattaDecimale(forza) + " / potenza +" +
+              Math.Round(overflow * 2.5d, 1) + "% / danno +" + overflow
+            : FormattaDecimale(forza);
     }
 
     private void AggiungiPercorso(StringBuilder testo, PercorsoBuild percorso)
@@ -839,9 +1360,62 @@ public class PlayerUpgrades : MonoBehaviour
 
     private static int CostoLivello(int[] costi, int livello)
     {
-        return costi != null && livello >= 0 && livello < costi.Length
-            ? Mathf.Max(0, costi[livello])
-            : 0;
+        int livelloValido = Mathf.Max(0, livello);
+        int quantiConfigurati = costi != null ? costi.Length : 0;
+        if (livelloValido < quantiConfigurati)
+        {
+            return Mathf.Max(1, costi[livelloValido]);
+        }
+
+        int ultimo = quantiConfigurati > 0
+            ? Mathf.Max(1, costi[quantiConfigurati - 1])
+            : 3;
+        int penultimo = quantiConfigurati > 1
+            ? Mathf.Max(1, costi[quantiConfigurati - 2])
+            : Mathf.Max(1, ultimo / 2);
+        int passo = Mathf.Max(1, ultimo - penultimo);
+        int curvatura = Mathf.Max(1, passo / 3);
+        long livelliExtra = quantiConfigurati > 0
+            ? (long)livelloValido - quantiConfigurati + 1L
+            : livelloValido;
+        double costo = ultimo +
+            passo * (double)livelliExtra +
+            curvatura * (double)livelliExtra *
+            Math.Max(0L, livelliExtra - 1L) * 0.5d;
+        return costo >= int.MaxValue
+            ? int.MaxValue
+            : Math.Max(1, (int)Math.Ceiling(costo));
+    }
+
+    private static int IncrementaLivello(int livello)
+    {
+        return livello < int.MaxValue ? livello + 1 : int.MaxValue;
+    }
+
+    private static int ProdottoSicuro(int primo, int secondo)
+    {
+        long prodotto = (long)Mathf.Max(0, primo) * Mathf.Max(0, secondo);
+        return prodotto >= int.MaxValue ? int.MaxValue : (int)prodotto;
+    }
+
+    private static int SommaSicura(int primo, int secondo)
+    {
+        long somma = (long)Mathf.Max(0, primo) + Mathf.Max(0, secondo);
+        return somma >= int.MaxValue ? int.MaxValue : (int)somma;
+    }
+
+    private static int MoltiplicaDannoSicuro(
+        int danno,
+        double moltiplicatore
+    )
+    {
+        if (double.IsNaN(moltiplicatore) || moltiplicatore <= 0d) return 1;
+        double risultato = Math.Max(1, danno) * moltiplicatore;
+        if (double.IsInfinity(risultato) || risultato >= int.MaxValue)
+        {
+            return int.MaxValue;
+        }
+        return Math.Max(1, (int)Math.Round(risultato));
     }
 
     private static int Lunghezza(int[] valori)

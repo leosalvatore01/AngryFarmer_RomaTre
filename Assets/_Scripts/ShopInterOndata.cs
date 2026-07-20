@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -7,6 +8,19 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public class ShopInterOndata : MonoBehaviour
 {
+    private const int NumeroScelteIniziali = 2;
+    private static readonly TipoPotenziamento[] OfferteSpecializzazione =
+    {
+        TipoPotenziamento.Cadenza,
+        TipoPotenziamento.PatataGigante,
+        TipoPotenziamento.Critico,
+        TipoPotenziamento.Rallentamento
+    };
+    private static readonly TipoPotenziamento[] OfferteSupporto =
+    {
+        TipoPotenziamento.Movimento,
+        TipoPotenziamento.SaluteMassima
+    };
     private static readonly Color32 ColoreVelo =
         FarmPixelUI.ColoreVeloFlat;
     private static readonly Color32 ColorePannello =
@@ -74,12 +88,17 @@ public class ShopInterOndata : MonoBehaviour
     private TMP_Text testoBuildRiepilogo;
     private TMP_Text testoBuildBottega;
     private TMP_Text testoMessaggioBottega;
+    private TMP_Text titoloBottega;
+    private TMP_Text testoAvviaBottega;
     private TMP_Text testoReroll;
     private TMP_Text testoCura;
     private Button pulsanteReroll;
     private Button pulsanteCura;
+    private Button pulsanteAvviaBottega;
+    private Button pulsanteIndietroBottega;
     private Image iconaCostoReroll;
     private Image iconaCostoCura;
+    private Image iconaMoneteBottega;
     private TMP_FontAsset fontInterfaccia;
     private PlayerUpgrades potenziamenti;
     private GeneratoreOfferteBuild generatore;
@@ -88,11 +107,18 @@ public class ShopInterOndata : MonoBehaviour
     private int numeroReroll;
     private int acquistiIntervallo;
     private bool costruito;
+    private bool preparazioneIniziale;
+    private bool transizioneSceltaIniziale;
+    private int scelteGratuiteRimaste;
+    private PercorsoBuild? percorsoPreferito;
 
     public IReadOnlyList<TipoPotenziamento> OfferteCorrenti =>
         offerteCorrenti;
     public int NumeroReroll => numeroReroll;
     public int AcquistiIntervallo => acquistiIntervallo;
+    public bool PreparazioneInizialeAttiva => preparazioneIniziale;
+    public int ScelteGratuiteRimaste => scelteGratuiteRimaste;
+    public PercorsoBuild? PercorsoPreferito => percorsoPreferito;
     public int CostoRerollCorrente
     {
         get
@@ -184,7 +210,11 @@ public class ShopInterOndata : MonoBehaviour
     {
         if (!costruito) CostruisciInterfaccia();
 
+        preparazioneIniziale = false;
+        transizioneSceltaIniziale = false;
+        scelteGratuiteRimaste = 0;
         PreparaPotenziamentiGiocatore();
+        AggiornaPercorsoPreferitoDaBuild();
         ondaCompletataCorrente = Mathf.Max(1, ondaCompletata);
         anteprimaCorrente = prossimaOnda;
         numeroReroll = 0;
@@ -209,6 +239,34 @@ public class ShopInterOndata : MonoBehaviour
         transform.SetAsLastSibling();
         AggiornaInterfaccia();
         FarmAudioController.RiproduciSuccesso(0.8f);
+    }
+
+    public void MostraPreparazioneIniziale(AnteprimaOndata primaOnda)
+    {
+        if (!costruito) CostruisciInterfaccia();
+
+        PreparaPotenziamentiGiocatore();
+        preparazioneIniziale = true;
+        transizioneSceltaIniziale = false;
+        scelteGratuiteRimaste = NumeroScelteIniziali;
+        percorsoPreferito = null;
+        ondaCompletataCorrente = 0;
+        anteprimaCorrente = primaOnda;
+        numeroReroll = 0;
+        acquistiIntervallo = 0;
+        ImpostaOfferte(OfferteSpecializzazione);
+
+        if (titoloBottega != null)
+            titoloBottega.text = "PREPARAZIONE INIZIALE";
+        testoAnteprimaBottega.text = FormattaAnteprima(primaOnda);
+        testoMessaggioBottega.text =
+            "Scegli gratuitamente la specializzazione della tua build.";
+        pannelloRiepilogo.SetActive(false);
+        pannelloBottega.SetActive(true);
+        gameObject.SetActive(true);
+        transform.SetAsLastSibling();
+        AggiornaInterfaccia();
+        FarmAudioController.RiproduciInterfaccia();
     }
 
     public void Nascondi()
@@ -249,6 +307,8 @@ public class ShopInterOndata : MonoBehaviour
 
     void TornaAlRiepilogo()
     {
+        if (preparazioneIniziale) return;
+
         pannelloBottega.SetActive(false);
         pannelloRiepilogo.SetActive(true);
         FarmAudioController.RiproduciInterfaccia();
@@ -257,16 +317,34 @@ public class ShopInterOndata : MonoBehaviour
 
     void AvviaOndataSuccessiva()
     {
+        if (preparazioneIniziale && scelteGratuiteRimaste > 0)
+        {
+            testoMessaggioBottega.text =
+                "Completa prima le " + scelteGratuiteRimaste +
+                (scelteGratuiteRimaste == 1
+                    ? " scelta gratuita."
+                    : " scelte gratuite.");
+            return;
+        }
+
         if (GameManager.instance != null)
         {
             FarmAudioController.RiproduciInterfaccia();
             GameManager.instance.ContinuaConOndataSuccessiva();
+            if (GameManager.instance.PreparazioneInizialeCompletata)
+                preparazioneIniziale = false;
         }
     }
 
     void Reroll()
     {
         if (GameManager.instance == null) return;
+        if (preparazioneIniziale)
+        {
+            testoMessaggioBottega.text =
+                "Le scelte iniziali sono garantite e non richiedono reroll.";
+            return;
+        }
 
         int costo = CostoRerollCorrente;
         if (!GameManager.instance.ProvaSpendiMonete(costo))
@@ -284,7 +362,8 @@ public class ShopInterOndata : MonoBehaviour
         FarmAudioController.RiproduciAcquisto(0.82f);
         GeneraOfferte(precedenti);
         testoMessaggioBottega.text =
-            "Nuove offerte arrivate. Il prossimo reroll costerà " +
+            "Offerte aggiornate: lo slot del tuo percorso resta garantito. " +
+            "Il prossimo reroll costa " +
             CostoRerollCorrente + " monete.";
         AggiornaInterfaccia();
     }
@@ -292,6 +371,12 @@ public class ShopInterOndata : MonoBehaviour
     void AcquistaCarta(int indice)
     {
         if (indice < 0 || indice >= carte.Count) return;
+        if (preparazioneIniziale &&
+            (scelteGratuiteRimaste <= 0 || transizioneSceltaIniziale))
+        {
+            return;
+        }
+
         CartaOfferta carta = carte[indice];
         if (!carta.valida || carta.acquistata || potenziamenti == null)
         {
@@ -299,18 +384,25 @@ public class ShopInterOndata : MonoBehaviour
         }
 
         string messaggio;
-        bool acquistato = potenziamenti.ProvaAcquistare(
-            carta.tipo,
-            out messaggio
-        );
+        bool acquistato = preparazioneIniziale
+            ? potenziamenti.ProvaApplicareGratis(carta.tipo, out messaggio)
+            : potenziamenti.ProvaAcquistare(carta.tipo, out messaggio);
         if (acquistato)
         {
             FarmAudioController.RiproduciAcquisto();
             carta.acquistata = true;
             acquistiIntervallo++;
-            testoMessaggioBottega.text =
-                messaggio + "  " +
-                potenziamenti.OttieniTitolo(carta.tipo);
+            if (preparazioneIniziale)
+            {
+                GestisciSceltaIniziale(carta.tipo);
+            }
+            else
+            {
+                AggiornaPercorsoPreferitoDaBuild();
+                testoMessaggioBottega.text =
+                    messaggio + "  " +
+                    potenziamenti.OttieniTitolo(carta.tipo);
+            }
         }
         else
         {
@@ -322,6 +414,12 @@ public class ShopInterOndata : MonoBehaviour
     void AcquistaCura()
     {
         if (potenziamenti == null) return;
+        if (preparazioneIniziale)
+        {
+            testoMessaggioBottega.text =
+                "La cura sara disponibile tra le ondate.";
+            return;
+        }
         string messaggio;
         bool acquistato = potenziamenti.ProvaAcquistare(
             TipoPotenziamento.Cura,
@@ -353,7 +451,9 @@ public class ShopInterOndata : MonoBehaviour
             ondaCompletataCorrente,
             monete,
             Mathf.Clamp(config.numeroOfferte, 3, 4),
-            precedenti
+            precedenti,
+            percorsoPreferito,
+            true
         );
         offerteCorrenti.AddRange(nuove);
 
@@ -364,6 +464,92 @@ public class ShopInterOndata : MonoBehaviour
             carta.valida = i < offerteCorrenti.Count;
             carta.radice.SetActive(carta.valida);
             if (carta.valida) carta.tipo = offerteCorrenti[i];
+        }
+    }
+
+    void ImpostaOfferte(IReadOnlyList<TipoPotenziamento> nuove)
+    {
+        offerteCorrenti.Clear();
+        if (nuove != null)
+        {
+            for (int i = 0; i < nuove.Count; i++)
+                offerteCorrenti.Add(nuove[i]);
+        }
+
+        for (int i = 0; i < carte.Count; i++)
+        {
+            CartaOfferta carta = carte[i];
+            carta.acquistata = false;
+            carta.valida = i < offerteCorrenti.Count;
+            carta.radice.SetActive(carta.valida);
+            if (carta.valida) carta.tipo = offerteCorrenti[i];
+        }
+    }
+
+    void GestisciSceltaIniziale(TipoPotenziamento tipo)
+    {
+        if (scelteGratuiteRimaste == NumeroScelteIniziali)
+        {
+            DefinizionePotenziamentoBuild definizione =
+                CatalogoPotenziamentiBuild.Ottieni(tipo);
+            if (definizione != null &&
+                definizione.Percorso != PercorsoBuild.Utilita)
+            {
+                percorsoPreferito = definizione.Percorso;
+            }
+        }
+
+        scelteGratuiteRimaste = Mathf.Max(0, scelteGratuiteRimaste - 1);
+        if (scelteGratuiteRimaste == 1)
+        {
+            transizioneSceltaIniziale = true;
+            testoMessaggioBottega.text =
+                "Ora scegli gratuitamente un supporto per il contadino.";
+            StartCoroutine(MostraSupportiNelFrameSuccessivo());
+        }
+        else
+        {
+            testoMessaggioBottega.text =
+                "Preparazione completa. Puoi iniziare l'ondata 1.";
+        }
+    }
+
+    IEnumerator MostraSupportiNelFrameSuccessivo()
+    {
+        yield return null;
+        if (!preparazioneIniziale || scelteGratuiteRimaste != 1)
+        {
+            transizioneSceltaIniziale = false;
+            yield break;
+        }
+
+        ImpostaOfferte(OfferteSupporto);
+        transizioneSceltaIniziale = false;
+        AggiornaInterfaccia();
+    }
+
+    void AggiornaPercorsoPreferitoDaBuild()
+    {
+        if (potenziamenti == null) return;
+
+        PercorsoBuild[] percorsi =
+        {
+            PercorsoBuild.Raffica,
+            PercorsoBuild.Artiglieria,
+            PercorsoBuild.Perforazione,
+            PercorsoBuild.Controllo
+        };
+        int puntiMigliori = percorsoPreferito.HasValue
+            ? potenziamenti.OttieniPuntiPercorso(percorsoPreferito.Value)
+            : 0;
+        for (int i = 0; i < percorsi.Length; i++)
+        {
+            int punti = potenziamenti.OttieniPuntiPercorso(percorsi[i]);
+            if (punti > puntiMigliori)
+            {
+                puntiMigliori = punti;
+                percorsoPreferito = percorsi[i];
+            }
         }
     }
 
@@ -411,14 +597,24 @@ public class ShopInterOndata : MonoBehaviour
             : 0;
         string testoMonete = "MONETE  " + monete;
 
+        if (titoloBottega != null)
+        {
+            titoloBottega.text = preparazioneIniziale
+                ? "PREPARAZIONE INIZIALE"
+                : "BOTTEGA DELLE BUILD";
+        }
         if (testoMoneteRiepilogo != null)
         {
             testoMoneteRiepilogo.text = testoMonete;
         }
         if (testoMoneteBottega != null)
         {
-            testoMoneteBottega.text = testoMonete;
+            testoMoneteBottega.text = preparazioneIniziale
+                ? "SCELTE GRATIS  " + scelteGratuiteRimaste
+                : testoMonete;
         }
+        if (iconaMoneteBottega != null)
+            iconaMoneteBottega.enabled = !preparazioneIniziale;
 
         string build = potenziamenti != null
             ? "BUILD:  " + potenziamenti.DescriviBuildCompatta()
@@ -431,31 +627,73 @@ public class ShopInterOndata : MonoBehaviour
             AggiornaCarta(carte[i], monete);
         }
 
-        int costoReroll = CostoRerollCorrente;
-        if (testoReroll != null)
+        if (preparazioneIniziale)
         {
-            testoReroll.text =
-                "CAMBIA  |  " + EtichettaMonete(costoReroll);
-            testoReroll.color = monete >= costoReroll
-                ? TestoPulsante
-                : TestoErrorePulsante;
-        }
-        if (pulsanteReroll != null) pulsanteReroll.interactable = true;
-        if (iconaCostoReroll != null) iconaCostoReroll.enabled = true;
+            if (testoReroll != null)
+            {
+                testoReroll.text = "SCELTE GARANTITE";
+                testoReroll.color = TestoPulsante;
+            }
+            if (pulsanteReroll != null) pulsanteReroll.interactable = false;
+            if (iconaCostoReroll != null) iconaCostoReroll.enabled = false;
 
-        if (potenziamenti != null && testoCura != null)
+            if (testoCura != null)
+            {
+                testoCura.text = "CURA TRA LE ONDATE";
+                testoCura.color = TestoPulsante;
+            }
+            if (pulsanteCura != null) pulsanteCura.interactable = false;
+            if (iconaCostoCura != null) iconaCostoCura.enabled = false;
+        }
+        else
         {
-            bool disponibile =
-                potenziamenti.PuoAcquistare(TipoPotenziamento.Cura);
-            int costo = potenziamenti.OttieniCosto(TipoPotenziamento.Cura);
-            testoCura.text = disponibile
-                ? "CURA  |  " + EtichettaMonete(costo)
-                : "SALUTE PIENA";
-            testoCura.color = disponibile && monete < costo
-                ? TestoErrorePulsante
-                : TestoPulsante;
-            pulsanteCura.interactable = disponibile;
-            if (iconaCostoCura != null) iconaCostoCura.enabled = disponibile;
+            int costoReroll = CostoRerollCorrente;
+            if (testoReroll != null)
+            {
+                testoReroll.text =
+                    "CAMBIA  |  " + EtichettaMonete(costoReroll);
+                testoReroll.color = monete >= costoReroll
+                    ? TestoPulsante
+                    : TestoErrorePulsante;
+            }
+            if (pulsanteReroll != null) pulsanteReroll.interactable = true;
+            if (iconaCostoReroll != null) iconaCostoReroll.enabled = true;
+
+            if (potenziamenti != null && testoCura != null)
+            {
+                bool disponibile =
+                    potenziamenti.PuoAcquistare(TipoPotenziamento.Cura);
+                int costo = potenziamenti.OttieniCosto(TipoPotenziamento.Cura);
+                testoCura.text = disponibile
+                    ? "CURA  |  " + EtichettaMonete(costo)
+                    : "SALUTE PIENA";
+                testoCura.color = disponibile && monete < costo
+                    ? TestoErrorePulsante
+                    : TestoPulsante;
+                pulsanteCura.interactable = disponibile;
+                if (iconaCostoCura != null)
+                    iconaCostoCura.enabled = disponibile;
+            }
+        }
+
+        if (pulsanteIndietroBottega != null)
+            pulsanteIndietroBottega.gameObject.SetActive(!preparazioneIniziale);
+        if (pulsanteAvviaBottega != null)
+        {
+            pulsanteAvviaBottega.interactable =
+                !preparazioneIniziale || scelteGratuiteRimaste == 0;
+        }
+        if (testoAvviaBottega != null)
+        {
+            testoAvviaBottega.text = preparazioneIniziale
+                ? (scelteGratuiteRimaste == 0
+                    ? "INIZIA ONDATA 1  [SPAZIO]"
+                    : "SCEGLI ANCORA  " + scelteGratuiteRimaste)
+                : "PARTI SUBITO  [SPAZIO]";
+            testoAvviaBottega.color =
+                !preparazioneIniziale || scelteGratuiteRimaste == 0
+                    ? TestoPulsante
+                    : TestoMeta;
         }
     }
 
@@ -517,13 +755,37 @@ public class ShopInterOndata : MonoBehaviour
             carta.iconaCosto.enabled = false;
             carta.sfondo.color = ColoreCartaDisabilitata;
         }
-        else if (!disponibile)
+        else if (preparazioneIniziale && transizioneSceltaIniziale)
         {
-            carta.testoPulsante.text = "MAX";
+            carta.testoPulsante.text = "PROSSIMA SCELTA";
             carta.testoPulsante.color = TestoPulsante;
             carta.pulsante.interactable = false;
             carta.iconaCosto.enabled = false;
             carta.sfondo.color = ColoreCartaDisabilitata;
+        }
+        else if (preparazioneIniziale && scelteGratuiteRimaste == 0)
+        {
+            carta.testoPulsante.text = "COMPLETATO";
+            carta.testoPulsante.color = TestoPulsante;
+            carta.pulsante.interactable = false;
+            carta.iconaCosto.enabled = false;
+            carta.sfondo.color = ColoreCartaDisabilitata;
+        }
+        else if (!disponibile)
+        {
+            carta.testoPulsante.text = "NON DISPONIBILE";
+            carta.testoPulsante.color = TestoPulsante;
+            carta.pulsante.interactable = false;
+            carta.iconaCosto.enabled = false;
+            carta.sfondo.color = ColoreCartaDisabilitata;
+        }
+        else if (preparazioneIniziale)
+        {
+            carta.testoPulsante.text = "GRATIS";
+            carta.testoPulsante.color = TestoPulsante;
+            carta.pulsante.interactable = true;
+            carta.iconaCosto.enabled = false;
+            carta.sfondo.color = ColoreCarta;
         }
         else
         {
@@ -703,7 +965,7 @@ public class ShopInterOndata : MonoBehaviour
             new Vector2(52f, 52f)
         );
 
-        CreaTesto(
+        titoloBottega = CreaTesto(
             "Titolo",
             parent,
             "BOTTEGA DELLE BUILD",
@@ -726,7 +988,7 @@ public class ShopInterOndata : MonoBehaviour
             FontStyles.Bold,
             TextAlignmentOptions.Center
         );
-        FarmPixelUI.AggiungiIcona(
+        iconaMoneteBottega = FarmPixelUI.AggiungiIcona(
             parent,
             "IconaMonete",
             FarmPixelIcon.Moneta,
@@ -837,7 +1099,7 @@ public class ShopInterOndata : MonoBehaviour
         );
         testoAnteprimaBottega.overflowMode = TextOverflowModes.Overflow;
 
-        CreaPulsante(
+        pulsanteIndietroBottega = CreaPulsante(
             "Indietro",
             parent,
             "INDIETRO",
@@ -846,7 +1108,7 @@ public class ShopInterOndata : MonoBehaviour
             ColorePulsanteNeutro,
             TornaAlRiepilogo
         );
-        CreaPulsante(
+        pulsanteAvviaBottega = CreaPulsante(
             "OndataSuccessiva",
             parent,
             "PARTI SUBITO  [SPAZIO]",
@@ -855,6 +1117,8 @@ public class ShopInterOndata : MonoBehaviour
             ColorePulsanteVerde,
             AvviaOndataSuccessiva
         );
+        testoAvviaBottega =
+            pulsanteAvviaBottega.GetComponentInChildren<TMP_Text>();
     }
 
     void CreaCartaOfferta(Transform parent, int indice, float posizioneY)

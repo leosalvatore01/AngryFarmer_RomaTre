@@ -44,13 +44,14 @@ public class PlayerShooting : MonoBehaviour
 
     public int DannoBase => dannoBase;
     public int BonusDanno => bonusDanno;
-    public int DannoFinale => Mathf.Max(1, dannoBase + bonusDanno);
+    public int DannoFinale => SommaSicura(dannoBase, bonusDanno, 1);
 
     public int PenetrazioneBase => penetrazioneBase;
     public int BonusPenetrazione => bonusPenetrazione;
-    public int PenetrazioneFinale => Mathf.Max(
-        0,
-        penetrazioneBase + bonusPenetrazione
+    public int PenetrazioneFinale => SommaSicura(
+        penetrazioneBase,
+        bonusPenetrazione,
+        0
     );
 
     public float IntervalloSparoMinimo => intervalloSparoMinimo;
@@ -226,12 +227,17 @@ public class PlayerShooting : MonoBehaviour
             potenziamenti = GetComponent<PlayerUpgrades>();
         }
 
-        colpiContatiPerRaffica++;
-        bool rafficaRaccolto =
-            potenziamenti != null &&
-            potenziamenti.HaRafficaRaccolto &&
-            colpiContatiPerRaffica %
-            potenziamenti.ColpiPerRafficaRaccolto == 0;
+        bool rafficaRaccolto = false;
+        if (potenziamenti != null && potenziamenti.HaRafficaRaccolto)
+        {
+            colpiContatiPerRaffica++;
+            if (colpiContatiPerRaffica >=
+                potenziamenti.ColpiPerRafficaRaccolto)
+            {
+                colpiContatiPerRaffica = 0;
+                rafficaRaccolto = true;
+            }
+        }
         bool sparaVentaglio = triploSparoAttivo || rafficaRaccolto;
         bool potente =
             bonusDanno > 0 ||
@@ -248,29 +254,41 @@ public class PlayerShooting : MonoBehaviour
 
         if (sparaVentaglio)
         {
-            CreateBullet(direzione, potente, perforante);
-            CreateBullet(
-                Quaternion.Euler(0f, 0f, angoloLateraleTriploSparo) * direzione,
+            int numeroProiettili = rafficaRaccolto && potenziamenti != null
+                ? Mathf.Max(
+                    3,
+                    potenziamenti.NumeroProiettiliRafficaRaccolto
+                )
+                : 3;
+            SparaVentaglio(
+                direzione,
+                numeroProiettili,
                 potente,
-                perforante
-            );
-            CreateBullet(
-                Quaternion.Euler(0f, 0f, -angoloLateraleTriploSparo) * direzione,
-                potente,
-                perforante
+                perforante,
+                rafficaRaccolto
             );
         }
         else
         {
             CreateBullet(direzione, potente, perforante);
-            if (potenziamenti != null &&
-                EstraiProbabilita(
-                    potenziamenti.ProbabilitaColpoAggiuntivo
-                ))
+            int colpiAggiuntivi = potenziamenti != null
+                ? potenziamenti.ColpiAggiuntiviGarantiti
+                : 0;
+            if (potenziamenti != null && EstraiProbabilita(
+                potenziamenti.ProbabilitaColpoAggiuntivo
+            ))
             {
-                float angolo =
+                colpiAggiuntivi++;
+            }
+            for (int i = 0; i < colpiAggiuntivi; i++)
+            {
+                int fasciaLaterale = i / 2 + 1;
+                float angolo = Mathf.Clamp(
                     potenziamenti.AngoloColpoAggiuntivo *
-                    segnoColpoAggiuntivo;
+                    fasciaLaterale * segnoColpoAggiuntivo,
+                    -30f,
+                    30f
+                );
                 segnoColpoAggiuntivo *= -1;
                 CreateBullet(
                     Quaternion.Euler(0f, 0f, angolo) * direzione,
@@ -299,10 +317,41 @@ public class PlayerShooting : MonoBehaviour
         return true;
     }
 
+    private void SparaVentaglio(
+        Vector2 direzione,
+        int numeroProiettili,
+        bool potente,
+        bool perforante,
+        bool colpoRaffica
+    )
+    {
+        int quantita = Mathf.Clamp(numeroProiettili, 3, 7);
+        if (quantita % 2 == 0) quantita--;
+        int meta = quantita / 2;
+        float passoAngolare = Mathf.Clamp(
+            angoloLateraleTriploSparo,
+            1f,
+            12f
+        );
+        for (int indice = -meta; indice <= meta; indice++)
+        {
+            Vector2 direzioneColpo =
+                Quaternion.Euler(0f, 0f, indice * passoAngolare) *
+                direzione;
+            CreateBullet(
+                direzioneColpo,
+                potente,
+                perforante,
+                colpoRaffica
+            );
+        }
+    }
+
     void CreateBullet(
         Vector2 direzione,
         bool potente,
-        bool perforante
+        bool perforante,
+        bool colpoRaffica = false
     )
     {
         bool critico =
@@ -310,7 +359,10 @@ public class PlayerShooting : MonoBehaviour
             EstraiProbabilita(potenziamenti.ProbabilitaCritico);
         ProfiloProiettileBuild profilo =
             potenziamenti != null
-                ? potenziamenti.CreaProfiloProiettile(critico)
+                ? potenziamenti.CreaProfiloProiettile(
+                    critico,
+                    colpoRaffica
+                )
                 : new ProfiloProiettileBuild
                 {
                     Danno = DannoFinale,
@@ -421,7 +473,7 @@ public class PlayerShooting : MonoBehaviour
     [System.Obsolete("Usa ImpostaBonusDanno.")]
     public void AumentaDanno(int quantita)
     {
-        ImpostaBonusDanno(bonusDanno + Mathf.Max(0, quantita));
+        ImpostaBonusDanno(SommaSicura(bonusDanno, quantita, 0));
     }
 
     [System.Obsolete("Usa ImpostaBonusRiduzioneIntervalloSparo.")]
@@ -436,7 +488,7 @@ public class PlayerShooting : MonoBehaviour
     public void AumentaPenetrazione(int quantita)
     {
         ImpostaBonusPenetrazione(
-            bonusPenetrazione + Mathf.Max(0, quantita)
+            SommaSicura(bonusPenetrazione, quantita, 0)
         );
     }
 
@@ -444,5 +496,11 @@ public class PlayerShooting : MonoBehaviour
     public void AttivaDoppioSparo()
     {
         AttivaTriploSparo();
+    }
+
+    private static int SommaSicura(int primo, int secondo, int minimo)
+    {
+        long somma = (long)primo + Math.Max(0, secondo);
+        return (int)Math.Max(minimo, Math.Min(int.MaxValue, somma));
     }
 }

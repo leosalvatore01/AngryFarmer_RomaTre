@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
@@ -41,6 +42,7 @@ public class GameManager : MonoBehaviour
     private bool ultimaPartitaVinta;
     private bool recordFinaliCalcolati;
     private EsitoRecordPartita recordFinali;
+    private Coroutine aperturaPreparazioneRoutine;
 
     public int monete = 0;
     public int MoneteRaccolte { get; private set; }
@@ -67,6 +69,7 @@ public class GameManager : MonoBehaviour
     public int PunteggioFinale => punteggioFinale;
     public DifficoltaPartita DifficoltaCorrente { get; private set; }
     public bool DifficoltaConfermata { get; private set; }
+    public bool PreparazioneInizialeCompletata { get; private set; }
     public string UltimoObiettivo { get; private set; } = string.Empty;
     public bool UltimoObiettivoValutato { get; private set; }
     public bool UltimoObiettivoCompletato { get; private set; }
@@ -125,7 +128,7 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        ImpostaStatoPartita(StatoPartita.Onda);
+        ImpostaStatoPartita(StatoPartita.Intervallo);
 
         testoMonete = TrovaTestoInterfaccia("MoneteText");
 
@@ -150,6 +153,11 @@ public class GameManager : MonoBehaviour
             if (gallina != null) Destroy(gallina.gameObject);
         }
         gallineRimaste = 0;
+
+        if (DifficoltaConfermata)
+        {
+            RichiediPreparazioneIniziale();
+        }
     }
 
     void Update()
@@ -174,7 +182,7 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        if (!isGameOver && !PausaManualeAttiva)
+        if (GameplayAttivo)
         {
             durataPartita += Time.unscaledDeltaTime;
         }
@@ -853,8 +861,62 @@ public class GameManager : MonoBehaviour
         {
             selettoreDifficolta.SetActive(false);
         }
-        AggiornaScalaTemporale();
+        RichiediPreparazioneIniziale();
         FarmAudioController.RiproduciInterfaccia();
+    }
+
+    void RichiediPreparazioneIniziale()
+    {
+        if (PreparazioneInizialeCompletata || isGameOver) return;
+
+        ImpostaStatoPartita(StatoPartita.Intervallo);
+        if (aperturaPreparazioneRoutine != null)
+        {
+            StopCoroutine(aperturaPreparazioneRoutine);
+        }
+        aperturaPreparazioneRoutine = StartCoroutine(
+            ApriPreparazioneInizialeQuandoPronta()
+        );
+    }
+
+    IEnumerator ApriPreparazioneInizialeQuandoPronta()
+    {
+        EnemySpawner spawner = FindFirstObjectByType<EnemySpawner>();
+        if (spawner != null)
+        {
+            yield return new WaitUntil(
+                () => spawner == null || spawner.DifficoltaApplicata
+            );
+        }
+        else
+        {
+            yield return null;
+        }
+
+        if (isGameOver || PreparazioneInizialeCompletata)
+        {
+            aperturaPreparazioneRoutine = null;
+            yield break;
+        }
+
+        if (shopInterOndata == null)
+        {
+            shopInterOndata = ShopInterOndata.CreaOTrova();
+        }
+        if (shopInterOndata == null)
+        {
+            Debug.LogError("Impossibile aprire la preparazione iniziale.");
+            PreparazioneInizialeCompletata = true;
+            ImpostaStatoPartita(StatoPartita.Onda);
+            aperturaPreparazioneRoutine = null;
+            yield break;
+        }
+
+        AnteprimaOndata primaOnda = spawner != null
+            ? spawner.OttieniAnteprima(0)
+            : default;
+        shopInterOndata.MostraPreparazioneIniziale(primaOnda);
+        aperturaPreparazioneRoutine = null;
     }
 
     public void RegistraProiettileSparato()
@@ -1246,6 +1308,18 @@ public class GameManager : MonoBehaviour
             StatoCorrente != StatoPartita.Intervallo)
         {
             return;
+        }
+
+        if (shopInterOndata != null &&
+            shopInterOndata.PreparazioneInizialeAttiva &&
+            shopInterOndata.ScelteGratuiteRimaste > 0)
+        {
+            return;
+        }
+
+        if (!PreparazioneInizialeCompletata)
+        {
+            PreparazioneInizialeCompletata = true;
         }
 
         EnemySpawner spawner = FindFirstObjectByType<EnemySpawner>();

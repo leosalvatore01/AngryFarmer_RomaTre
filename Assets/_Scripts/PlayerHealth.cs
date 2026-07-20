@@ -14,7 +14,8 @@ public class PlayerHealth : MonoBehaviour
     private int bonusVitaMassima;
     private int frequenzaBloccoBase;
     private int frequenzaBloccoBonus;
-    private int colpiContati;
+    private float probabilitaBloccoBonus;
+    private System.Random casualitaBlocco;
     private float durataInvulnerabilita;
     private float invulnerabileFinoA;
     private bool invulnerabilitaSegnalata;
@@ -23,8 +24,11 @@ public class PlayerHealth : MonoBehaviour
     public int VitaCorrente => vitaCorrente;
     public int VitaMassimaBase => vitaMassimaBase;
     public int BonusVitaMassima => bonusVitaMassima;
-    public int VitaMassimaFinale =>
-        Mathf.Max(1, vitaMassimaBase + bonusVitaMassima);
+    public int VitaMassimaFinale => SommaSicura(
+        vitaMassimaBase,
+        bonusVitaMassima,
+        1
+    );
     public int VitaMassima => VitaMassimaFinale;
     public bool VitaPiena => vitaCorrente >= VitaMassimaFinale;
     public bool Invulnerabile =>
@@ -45,6 +49,15 @@ public class PlayerHealth : MonoBehaviour
         }
     }
     public int FrequenzaBlocco => FrequenzaBloccoFinale;
+    public float ProbabilitaBloccoBase => frequenzaBloccoBase > 0
+        ? 1f / frequenzaBloccoBase
+        : 0f;
+    public float ProbabilitaBloccoBonus => probabilitaBloccoBonus;
+    public float ProbabilitaBloccoFinale => Mathf.Clamp(
+        Mathf.Max(ProbabilitaBloccoBase, probabilitaBloccoBonus),
+        0f,
+        0.9f
+    );
 
     [Obsolete("Usa VitaMassimaFinale.")]
     public int vitaMassima => VitaMassimaFinale;
@@ -66,6 +79,9 @@ public class PlayerHealth : MonoBehaviour
             configurazione.durataInvulnerabilitaDopoColpo,
             0f,
             2f
+        );
+        casualitaBlocco = new System.Random(
+            unchecked(Environment.TickCount ^ GetInstanceID() * 397)
         );
     }
 
@@ -96,16 +112,11 @@ public class PlayerHealth : MonoBehaviour
     {
         if (danno <= 0 || vitaCorrente <= 0 || Invulnerabile) return false;
 
-        int frequenzaBlocco = FrequenzaBloccoFinale;
-        if (frequenzaBlocco > 0)
+        float probabilitaBlocco = ProbabilitaBloccoFinale;
+        if (probabilitaBlocco > 0f && EstraiProbabilita(probabilitaBlocco))
         {
-            colpiContati++;
-            if (colpiContati >= frequenzaBlocco)
-            {
-                colpiContati = 0;
-                Debug.Log("Il contadino ha resistito al colpo.", this);
-                return false;
-            }
+            Debug.Log("Il contadino ha resistito al colpo.", this);
+            return false;
         }
 
         int vitaPrecedente = vitaCorrente;
@@ -142,9 +153,11 @@ public class PlayerHealth : MonoBehaviour
         if (quantita <= 0 || VitaPiena) return;
 
         int vitaPrecedente = vitaCorrente;
-        vitaCorrente = Mathf.Min(
-            VitaMassimaFinale,
-            vitaCorrente + quantita
+        vitaCorrente = SommaSicura(
+            vitaCorrente,
+            quantita,
+            0,
+            VitaMassimaFinale
         );
         AggiornaInterfaccia();
         if (vitaCorrente != vitaPrecedente)
@@ -163,9 +176,11 @@ public class PlayerHealth : MonoBehaviour
         if (bonusVitaMassima == bonusValido && curaValida == 0) return;
 
         bonusVitaMassima = bonusValido;
-        vitaCorrente = Mathf.Min(
-            VitaMassimaFinale,
-            vitaCorrente + curaValida
+        vitaCorrente = SommaSicura(
+            vitaCorrente,
+            curaValida,
+            0,
+            VitaMassimaFinale
         );
         AggiornaInterfaccia();
         VitaCambiata?.Invoke();
@@ -178,7 +193,7 @@ public class PlayerHealth : MonoBehaviour
     {
         if (quantita <= 0) return;
         ImpostaBonusVitaMassima(
-            bonusVitaMassima + quantita,
+            SommaSicura(bonusVitaMassima, quantita, 0),
             curaBonus
         );
     }
@@ -192,7 +207,22 @@ public class PlayerHealth : MonoBehaviour
     public void ImpostaBonusFrequenzaBlocco(int ogniQuantiColpi)
     {
         frequenzaBloccoBonus = Mathf.Max(0, ogniQuantiColpi);
-        colpiContati = 0;
+        probabilitaBloccoBonus = frequenzaBloccoBonus > 0
+            ? 1f / frequenzaBloccoBonus
+            : 0f;
+    }
+
+    public void ImpostaProbabilitaBlocco(float probabilita)
+    {
+        probabilitaBloccoBonus = Mathf.Clamp(probabilita, 0f, 0.9f);
+        frequenzaBloccoBonus = probabilitaBloccoBonus > 0f
+            ? Mathf.Max(1, Mathf.RoundToInt(1f / probabilitaBloccoBonus))
+            : 0;
+    }
+
+    public void ImpostaSeedBloccoPerTest(int seed)
+    {
+        casualitaBlocco = new System.Random(seed);
     }
 
     [Obsolete("Usa ImpostaBonusFrequenzaBlocco.")]
@@ -225,5 +255,29 @@ public class PlayerHealth : MonoBehaviour
 
             testoVita.text = vitaCorrente + " / " + vitaMassima;
         }
+    }
+
+    private bool EstraiProbabilita(float probabilita)
+    {
+        if (probabilita <= 0f) return false;
+        if (probabilita >= 1f) return true;
+        if (casualitaBlocco == null)
+        {
+            casualitaBlocco = new System.Random(
+                unchecked(Environment.TickCount ^ GetInstanceID() * 397)
+            );
+        }
+        return casualitaBlocco.NextDouble() < probabilita;
+    }
+
+    private static int SommaSicura(
+        int primo,
+        int secondo,
+        int minimo,
+        int massimo = int.MaxValue
+    )
+    {
+        long somma = (long)primo + secondo;
+        return (int)Math.Max(minimo, Math.Min(massimo, somma));
     }
 }

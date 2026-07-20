@@ -251,7 +251,9 @@ public sealed class GeneratoreOfferteBuild
         int ondaCompletata,
         int monete,
         int numeroOfferte,
-        ICollection<TipoPotenziamento> offertePrecedenti = null
+        ICollection<TipoPotenziamento> offertePrecedenti = null,
+        PercorsoBuild? percorsoPreferito = null,
+        bool usaStrutturaPercorsi = true
     )
     {
         List<TipoPotenziamento> risultato =
@@ -273,31 +275,72 @@ public sealed class GeneratoreOfferteBuild
             false
         );
 
-        AggiungiGarantitaAccessibile(
-            risultato,
-            potenziamenti,
-            Mathf.Max(0, monete),
-            candidati,
-            tuttiCandidati
-        );
-        AggiungiModificatoriGarantiti(
-            risultato,
-            2,
-            candidati,
-            tuttiCandidati,
-            potenziamenti
-        );
+        PercorsoBuild? preferenzaCombattimento =
+            percorsoPreferito.HasValue &&
+            percorsoPreferito.Value != PercorsoBuild.Utilita
+                ? percorsoPreferito
+                : null;
+        bool generaShopStrutturato =
+            usaStrutturaPercorsi &&
+            preferenzaCombattimento.HasValue &&
+            numeroOfferte >= 3;
+
+        if (generaShopStrutturato)
+        {
+            AggiungiGarantitaPercorso(
+                risultato,
+                potenziamenti,
+                Mathf.Max(0, monete),
+                preferenzaCombattimento.Value,
+                candidati,
+                tuttiCandidati,
+                preferenzaCombattimento
+            );
+            AggiungiGarantitaPercorso(
+                risultato,
+                potenziamenti,
+                Mathf.Max(0, monete),
+                PercorsoBuild.Utilita,
+                candidati,
+                tuttiCandidati,
+                preferenzaCombattimento
+            );
+        }
+        else
+        {
+            AggiungiGarantitaAccessibile(
+                risultato,
+                potenziamenti,
+                Mathf.Max(0, monete),
+                candidati,
+                tuttiCandidati,
+                preferenzaCombattimento
+            );
+            AggiungiModificatoriGarantiti(
+                risultato,
+                2,
+                candidati,
+                tuttiCandidati,
+                potenziamenti,
+                preferenzaCombattimento
+            );
+        }
 
         while (risultato.Count < numeroOfferte)
         {
             DefinizionePotenziamentoBuild scelta =
-                EstraiPesata(risultato, potenziamenti);
+                EstraiPesata(
+                    risultato,
+                    potenziamenti,
+                    preferenzaCombattimento
+                );
             if (scelta == null)
             {
                 scelta = EstraiPesataDaLista(
                     tuttiCandidati,
                     risultato,
-                    potenziamenti
+                    potenziamenti,
+                    preferenzaCombattimento
                 );
             }
             if (scelta == null) break;
@@ -338,14 +381,16 @@ public sealed class GeneratoreOfferteBuild
         PlayerUpgrades potenziamenti,
         int monete,
         List<DefinizionePotenziamentoBuild> preferiti,
-        List<DefinizionePotenziamentoBuild> fallback
+        List<DefinizionePotenziamentoBuild> fallback,
+        PercorsoBuild? percorsoPreferito
     )
     {
         DefinizionePotenziamentoBuild scelta = EstraiAccessibile(
             preferiti,
             risultato,
             potenziamenti,
-            monete
+            monete,
+            percorsoPreferito
         );
         if (scelta == null)
         {
@@ -353,7 +398,107 @@ public sealed class GeneratoreOfferteBuild
                 fallback,
                 risultato,
                 potenziamenti,
-                monete
+                monete,
+                percorsoPreferito
+            );
+        }
+        if (scelta != null) risultato.Add(scelta.Tipo);
+    }
+
+    private void AggiungiGarantitaPercorso(
+        List<TipoPotenziamento> risultato,
+        PlayerUpgrades potenziamenti,
+        int monete,
+        PercorsoBuild percorso,
+        List<DefinizionePotenziamentoBuild> preferiti,
+        List<DefinizionePotenziamentoBuild> fallback,
+        PercorsoBuild? percorsoPreferito
+    )
+    {
+        DefinizionePotenziamentoBuild scelta =
+            EstraiDaPercorso(
+                preferiti,
+                risultato,
+                potenziamenti,
+                percorso,
+                monete,
+                true,
+                percorsoPreferito
+            );
+        if (scelta == null)
+        {
+            scelta = EstraiDaPercorso(
+                fallback,
+                risultato,
+                potenziamenti,
+                percorso,
+                monete,
+                true,
+                percorsoPreferito
+            );
+        }
+        if (scelta == null)
+        {
+            scelta = EstraiDaPercorso(
+                preferiti,
+                risultato,
+                potenziamenti,
+                percorso,
+                monete,
+                false,
+                percorsoPreferito
+            );
+        }
+        if (scelta == null)
+        {
+            scelta = EstraiDaPercorso(
+                fallback,
+                risultato,
+                potenziamenti,
+                percorso,
+                monete,
+                false,
+                percorsoPreferito
+            );
+        }
+
+        // Se il percorso non ha carte eleggibili, non lasciare uno slot vuoto.
+        if (scelta == null)
+        {
+            scelta = EstraiAccessibile(
+                preferiti,
+                risultato,
+                potenziamenti,
+                monete,
+                percorsoPreferito
+            );
+        }
+        if (scelta == null)
+        {
+            scelta = EstraiAccessibile(
+                fallback,
+                risultato,
+                potenziamenti,
+                monete,
+                percorsoPreferito
+            );
+        }
+        if (scelta == null)
+        {
+            scelta = EstraiPesataDaLista(
+                preferiti,
+                risultato,
+                potenziamenti,
+                percorsoPreferito
+            );
+        }
+        if (scelta == null)
+        {
+            scelta = EstraiPesataDaLista(
+                fallback,
+                risultato,
+                potenziamenti,
+                percorsoPreferito
             );
         }
         if (scelta != null) risultato.Add(scelta.Tipo);
@@ -364,7 +509,8 @@ public sealed class GeneratoreOfferteBuild
         int quantitaDesiderata,
         List<DefinizionePotenziamentoBuild> preferiti,
         List<DefinizionePotenziamentoBuild> fallback,
-        PlayerUpgrades potenziamenti
+        PlayerUpgrades potenziamenti,
+        PercorsoBuild? percorsoPreferito
     )
     {
         while (ContaModificatori(risultato) < quantitaDesiderata)
@@ -373,14 +519,16 @@ public sealed class GeneratoreOfferteBuild
                 EstraiModificatore(
                     preferiti,
                     risultato,
-                    potenziamenti
+                    potenziamenti,
+                    percorsoPreferito
                 );
             if (scelta == null)
             {
                 scelta = EstraiModificatore(
                     fallback,
                     risultato,
-                    potenziamenti
+                    potenziamenti,
+                    percorsoPreferito
                 );
             }
             if (scelta == null) return;
@@ -392,7 +540,8 @@ public sealed class GeneratoreOfferteBuild
         List<DefinizionePotenziamentoBuild> sorgente,
         List<TipoPotenziamento> giaScelte,
         PlayerUpgrades potenziamenti,
-        int monete
+        int monete,
+        PercorsoBuild? percorsoPreferito
     )
     {
         selezionabili.Clear();
@@ -406,14 +555,46 @@ public sealed class GeneratoreOfferteBuild
         return EstraiPesataDaLista(
             selezionabili,
             giaScelte,
-            potenziamenti
+            potenziamenti,
+            percorsoPreferito
+        );
+    }
+
+    private DefinizionePotenziamentoBuild EstraiDaPercorso(
+        List<DefinizionePotenziamentoBuild> sorgente,
+        List<TipoPotenziamento> giaScelte,
+        PlayerUpgrades potenziamenti,
+        PercorsoBuild percorso,
+        int monete,
+        bool soloAccessibili,
+        PercorsoBuild? percorsoPreferito
+    )
+    {
+        selezionabili.Clear();
+        for (int i = 0; i < sorgente.Count; i++)
+        {
+            DefinizionePotenziamentoBuild definizione = sorgente[i];
+            if (definizione.Percorso != percorso) continue;
+            if (soloAccessibili &&
+                potenziamenti.OttieniCosto(definizione.Tipo) > monete)
+            {
+                continue;
+            }
+            selezionabili.Add(definizione);
+        }
+        return EstraiPesataDaLista(
+            selezionabili,
+            giaScelte,
+            potenziamenti,
+            percorsoPreferito
         );
     }
 
     private DefinizionePotenziamentoBuild EstraiModificatore(
         List<DefinizionePotenziamentoBuild> sorgente,
         List<TipoPotenziamento> giaScelte,
-        PlayerUpgrades potenziamenti
+        PlayerUpgrades potenziamenti,
+        PercorsoBuild? percorsoPreferito
     )
     {
         selezionabili.Clear();
@@ -427,7 +608,8 @@ public sealed class GeneratoreOfferteBuild
         return EstraiPesataDaLista(
             selezionabili,
             giaScelte,
-            potenziamenti
+            potenziamenti,
+            percorsoPreferito
         );
     }
 
@@ -451,23 +633,34 @@ public sealed class GeneratoreOfferteBuild
 
     private DefinizionePotenziamentoBuild EstraiPesata(
         List<TipoPotenziamento> giaScelte,
-        PlayerUpgrades potenziamenti
+        PlayerUpgrades potenziamenti,
+        PercorsoBuild? percorsoPreferito
     )
     {
-        return EstraiPesataDaLista(candidati, giaScelte, potenziamenti);
+        return EstraiPesataDaLista(
+            candidati,
+            giaScelte,
+            potenziamenti,
+            percorsoPreferito
+        );
     }
 
     private DefinizionePotenziamentoBuild EstraiPesataDaLista(
         List<DefinizionePotenziamentoBuild> sorgente,
         List<TipoPotenziamento> giaScelte,
-        PlayerUpgrades potenziamenti
+        PlayerUpgrades potenziamenti,
+        PercorsoBuild? percorsoPreferito
     )
     {
         int pesoTotale = 0;
         for (int i = 0; i < sorgente.Count; i++)
         {
             if (giaScelte.Contains(sorgente[i].Tipo)) continue;
-            pesoTotale += CalcolaPeso(sorgente[i], potenziamenti);
+            pesoTotale += CalcolaPeso(
+                sorgente[i],
+                potenziamenti,
+                percorsoPreferito
+            );
         }
         if (pesoTotale <= 0) return null;
 
@@ -476,7 +669,11 @@ public sealed class GeneratoreOfferteBuild
         {
             DefinizionePotenziamentoBuild definizione = sorgente[i];
             if (giaScelte.Contains(definizione.Tipo)) continue;
-            estrazione -= CalcolaPeso(definizione, potenziamenti);
+            estrazione -= CalcolaPeso(
+                definizione,
+                potenziamenti,
+                percorsoPreferito
+            );
             if (estrazione < 0) return definizione;
         }
         return null;
@@ -484,7 +681,8 @@ public sealed class GeneratoreOfferteBuild
 
     private static int CalcolaPeso(
         DefinizionePotenziamentoBuild definizione,
-        PlayerUpgrades potenziamenti
+        PlayerUpgrades potenziamenti,
+        PercorsoBuild? percorsoPreferito
     )
     {
         int peso;
@@ -501,7 +699,12 @@ public sealed class GeneratoreOfferteBuild
                 break;
         }
 
-        if (potenziamenti != null &&
+        if (percorsoPreferito.HasValue &&
+            definizione.Percorso == percorsoPreferito.Value)
+        {
+            peso = Mathf.RoundToInt(peso * 1.7f);
+        }
+        else if (potenziamenti != null &&
             definizione.Percorso != PercorsoBuild.Utilita &&
             potenziamenti.OttieniPuntiPercorso(definizione.Percorso) > 0)
         {
