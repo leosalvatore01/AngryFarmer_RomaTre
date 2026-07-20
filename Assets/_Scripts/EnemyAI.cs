@@ -1,15 +1,41 @@
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class EnemyAI : MonoBehaviour, IDanneggiabile
 {
+    private const float IntervalloControlloProiettili = 0.04f;
+    private const float DurataMiraFango = 0.68f;
+    private const float DurataPreparazioneScavo = 0.72f;
+
     private enum StatoAttaccoAlfa
     {
         Inseguimento,
         Preparazione,
         Scatto,
         Recupero
+    }
+
+    private enum StatoUlulatrice
+    {
+        Inseguimento,
+        Canalizzazione,
+        Recupero
+    }
+
+    private enum StatoSputafango
+    {
+        Movimento,
+        Mira
+    }
+
+    private enum StatoScavatrice
+    {
+        Inseguimento,
+        Preparazione,
+        Sotterranea,
+        Emersione
     }
 
     public float speed = 2.4f;
@@ -79,11 +105,29 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     private float tempoRallentamentoTerreno;
     private float moltiplicatoreRallentamentoTerreno = 1f;
 
-    private Gallina gallinaBersaglio;
-    private bool trasportaGallina;
-    private bool fugaLadraCompletata;
-    private float prossimoControlloGallina;
-    private Vector2 direzioneFugaLadra;
+    private float prossimoControlloProiettili;
+    private float prossimaSchivata;
+    private float timerSchivata;
+    private Vector2 direzioneSchivata;
+
+    private StatoUlulatrice statoUlulatrice;
+    private float timerUlulatrice;
+    private float prossimoUlulato;
+    private float buffUlulatoFino;
+    private float moltiplicatoreVelocitaUlulato = 1f;
+    private float moltiplicatoreCadenzaUlulato = 1f;
+
+    private StatoSputafango statoSputafango;
+    private float timerSputafango;
+    private float prossimoSputoFango;
+    private Vector2 bersaglioSputoFango;
+
+    private StatoScavatrice statoScavatrice;
+    private float timerScavatrice;
+    private float prossimoScavo;
+    private float prossimaTracciaScavo;
+    private Vector2 partenzaScavo;
+    private Vector2 destinazioneScavo;
 
     private StatoAttaccoAlfa statoAlfa;
     private float timerStatoAlfa;
@@ -101,8 +145,15 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     private SpriteRenderer rendererRiempimentoBarra;
 
     private static Sprite spriteBarra;
-    private static Sprite[] cacheFrameCorsa;
-    private static Sprite[] cacheFrameMorte;
+    private static readonly Dictionary<TipoVolpe, Sprite[]> cacheFrameCorsa =
+        new Dictionary<TipoVolpe, Sprite[]>();
+    private static readonly Dictionary<TipoVolpe, Sprite[]> cacheFrameMorte =
+        new Dictionary<TipoVolpe, Sprite[]>();
+    private static readonly HashSet<EnemyAI> volpiAttive =
+        new HashSet<EnemyAI>();
+    private static readonly Collider2D[] bufferProiettili = new Collider2D[32];
+    private static readonly ContactFilter2D filtroProiettili =
+        ContactFilter2D.noFilter;
 
     public GameObject dentePrefab;
     public GameObject codaPrefab;
@@ -117,16 +168,17 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     public bool IsDead => morto;
     public TipoVolpe Tipo => tipo;
     public string NomeTipo => FoxVariantStyle.Nome(tipo);
-    public bool TrasportaGallina => trasportaGallina;
-    public Gallina GallinaBersaglio => gallinaBersaglio;
-    public Transform BersaglioCorrente =>
-        tipo == TipoVolpe.Ladra && gallinaBersaglio != null && !trasportaGallina
-            ? gallinaBersaglio.transform
-            : target;
+    public Transform BersaglioCorrente => target;
     public bool StaPreparandoAttaccoAlfa =>
         statoAlfa == StatoAttaccoAlfa.Preparazione;
     public bool StaScattandoAlfa =>
         statoAlfa == StatoAttaccoAlfa.Scatto;
+    public bool StaSchivando => timerSchivata > 0f;
+    public bool StaCanalizzandoUlulato =>
+        statoUlulatrice == StatoUlulatrice.Canalizzazione;
+    public bool StaMirandoFango => statoSputafango == StatoSputafango.Mira;
+    public bool StaScavando => statoScavatrice == StatoScavatrice.Sotterranea;
+    public bool BuffUlulatoAttivo => Time.time < buffUlulatoFino;
     public bool RallentataDaBuild => tempoRallentamentoBuild > 0f;
     public float MoltiplicatoreRallentamentoBuild =>
         RallentataDaBuild ? moltiplicatoreRallentamentoBuild : 1f;
@@ -137,6 +189,76 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     public FoxVariantPresentation PresentazioneVariante =>
         presentazioneVariante;
     public event System.Action<EnemyAI> NonPiuMinaccia;
+
+    private float DistanzaAttivazioneSchivata => varianti != null
+        ? varianti.distanzaAttivazioneSchivata
+        : 2.1f;
+    private float DurataSchivataCorrente => varianti != null
+        ? varianti.durataSchivata
+        : 0.24f;
+    private float RecuperoSchivataCorrente => varianti != null
+        ? varianti.recuperoSchivata
+        : 1.65f;
+    private float MoltiplicatoreVelocitaSchivata => varianti != null
+        ? varianti.moltiplicatoreVelocitaSchivata
+        : 2.8f;
+    private float RaggioUlulatoCorrente => varianti != null
+        ? varianti.raggioUlulato
+        : 4.6f;
+    private float RecuperoUlulatoCorrente => varianti != null
+        ? varianti.recuperoUlulato
+        : 6.5f;
+    private float DurataCanalizzazioneUlulatoCorrente => varianti != null
+        ? varianti.durataPreparazioneUlulato
+        : 0.85f;
+    private float DurataBuffUlulatoCorrente => varianti != null
+        ? varianti.durataRallentamentoUlulato
+        : 2.5f;
+    private float MoltiplicatoreVelocitaBuffUlulato => varianti != null
+        ? 2f - varianti.moltiplicatoreRallentamentoUlulato
+        : 1.28f;
+    private float MoltiplicatoreCadenzaBuffUlulato => varianti != null
+        ? 1f + (1f - varianti.moltiplicatoreRallentamentoUlulato) * 0.6f
+        : 1.17f;
+    private float DistanzaTiroFangoCorrente => varianti != null
+        ? varianti.distanzaTiroFango
+        : 5.5f;
+    private float RecuperoSputoFangoCorrente => varianti != null
+        ? varianti.recuperoTiroFango
+        : 3.4f;
+    private float VelocitaProiettileFangoCorrente => varianti != null
+        ? varianti.velocitaProiettileFango
+        : 6.2f;
+    private int DannoFangoCorrente => varianti != null
+        ? varianti.dannoFango
+        : 1;
+    private float DurataFangoCorrente => varianti != null
+        ? varianti.durataPozzaFango
+        : 4.5f;
+    private float MoltiplicatoreRallentamentoFangoCorrente => varianti != null
+        ? varianti.moltiplicatoreRallentamentoFango
+        : 0.58f;
+    private float DistanzaInizioScavoCorrente => varianti != null
+        ? varianti.distanzaInizioScavo
+        : 5f;
+    private float DurataScavoCorrente => varianti != null
+        ? varianti.durataScavo
+        : 0.8f;
+    private float DurataEmersioneCorrente => varianti != null
+        ? varianti.durataEmersione
+        : 0.35f;
+    private float RecuperoScavoCorrente => varianti != null
+        ? varianti.recuperoScavo
+        : 5.2f;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void AzzeraStatoRuntime()
+    {
+        volpiAttive.Clear();
+        cacheFrameCorsa.Clear();
+        cacheFrameMorte.Clear();
+        spriteBarra = null;
+    }
 
     void Awake()
     {
@@ -158,28 +280,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         feedbackImpatto = gameObject.AddComponent<CombatHitFeedback2D>();
         feedbackImpatto.Configura(grafica, spriteRendererVisibile);
 
-        if (cacheFrameCorsa == null)
-        {
-            cacheFrameCorsa = Resources.LoadAll<Sprite>("FoxRun");
-            System.Array.Sort(cacheFrameCorsa, (a, b) =>
-                string.CompareOrdinal(a.name, b.name)
-            );
-        }
-        frameCorsa = cacheFrameCorsa;
-        if (spriteRendererVisibile != null && frameCorsa.Length > 0)
-        {
-            spriteIdle = frameCorsa[0];
-            spriteRendererVisibile.sprite = spriteIdle;
-        }
-
-        if (cacheFrameMorte == null)
-        {
-            cacheFrameMorte = Resources.LoadAll<Sprite>("FoxDeath");
-            System.Array.Sort(cacheFrameMorte, (a, b) =>
-                string.CompareOrdinal(a.name, b.name)
-            );
-        }
-        frameMorte = cacheFrameMorte;
+        CaricaGraficaVariante(TipoVolpe.Comune);
 
         ombraRenderer = OmbraDinamica2D.Crea(
             transform,
@@ -193,6 +294,11 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
 
         CreaBarraVita();
         AggiornaBarraVita();
+    }
+
+    void OnEnable()
+    {
+        volpiAttive.Add(this);
     }
 
     void ApplicaBilanciamento()
@@ -289,6 +395,24 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
             return;
         }
 
+        if (tipo == TipoVolpe.Scavatrice &&
+            statoScavatrice == StatoScavatrice.Sotterranea)
+        {
+            float progresso = 1f - timerScavatrice / DurataScavoCorrente;
+            progresso = Mathf.Clamp01(progresso);
+            progresso = progresso * progresso * (3f - 2f * progresso);
+            corpo.MovePosition(Vector2.Lerp(
+                partenzaScavo,
+                destinazioneScavo,
+                progresso
+            ));
+            corpo.linearVelocity = Vector2.zero;
+            velocitaAttuale = Vector2.zero;
+            velocitaDesiderata = Vector2.zero;
+            velocitaSpinta = Vector2.zero;
+            return;
+        }
+
         float rapiditaCambio = velocitaDesiderata.sqrMagnitude > 0.001f
             ? accelerazione
             : decelerazione;
@@ -331,17 +455,32 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
             return;
         }
 
-        // Nel survival ogni variante, inclusa la Ladra, caccia il contadino.
         if (!ProvaAcquisireGiocatore())
         {
-            InterrompiAttaccoAlfa();
+            InterrompiAbilitaSpeciali();
             staInseguendo = false;
             return;
         }
-        if (tipo == TipoVolpe.Alfa)
+
+        if (tipo == TipoVolpe.Schivatrice && GestisciSchivatrice())
         {
-            GestisciAlfa();
             return;
+        }
+
+        switch (tipo)
+        {
+            case TipoVolpe.Alfa:
+                GestisciAlfa();
+                return;
+            case TipoVolpe.Ululatrice:
+                GestisciUlulatrice();
+                return;
+            case TipoVolpe.Sputafango:
+                GestisciSputafango();
+                return;
+            case TipoVolpe.Scavatrice:
+                GestisciScavatrice();
+                return;
         }
 
         GestisciInseguimentoGiocatore(tipo == TipoVolpe.Agile);
@@ -374,139 +513,535 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
                  Time.time >= prossimoAttacco)
         {
             playerHealth.SubisciDanno(danno);
-            prossimoAttacco = Time.time + intervalloAttacco;
+            prossimoAttacco = Time.time + IntervalloAttaccoEffettivo(
+                intervalloAttacco
+            );
         }
     }
 
-    bool GestisciLadra()
+    bool GestisciSchivatrice()
     {
-        if (trasportaGallina)
+        if (timerSchivata > 0f)
         {
-            float velocitaFuga = speed * varianti.moltiplicatoreFugaLadra;
-            ImpostaMovimentoDirezione(direzioneFugaLadra, velocitaFuga);
-            if (((Vector2)transform.position).magnitude >=
-                varianti.distanzaFugaLadra)
-            {
-                CompletaFugaLadra();
-            }
+            timerSchivata = Mathf.Max(0f, timerSchivata - Time.deltaTime);
+            staInseguendo = true;
+            ImpostaMovimentoDirezione(
+                direzioneSchivata,
+                speed * MoltiplicatoreVelocitaSchivata
+            );
             return true;
         }
 
-        if (gallinaBersaglio != null &&
-            !gallinaBersaglio.PrenotataDa(this))
+        if (Time.time < prossimaSchivata ||
+            Time.time < prossimoControlloProiettili)
         {
-            gallinaBersaglio = null;
+            return false;
         }
 
-        if (gallinaBersaglio == null && Time.time >= prossimoControlloGallina)
+        prossimoControlloProiettili =
+            Time.time + IntervalloControlloProiettili;
+        Vector2 velocitaProiettile;
+        if (!TrovaProiettileInArrivo(out velocitaProiettile)) return false;
+
+        Vector2 laterale = new Vector2(
+            -velocitaProiettile.y,
+            velocitaProiettile.x
+        ).normalized;
+        if (laterale.sqrMagnitude < 0.001f) laterale = Vector2.up;
+
+        Vector2 posizione = corpo != null
+            ? corpo.position
+            : (Vector2)transform.position;
+        Vector2 riferimento = target != null
+            ? (Vector2)target.position
+            : Vector2.zero;
+        float distanzaPositiva = (posizione + laterale - riferimento).sqrMagnitude;
+        float distanzaNegativa = (posizione - laterale - riferimento).sqrMagnitude;
+        if (Mathf.Abs(distanzaPositiva - distanzaNegativa) < 0.001f)
         {
-            prossimoControlloGallina =
-                Time.time + varianti.intervalloRicercaGallina;
-            gallinaBersaglio = TrovaGallinaDaRubare();
+            if ((indiceSpawn & 1) != 0) laterale = -laterale;
+        }
+        else if (distanzaNegativa > distanzaPositiva)
+        {
+            laterale = -laterale;
         }
 
-        if (gallinaBersaglio == null) return false;
-
-        float distanza = Vector2.Distance(
-            transform.position,
-            gallinaBersaglio.transform.position
+        direzioneSchivata = laterale;
+        timerSchivata = DurataSchivataCorrente;
+        prossimaSchivata = Time.time + RecuperoSchivataCorrente;
+        velocitaSpinta = laterale * Mathf.Clamp(
+            speed * MoltiplicatoreVelocitaSchivata,
+            4.2f,
+            7.5f
         );
-        if (distanza <= varianti.distanzaPrelievoGallina)
+        if (presentazioneVariante != null)
         {
-            if (gallinaBersaglio.ProvaPrelevare(this))
-            {
-                trasportaGallina = true;
-                staInseguendo = true;
-                direzioneFugaLadra = CalcolaDirezioneFuga();
-                FarmObjectivesController.Instance?.NotificaUovoRubato();
-                if (presentazioneVariante != null)
-                {
-                    presentazioneVariante.ImpostaTrasportoGallina(true);
-                    presentazioneVariante.RiproduciPredazione();
-                }
-            }
-            else
-            {
-                gallinaBersaglio = null;
-            }
-            return true;
+            presentazioneVariante.RiproduciAbilita();
         }
-
-        staInseguendo = true;
-        ImpostaMovimentoVerso(
-            gallinaBersaglio.transform.position,
-            speed,
-            false
+        FoxAbilityVfx.CreaAnello(
+            posizione,
+            new Color32(88, 228, 220, 230),
+            0.18f,
+            0.72f,
+            DurataSchivataCorrente,
+            transform
+        );
+        ImpostaMovimentoDirezione(
+            direzioneSchivata,
+            speed * MoltiplicatoreVelocitaSchivata
         );
         return true;
     }
 
-    Gallina TrovaGallinaDaRubare()
+    bool TrovaProiettileInArrivo(out Vector2 velocitaScelta)
     {
-        Gallina migliore = null;
-        float distanzaMigliore = float.PositiveInfinity;
-        foreach (Gallina gallina in Gallina.Attive)
+        velocitaScelta = Vector2.zero;
+        Vector2 posizione = corpo != null
+            ? corpo.position
+            : (Vector2)transform.position;
+        int quantita = Physics2D.OverlapCircle(
+            posizione,
+            DistanzaAttivazioneSchivata,
+            filtroProiettili,
+            bufferProiettili
+        );
+        float tempoMigliore = float.PositiveInfinity;
+
+        for (int i = 0; i < quantita; i++)
         {
-            if (gallina == null || !gallina.Disponibile) continue;
-            float distanza = ((Vector2)gallina.transform.position -
-                              (Vector2)transform.position).sqrMagnitude;
-            if (distanza >= distanzaMigliore) continue;
-            migliore = gallina;
-            distanzaMigliore = distanza;
+            Collider2D collider = bufferProiettili[i];
+            bufferProiettili[i] = null;
+            if (collider == null) continue;
+            Proiettile proiettile = collider.GetComponentInParent<Proiettile>();
+            if (proiettile == null || proiettile.Consumato) continue;
+            Rigidbody2D corpoProiettile = proiettile.GetComponent<Rigidbody2D>();
+            if (corpoProiettile == null) continue;
+
+            Vector2 velocita = corpoProiettile.linearVelocity;
+            float velocitaQuadrata = velocita.sqrMagnitude;
+            if (velocitaQuadrata < 0.25f) continue;
+            Vector2 versoVolpe = posizione - corpoProiettile.position;
+            float tempoImpatto = Vector2.Dot(versoVolpe, velocita) /
+                                  velocitaQuadrata;
+            if (tempoImpatto < 0f || tempoImpatto > 0.38f) continue;
+
+            Vector2 distanzaMinima = versoVolpe - velocita * tempoImpatto;
+            float raggioSicurezza = 0.64f * Mathf.Max(
+                transform.lossyScale.x,
+                transform.lossyScale.y
+            );
+            if (distanzaMinima.sqrMagnitude >
+                raggioSicurezza * raggioSicurezza)
+            {
+                continue;
+            }
+            if (tempoImpatto >= tempoMigliore) continue;
+            tempoMigliore = tempoImpatto;
+            velocitaScelta = velocita;
         }
-        return migliore != null && migliore.ProvaPrenotare(this)
-            ? migliore
-            : null;
+        return tempoMigliore < float.PositiveInfinity;
     }
 
-    Vector2 CalcolaDirezioneFuga()
+    void GestisciUlulatrice()
     {
-        Vector2 direzione = transform.position;
-        if (direzione.sqrMagnitude > 0.25f) return direzione.normalized;
+        if (target == null || playerHealth == null) return;
 
-        float angolo = Mathf.Repeat(
-            indiceSpawn * 137.5f + 31f,
-            360f
-        ) * Mathf.Deg2Rad;
-        return new Vector2(Mathf.Cos(angolo), Mathf.Sin(angolo));
-    }
-
-    void CompletaFugaLadra()
-    {
-        if (morto || fugaLadraCompletata) return;
-        Gallina gallinaRubata = gallinaBersaglio;
-        if (gallinaRubata == null ||
-            !gallinaRubata.ConfermaPerdita(this))
+        if (statoUlulatrice == StatoUlulatrice.Canalizzazione)
         {
-            if (gallinaRubata != null) gallinaRubata.Rilascia(this);
-            NotificaGallinaNonDisponibile(gallinaRubata);
-            prossimoControlloGallina =
-                Time.time + varianti.intervalloRicercaGallina;
+            timerUlulatrice -= Time.deltaTime;
+            staInseguendo = false;
+            velocitaDesiderata = Vector2.zero;
+            if (grafica != null)
+            {
+                float impulso = 1f + 0.08f * Mathf.Sin(Time.time * 20f);
+                grafica.localScale = Vector3.one * impulso;
+            }
+            if (presentazioneVariante != null)
+            {
+                float progresso = 1f - timerUlulatrice /
+                    DurataCanalizzazioneUlulatoCorrente;
+                presentazioneVariante.ImpostaTelegraphAbilita(
+                    true,
+                    progresso
+                );
+            }
+            if (timerUlulatrice <= 0f)
+            {
+                EmettiUlulato();
+                statoUlulatrice = StatoUlulatrice.Recupero;
+                timerUlulatrice = 0.38f;
+                if (grafica != null) grafica.localScale = Vector3.one;
+                if (presentazioneVariante != null)
+                {
+                    presentazioneVariante.ImpostaTelegraphAbilita(false, 0f);
+                    presentazioneVariante.RiproduciAbilita();
+                }
+            }
             return;
         }
 
-        fugaLadraCompletata = true;
-        trasportaGallina = false;
-        gallinaBersaglio = null;
-        FarmObjectivesController.Instance?.NotificaUovoPerso();
-        morto = true;
-        SegnalaNeutralizzazione();
-        Destroy(gameObject);
+        if (statoUlulatrice == StatoUlulatrice.Recupero)
+        {
+            timerUlulatrice -= Time.deltaTime;
+            staInseguendo = false;
+            velocitaDesiderata = Vector2.zero;
+            if (timerUlulatrice <= 0f)
+            {
+                statoUlulatrice = StatoUlulatrice.Inseguimento;
+            }
+            return;
+        }
+
+        if (Time.time >= prossimoUlulato && ContaCompagneNelRaggio() >= 2)
+        {
+            statoUlulatrice = StatoUlulatrice.Canalizzazione;
+            timerUlulatrice = DurataCanalizzazioneUlulatoCorrente;
+            prossimoUlulato = Time.time + RecuperoUlulatoCorrente;
+            velocitaAttuale = Vector2.zero;
+            velocitaDesiderata = Vector2.zero;
+            if (presentazioneVariante != null)
+            {
+                presentazioneVariante.ImpostaTelegraphAbilita(true, 0f);
+            }
+            FoxAbilityVfx.CreaAnello(
+                transform.position,
+                new Color32(192, 112, 255, 235),
+                0.35f,
+                RaggioUlulatoCorrente,
+                DurataCanalizzazioneUlulatoCorrente,
+                transform
+            );
+            return;
+        }
+
+        GestisciInseguimentoGiocatore(false);
     }
 
-    public void NotificaGallinaNonDisponibile(Gallina gallina)
+    int ContaCompagneNelRaggio()
     {
-        if (gallina != null && gallinaBersaglio != gallina) return;
+        int quantita = 0;
+        float raggioQuadrato = RaggioUlulatoCorrente * RaggioUlulatoCorrente;
+        Vector2 centro = transform.position;
+        foreach (EnemyAI volpe in volpiAttive)
+        {
+            if (volpe == null || volpe.morto || !volpe.isActiveAndEnabled)
+            {
+                continue;
+            }
+            if (((Vector2)volpe.transform.position - centro).sqrMagnitude <=
+                raggioQuadrato)
+            {
+                quantita++;
+            }
+        }
+        return quantita;
+    }
 
-        gallinaBersaglio = null;
-        trasportaGallina = false;
-        staInseguendo = false;
+    void EmettiUlulato()
+    {
+        float raggioQuadrato = RaggioUlulatoCorrente * RaggioUlulatoCorrente;
+        Vector2 centro = transform.position;
+        foreach (EnemyAI volpe in volpiAttive)
+        {
+            if (volpe == null || volpe.morto || !volpe.isActiveAndEnabled)
+            {
+                continue;
+            }
+            if (((Vector2)volpe.transform.position - centro).sqrMagnitude >
+                raggioQuadrato)
+            {
+                continue;
+            }
+            volpe.ApplicaBuffUlulato(
+                DurataBuffUlulatoCorrente,
+                MoltiplicatoreVelocitaBuffUlulato,
+                MoltiplicatoreCadenzaBuffUlulato
+            );
+        }
+        FoxAbilityVfx.CreaAnello(
+            centro,
+            new Color32(233, 180, 255, 245),
+            0.45f,
+            RaggioUlulatoCorrente,
+            0.42f,
+            null
+        );
+    }
+
+    public void ApplicaBuffUlulato(
+        float durata,
+        float moltiplicatoreVelocita,
+        float moltiplicatoreCadenza
+    )
+    {
+        if (morto || durata <= 0f) return;
+        buffUlulatoFino = Mathf.Max(buffUlulatoFino, Time.time + durata);
+        moltiplicatoreVelocitaUlulato = Mathf.Max(
+            moltiplicatoreVelocitaUlulato,
+            Mathf.Clamp(moltiplicatoreVelocita, 1f, 1.6f)
+        );
+        moltiplicatoreCadenzaUlulato = Mathf.Max(
+            moltiplicatoreCadenzaUlulato,
+            Mathf.Clamp(moltiplicatoreCadenza, 1f, 1.7f)
+        );
+        FoxAbilityVfx.CreaAnello(
+            transform.position,
+            new Color32(203, 130, 255, 190),
+            0.2f,
+            0.75f,
+            0.34f,
+            transform
+        );
+    }
+
+    void GestisciSputafango()
+    {
+        if (target == null || playerHealth == null) return;
+
+        if (statoSputafango == StatoSputafango.Mira)
+        {
+            timerSputafango -= Time.deltaTime;
+            staInseguendo = false;
+            velocitaDesiderata = Vector2.zero;
+            if (presentazioneVariante != null)
+            {
+                float progresso = 1f - timerSputafango / DurataMiraFango;
+                presentazioneVariante.ImpostaTelegraphAbilita(
+                    true,
+                    progresso
+                );
+            }
+            if (timerSputafango <= 0f)
+            {
+                SputaFango();
+                statoSputafango = StatoSputafango.Movimento;
+                if (presentazioneVariante != null)
+                {
+                    presentazioneVariante.ImpostaTelegraphAbilita(false, 0f);
+                    presentazioneVariante.RiproduciAbilita();
+                }
+                prossimoSputoFango = Time.time +
+                    IntervalloAttaccoEffettivo(RecuperoSputoFangoCorrente);
+            }
+            return;
+        }
+
+        Vector2 posizione = corpo != null
+            ? corpo.position
+            : (Vector2)transform.position;
+        Vector2 versoGiocatore = (Vector2)target.position - posizione;
+        float distanza = versoGiocatore.magnitude;
+        Vector2 direzione = distanza > 0.001f
+            ? versoGiocatore / distanza
+            : Vector2.right;
+
+        if (Time.time >= prossimoSputoFango &&
+            distanza >= 2.1f &&
+            distanza <= DistanzaTiroFangoCorrente + 0.9f)
+        {
+            statoSputafango = StatoSputafango.Mira;
+            timerSputafango = DurataMiraFango;
+            bersaglioSputoFango = target.position;
+            velocitaAttuale = Vector2.zero;
+            velocitaDesiderata = Vector2.zero;
+            if (presentazioneVariante != null)
+            {
+                presentazioneVariante.ImpostaTelegraphAbilita(true, 0f);
+            }
+            FoxAbilityVfx.CreaLinea(
+                transform,
+                bersaglioSputoFango,
+                new Color32(144, 94, 48, 230),
+                DurataMiraFango
+            );
+            return;
+        }
+
+        staInseguendo = true;
+        if (distanza > 5.15f)
+        {
+            ImpostaMovimentoDirezione(direzione, speed);
+        }
+        else if (distanza < 3.25f)
+        {
+            ImpostaMovimentoDirezione(-direzione, speed * 1.12f);
+        }
+        else
+        {
+            Vector2 tangente = new Vector2(-direzione.y, direzione.x);
+            if ((indiceSpawn & 1) != 0) tangente = -tangente;
+            float correzione = Mathf.Clamp((distanza - 4.15f) * 0.32f, -0.3f, 0.3f);
+            ImpostaMovimentoDirezione(
+                (tangente + direzione * correzione).normalized,
+                speed * 0.78f
+            );
+        }
+    }
+
+    void SputaFango()
+    {
+        Vector2 origine = transform.position;
+        Vector2 direzione = bersaglioSputoFango - origine;
+        if (direzione.sqrMagnitude < 0.001f) direzione = Vector2.right;
+        direzione.Normalize();
+        FoxMudProjectile.Crea(
+            origine + direzione * 0.46f,
+            direzione,
+            VelocitaProiettileFangoCorrente,
+            DannoFangoCorrente,
+            MoltiplicatoreRallentamentoFangoCorrente,
+            Mathf.Min(2.2f, DurataFangoCorrente)
+        );
+    }
+
+    void GestisciScavatrice()
+    {
+        if (target == null || playerHealth == null) return;
+
+        switch (statoScavatrice)
+        {
+            case StatoScavatrice.Preparazione:
+                timerScavatrice -= Time.deltaTime;
+                staInseguendo = false;
+                velocitaDesiderata = Vector2.zero;
+                if (grafica != null)
+                {
+                    float impulso = 1f + 0.06f * Mathf.Sin(Time.time * 24f);
+                    grafica.localScale = new Vector3(impulso, 1f / impulso, 1f);
+                }
+                if (presentazioneVariante != null)
+                {
+                    float progresso = 1f - timerScavatrice /
+                        DurataPreparazioneScavo;
+                    presentazioneVariante.ImpostaTelegraphAbilita(
+                        true,
+                        progresso
+                    );
+                }
+                if (timerScavatrice <= 0f) EntraSottoterra();
+                return;
+
+            case StatoScavatrice.Sotterranea:
+                timerScavatrice -= Time.deltaTime;
+                staInseguendo = false;
+                velocitaDesiderata = Vector2.zero;
+                if (Time.time >= prossimaTracciaScavo)
+                {
+                    prossimaTracciaScavo = Time.time + 0.11f;
+                    FoxAbilityVfx.CreaTracciaScavo(transform.position);
+                }
+                if (timerScavatrice <= 0f) EmergeDalTerreno();
+                return;
+
+            case StatoScavatrice.Emersione:
+                timerScavatrice -= Time.deltaTime;
+                staInseguendo = false;
+                velocitaDesiderata = Vector2.zero;
+                if (timerScavatrice <= 0f)
+                {
+                    statoScavatrice = StatoScavatrice.Inseguimento;
+                    prossimoScavo = Time.time + RecuperoScavoCorrente;
+                }
+                return;
+        }
+
+        float distanza = Vector2.Distance(transform.position, target.position);
+        if (Time.time >= prossimoScavo &&
+            distanza >= DistanzaInizioScavoCorrente)
+        {
+            PreparaScavo();
+            return;
+        }
+        GestisciInseguimentoGiocatore(false);
+    }
+
+    void PreparaScavo()
+    {
+        Vector2 posizione = corpo != null
+            ? corpo.position
+            : (Vector2)transform.position;
+        Vector2 centro = target != null
+            ? (Vector2)target.position
+            : Vector2.zero;
+        Vector2 esterna = posizione - centro;
+        if (esterna.sqrMagnitude < 0.01f)
+        {
+            float angolo = Mathf.Repeat(indiceSpawn * 137.5f, 360f) *
+                            Mathf.Deg2Rad;
+            esterna = new Vector2(Mathf.Cos(angolo), Mathf.Sin(angolo));
+        }
+        esterna.Normalize();
+        Vector2 laterale = new Vector2(-esterna.y, esterna.x) *
+                           ((indiceSpawn & 1) == 0 ? 0.42f : -0.42f);
+        partenzaScavo = posizione;
+        destinazioneScavo = centro + esterna * 1.72f + laterale;
+        statoScavatrice = StatoScavatrice.Preparazione;
+        timerScavatrice = DurataPreparazioneScavo;
         velocitaAttuale = Vector2.zero;
         velocitaDesiderata = Vector2.zero;
         if (presentazioneVariante != null)
         {
-            presentazioneVariante.ImpostaTrasportoGallina(false);
+            presentazioneVariante.ImpostaTelegraphAbilita(true, 0f);
         }
+        FoxAbilityVfx.CreaAnello(
+            posizione,
+            new Color32(174, 112, 50, 235),
+            0.2f,
+            1.05f,
+            DurataPreparazioneScavo,
+            transform
+        );
+    }
+
+    void EntraSottoterra()
+    {
+        statoScavatrice = StatoScavatrice.Sotterranea;
+        timerScavatrice = DurataScavoCorrente;
+        prossimaTracciaScavo = 0f;
+        velocitaAttuale = Vector2.zero;
+        velocitaDesiderata = Vector2.zero;
+        velocitaSpinta = Vector2.zero;
+        if (presentazioneVariante != null)
+        {
+            presentazioneVariante.ImpostaTelegraphAbilita(false, 0f);
+            presentazioneVariante.RiproduciAbilita();
+        }
+        ImpostaScavatriceVisibile(false);
+        FoxAbilityVfx.CreaTracciaScavo(transform.position);
+    }
+
+    void EmergeDalTerreno()
+    {
+        if (corpo != null) corpo.position = destinazioneScavo;
+        transform.position = destinazioneScavo;
+        statoScavatrice = StatoScavatrice.Emersione;
+        timerScavatrice = DurataEmersioneCorrente;
+        ImpostaScavatriceVisibile(true);
+        if (grafica != null) grafica.localScale = Vector3.one;
+        FoxAbilityVfx.CreaAnello(
+            destinazioneScavo,
+            new Color32(214, 145, 67, 245),
+            0.18f,
+            1.2f,
+            DurataEmersioneCorrente,
+            null
+        );
+    }
+
+    void ImpostaScavatriceVisibile(bool visibile)
+    {
+        if (colliderFisico != null) colliderFisico.enabled = visibile;
+        if (spriteRendererVisibile != null) spriteRendererVisibile.enabled = visibile;
+        if (ombraRenderer != null) ombraRenderer.enabled = visibile;
+        if (barraVita != null) barraVita.gameObject.SetActive(visibile && !morto);
+    }
+
+    float IntervalloAttaccoEffettivo(float intervalloBase)
+    {
+        float cadenza = BuffUlulatoAttivo
+            ? moltiplicatoreCadenzaUlulato
+            : 1f;
+        return Mathf.Max(0.05f, intervalloBase / Mathf.Max(1f, cadenza));
     }
 
     private bool ProvaAcquisireGiocatore(bool forzaRicerca = false)
@@ -519,7 +1054,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
 
         // Un'Alfa non deve terminare una carica preparata contro un Player
         // precedente dopo che il bersaglio e stato rimpiazzato.
-        InterrompiAttaccoAlfa();
+        InterrompiAbilitaSpeciali();
         target = null;
         playerHealth = null;
         if (!forzaRicerca && Time.time < prossimaRicercaGiocatore)
@@ -545,7 +1080,28 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         velocitaDesiderata = Vector2.zero;
         velocitaSpinta = Vector2.zero;
         if (corpo != null) corpo.linearVelocity = Vector2.zero;
+        InterrompiAbilitaSpeciali();
+    }
+
+    private void InterrompiAbilitaSpeciali()
+    {
+        timerSchivata = 0f;
         InterrompiAttaccoAlfa();
+        statoUlulatrice = StatoUlulatrice.Inseguimento;
+        timerUlulatrice = 0f;
+        statoSputafango = StatoSputafango.Movimento;
+        timerSputafango = 0f;
+        if (statoScavatrice != StatoScavatrice.Inseguimento)
+        {
+            statoScavatrice = StatoScavatrice.Inseguimento;
+            timerScavatrice = 0f;
+            ImpostaScavatriceVisibile(true);
+        }
+        if (grafica != null) grafica.localScale = Vector3.one;
+        if (presentazioneVariante != null)
+        {
+            presentazioneVariante.ImpostaTelegraphAbilita(false, 0f);
+        }
     }
 
     private void InterrompiAttaccoAlfa()
@@ -603,17 +1159,16 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
                     distanza <= distanzaAttacco * 1.18f)
                 {
                     scattoAlfaHaColpito = true;
-                    if (playerHealth.ProvaSubireDanno(danno))
-                    {
-                        FarmObjectivesController.Instance?.
-                            NotificaAlfaHaColpito();
-                    }
+                    playerHealth.ProvaSubireDanno(danno);
                 }
                 if (timerStatoAlfa <= 0f)
                 {
                     statoAlfa = StatoAttaccoAlfa.Recupero;
                     timerStatoAlfa = 0.34f;
-                    prossimoAttacco = Time.time + varianti.recuperoScattoAlfa;
+                    prossimoAttacco = Time.time +
+                        IntervalloAttaccoEffettivo(
+                            varianti.recuperoScattoAlfa
+                        );
                 }
                 return;
 
@@ -701,7 +1256,11 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
                 moltiplicatoreRallentamentoTerreno
             );
         }
-        float velocitaCorrente = velocita * fattoreRallentamento;
+        float buffVelocita = BuffUlulatoAttivo
+            ? moltiplicatoreVelocitaUlulato
+            : 1f;
+        float velocitaCorrente =
+            velocita * fattoreRallentamento * buffVelocita;
         Vector2 direzioneNormalizzata = direzione.sqrMagnitude > 0.0001f
             ? direzione.normalized
             : Vector2.zero;
@@ -712,6 +1271,77 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         {
             spriteRendererVisibile.flipX = direzioneNormalizzata.x < 0f;
         }
+    }
+
+    void CaricaGraficaVariante(TipoVolpe tipoRichiesto)
+    {
+        TipoVolpe tipoValido = FoxVariantStyle.Normalizza(tipoRichiesto);
+        frameCorsa = OttieniFrameCorsa(tipoValido);
+        frameMorte = OttieniFrameMorte(tipoValido);
+        timerAnimazione = 0f;
+
+        if (frameCorsa != null && frameCorsa.Length > 0)
+        {
+            spriteIdle = frameCorsa[0];
+            if (spriteRendererVisibile != null)
+            {
+                spriteRendererVisibile.sprite = spriteIdle;
+            }
+        }
+        if (spriteRendererVisibile != null)
+        {
+            spriteRendererVisibile.color = Color.white;
+        }
+        coloreBase = Color.white;
+    }
+
+    static Sprite[] OttieniFrameCorsa(TipoVolpe tipo)
+    {
+        Sprite[] frame;
+        if (cacheFrameCorsa.TryGetValue(tipo, out frame)) return frame;
+
+        frame = CaricaFrame("Foxes/" + tipo + "/Run");
+        if ((frame == null || frame.Length == 0) && tipo != TipoVolpe.Comune)
+        {
+            frame = CaricaFrame("Foxes/" + TipoVolpe.Comune + "/Run");
+        }
+        if (frame == null || frame.Length == 0)
+        {
+            // Compatibilita con il set grafico storico durante la migrazione.
+            frame = CaricaFrame("FoxRun");
+        }
+        if (frame == null) frame = System.Array.Empty<Sprite>();
+        cacheFrameCorsa[tipo] = frame;
+        return frame;
+    }
+
+    static Sprite[] OttieniFrameMorte(TipoVolpe tipo)
+    {
+        Sprite[] frame;
+        if (cacheFrameMorte.TryGetValue(tipo, out frame)) return frame;
+
+        frame = CaricaFrame("Foxes/" + tipo + "/Death");
+        if ((frame == null || frame.Length == 0) && tipo == TipoVolpe.Comune)
+        {
+            frame = CaricaFrame("FoxDeath");
+        }
+        // Una variante senza Death dedicata mantiene la propria silhouette:
+        // AnimaMorte applica rotazione e dissolvenza al frame di corsa attuale.
+        if (frame == null) frame = System.Array.Empty<Sprite>();
+        cacheFrameMorte[tipo] = frame;
+        return frame;
+    }
+
+    static Sprite[] CaricaFrame(string percorso)
+    {
+        Sprite[] frame = Resources.LoadAll<Sprite>(percorso);
+        if (frame != null && frame.Length > 1)
+        {
+            System.Array.Sort(frame, (a, b) =>
+                string.CompareOrdinal(a.name, b.name)
+            );
+        }
+        return frame;
     }
 
     void AggiornaAnimazioneCorsa(bool staCamminando, float fattoreCadenza)
@@ -747,6 +1377,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         tipo = FoxVariantStyle.Normalizza(nuovoTipo);
         indiceSpawn = Mathf.Max(0, nuovoIndiceSpawn);
         faseSerpentina = indiceSpawn * 1.618034f;
+        CaricaGraficaVariante(tipo);
         varianti = GameBalanceConfig.Corrente.VariantiVolpe;
         profiloVariante = varianti.Ottieni(tipo);
 
@@ -807,11 +1438,29 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
             grafica,
             riproduciVerso
         );
-        coloreBase = spriteRendererVisibile != null
-            ? spriteRendererVisibile.color
-            : FoxVariantStyle.ColoreCorpo(tipo);
+        if (spriteRendererVisibile != null)
+        {
+            // I tipi hanno silhouette e palette proprie: nessuna tinta runtime
+            // deve alterare i pixel dedicati caricati da Resources/Foxes.
+            spriteRendererVisibile.color = Color.white;
+        }
+        coloreBase = Color.white;
 
         statoAlfa = StatoAttaccoAlfa.Inseguimento;
+        statoUlulatrice = StatoUlulatrice.Inseguimento;
+        statoSputafango = StatoSputafango.Movimento;
+        statoScavatrice = StatoScavatrice.Inseguimento;
+        timerSchivata = 0f;
+        prossimaSchivata = Time.time + 0.45f;
+        prossimoControlloProiettili = Time.time +
+            (indiceSpawn % 4) * 0.01f;
+        prossimoUlulato = Time.time + 2.6f + (indiceSpawn % 4) * 0.55f;
+        prossimoSputoFango = Time.time + 1.25f +
+            (indiceSpawn % 3) * 0.28f;
+        prossimoScavo = Time.time + 2.2f + (indiceSpawn % 4) * 0.42f;
+        buffUlulatoFino = 0f;
+        moltiplicatoreVelocitaUlulato = 1f;
+        moltiplicatoreCadenzaUlulato = 1f;
         prossimoAttacco = tipo == TipoVolpe.Alfa
             ? Time.time + 0.35f
             : Time.time;
@@ -1110,17 +1759,9 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     public void Die()
     {
         if (morto) return;
-        bool richiedeRecupero = false;
-        if (!richiedeRecupero)
-        {
-            RilasciaGallinaSeNecessario();
-        }
+        InterrompiAbilitaSpeciali();
         morto = true;
         SegnalaNeutralizzazione();
-        FarmObjectivesController.Instance?.NotificaVolpeEliminata(
-            tipo,
-            richiedeRecupero
-        );
 
         velocitaAttuale = Vector2.zero;
         velocitaDesiderata = Vector2.zero;
@@ -1169,6 +1810,9 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
 
     IEnumerator AnimaMorte()
     {
+        bool usaMorteAlternativa =
+            tipo != TipoVolpe.Comune &&
+            (frameMorte == null || frameMorte.Length == 0);
         bool ripristinaColoreDopoPrimoFrame =
             spriteRendererVisibile != null &&
             spriteRendererVisibile.color != coloreBase;
@@ -1231,6 +1875,20 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
                 colore.a = Mathf.Lerp(coloreOmbraIniziale.a, 0f, t);
                 ombraRenderer.color = colore;
             }
+            if (usaMorteAlternativa && grafica != null)
+            {
+                float verso = (indiceSpawn & 1) == 0 ? 1f : -1f;
+                grafica.localRotation = Quaternion.Euler(
+                    0f,
+                    0f,
+                    Mathf.Lerp(0f, 24f * verso, t)
+                );
+                grafica.localScale = new Vector3(
+                    Mathf.Lerp(1f, 0.82f, t),
+                    Mathf.Lerp(1f, 0.68f, t),
+                    1f
+                );
+            }
 
             yield return null;
         }
@@ -1240,7 +1898,8 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
 
     void OnDisable()
     {
-        RilasciaGallinaSeNecessario();
+        volpiAttive.Remove(this);
+        InterrompiAbilitaSpeciali();
         SegnalaNeutralizzazione();
         flashDannoRoutine = null;
         velocitaAttuale = Vector2.zero;
@@ -1255,54 +1914,6 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         {
             spriteRendererVisibile.color = coloreBase;
         }
-    }
-
-    private void RilasciaGallinaSeNecessario()
-    {
-        if (!fugaLadraCompletata && gallinaBersaglio != null)
-        {
-            gallinaBersaglio.Rilascia(this);
-        }
-        gallinaBersaglio = null;
-        trasportaGallina = false;
-        if (presentazioneVariante != null)
-        {
-            presentazioneVariante.ImpostaTrasportoGallina(false);
-            presentazioneVariante.ImpostaTelegraphAlfa(false, 0f);
-        }
-    }
-
-    private bool LasciaUovoRecuperabile()
-    {
-        if (!trasportaGallina || gallinaBersaglio == null)
-        {
-            return false;
-        }
-
-        Gallina gallinaRubata = gallinaBersaglio;
-        if (!gallinaRubata.PreparaRecupero(this))
-        {
-            return false;
-        }
-
-        UovoRecuperabile recupero = UovoRecuperabile.Crea(
-            gallinaRubata,
-            transform.position
-        );
-        if (recupero == null)
-        {
-            gallinaRubata.CompletaRecupero();
-            return false;
-        }
-
-        gallinaBersaglio = null;
-        trasportaGallina = false;
-        if (presentazioneVariante != null)
-        {
-            presentazioneVariante.ImpostaTrasportoGallina(false);
-        }
-        FarmObjectivesController.Instance?.NotificaUovoDaRecuperare();
-        return true;
     }
 
     private void SegnalaNeutralizzazione()

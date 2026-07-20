@@ -231,103 +231,211 @@ public sealed class WaveBalanceSettings
             },
             new Wave
             {
-                nomeOndata = "Primi intrusi",
+                nomeOndata = "Passi veloci",
                 numeroNemici = 4,
                 sequenzaVolpi = new[]
                 {
                     TipoVolpe.Comune,
                     TipoVolpe.Comune,
-                    TipoVolpe.Comune,
-                    TipoVolpe.Agile
+                    TipoVolpe.Agile,
+                    TipoVolpe.Comune
                 },
                 intervalloTraNemici = 0.7f,
                 dimensioneMassimaGruppo = 2,
-                intervalloTraGruppi = 3.25f,
-                numeroMaialiniBonus = 1,
-                vitaMaialinoBonus = 2,
-                moneteMaialinoBonus = 2
+                intervalloTraGruppi = 3f,
+                numeroMaialiniBonus = 0,
+                vitaMaialinoBonus = 1,
+                moneteMaialinoBonus = 0
             },
             new Wave
             {
-                nomeOndata = "Branco in arrivo",
+                nomeOndata = "Pelle dura",
                 numeroNemici = 5,
                 sequenzaVolpi = new[]
                 {
                     TipoVolpe.Comune,
                     TipoVolpe.Agile,
                     TipoVolpe.Comune,
-                    TipoVolpe.Agile,
-                    TipoVolpe.Robusta
+                    TipoVolpe.Robusta,
+                    TipoVolpe.Comune
                 },
-                intervalloTraNemici = 0.7f,
+                intervalloTraNemici = 0.68f,
                 dimensioneMassimaGruppo = 2,
-                intervalloTraGruppi = 2f,
-                numeroMaialiniBonus = 1,
-                vitaMaialinoBonus = 2,
-                moneteMaialinoBonus = 2
+                intervalloTraGruppi = 2.7f,
+                numeroMaialiniBonus = 0,
+                vitaMaialinoBonus = 1,
+                moneteMaialinoBonus = 0
             },
             new Wave
             {
-                nomeOndata = "Assalto alla fattoria",
+                nomeOndata = "Salti imprevedibili",
                 numeroNemici = 6,
                 sequenzaVolpi = new[]
                 {
                     TipoVolpe.Comune,
                     TipoVolpe.Agile,
-                    TipoVolpe.Robusta,
                     TipoVolpe.Comune,
                     TipoVolpe.Robusta,
-                    TipoVolpe.Ladra
+                    TipoVolpe.Schivatrice,
+                    TipoVolpe.Comune
                 },
-                intervalloTraNemici = 0.65f,
-                dimensioneMassimaGruppo = 3,
-                intervalloTraGruppi = 3.4f,
-                numeroMaialiniBonus = 1,
-                vitaMaialinoBonus = 3,
-                moneteMaialinoBonus = 3
+                intervalloTraNemici = 0.66f,
+                dimensioneMassimaGruppo = 2,
+                intervalloTraGruppi = 2.55f,
+                numeroMaialiniBonus = 0,
+                vitaMaialinoBonus = 1,
+                moneteMaialinoBonus = 0
             },
             new Wave
             {
-                nomeOndata = "Furia della campagna",
+                nomeOndata = "Carica alfa",
                 numeroNemici = 7,
                 sequenzaVolpi = new[]
                 {
-                    TipoVolpe.Agile,
-                    TipoVolpe.Robusta,
-                    TipoVolpe.Ladra,
+                    TipoVolpe.Comune,
                     TipoVolpe.Agile,
                     TipoVolpe.Robusta,
                     TipoVolpe.Comune,
+                    TipoVolpe.Schivatrice,
+                    TipoVolpe.Comune,
                     TipoVolpe.Alfa
                 },
-                intervalloTraNemici = 0.6f,
+                intervalloTraNemici = 0.64f,
                 dimensioneMassimaGruppo = 3,
-                intervalloTraGruppi = 2.1f,
-                numeroMaialiniBonus = 2,
-                vitaMaialinoBonus = 3,
-                moneteMaialinoBonus = 3
+                intervalloTraGruppi = 2.6f,
+                numeroMaialiniBonus = 0,
+                vitaMaialinoBonus = 1,
+                moneteMaialinoBonus = 0
             },
             new Wave
             {
-                nomeOndata = "Ultima difesa",
+                nomeOndata = "Richiamo del branco",
                 numeroNemici = 8,
                 sequenzaVolpi = new[]
                 {
                     TipoVolpe.Comune,
                     TipoVolpe.Agile,
                     TipoVolpe.Robusta,
-                    TipoVolpe.Agile,
-                    TipoVolpe.Ladra,
-                    TipoVolpe.Robusta,
-                    TipoVolpe.Ladra,
+                    TipoVolpe.Comune,
+                    TipoVolpe.Schivatrice,
+                    TipoVolpe.Ululatrice,
+                    TipoVolpe.Comune,
                     TipoVolpe.Alfa
                 },
-                intervalloTraNemici = 0.55f,
+                intervalloTraNemici = 0.62f,
                 dimensioneMassimaGruppo = 3,
-                intervalloTraGruppi = 2.3f,
-                numeroMaialiniBonus = 2,
-                vitaMaialinoBonus = 4,
-                moneteMaialinoBonus = 5
+                intervalloTraGruppi = 2.5f,
+                numeroMaialiniBonus = 0,
+                vitaMaialinoBonus = 1,
+                moneteMaialinoBonus = 0
+            },
+            new Wave
+            {
+                nomeOndata = "Branco misto",
+                numeroNemici = 10,
+                sequenzaVolpi = new[]
+                {
+                    TipoVolpe.Comune,
+                    TipoVolpe.Agile,
+                    TipoVolpe.Robusta,
+                    TipoVolpe.Comune,
+                    TipoVolpe.Schivatrice,
+                    TipoVolpe.Alfa,
+                    TipoVolpe.Comune,
+                    TipoVolpe.Agile,
+                    TipoVolpe.Ululatrice,
+                    TipoVolpe.Robusta
+                },
+                intervalloTraNemici = 0.6f,
+                dimensioneMassimaGruppo = 3,
+                intervalloTraGruppi = 2.35f,
+                numeroMaialiniBonus = 0,
+                vitaMaialinoBonus = 1,
+                moneteMaialinoBonus = 0
+            },
+            new Wave
+            {
+                nomeOndata = "Fango in arrivo",
+                numeroNemici = 12,
+                sequenzaVolpi = new[]
+                {
+                    TipoVolpe.Comune,
+                    TipoVolpe.Agile,
+                    TipoVolpe.Robusta,
+                    TipoVolpe.Comune,
+                    TipoVolpe.Schivatrice,
+                    TipoVolpe.Ululatrice,
+                    TipoVolpe.Comune,
+                    TipoVolpe.Agile,
+                    TipoVolpe.Alfa,
+                    TipoVolpe.Robusta,
+                    TipoVolpe.Comune,
+                    TipoVolpe.Sputafango
+                },
+                intervalloTraNemici = 0.58f,
+                dimensioneMassimaGruppo = 3,
+                intervalloTraGruppi = 2.25f,
+                numeroMaialiniBonus = 0,
+                vitaMaialinoBonus = 1,
+                moneteMaialinoBonus = 0
+            },
+            new Wave
+            {
+                nomeOndata = "Assedio del branco",
+                numeroNemici = 14,
+                sequenzaVolpi = new[]
+                {
+                    TipoVolpe.Comune,
+                    TipoVolpe.Agile,
+                    TipoVolpe.Robusta,
+                    TipoVolpe.Comune,
+                    TipoVolpe.Schivatrice,
+                    TipoVolpe.Sputafango,
+                    TipoVolpe.Comune,
+                    TipoVolpe.Agile,
+                    TipoVolpe.Alfa,
+                    TipoVolpe.Robusta,
+                    TipoVolpe.Comune,
+                    TipoVolpe.Schivatrice,
+                    TipoVolpe.Ululatrice,
+                    TipoVolpe.Agile
+                },
+                intervalloTraNemici = 0.56f,
+                dimensioneMassimaGruppo = 3,
+                intervalloTraGruppi = 2.15f,
+                numeroMaialiniBonus = 0,
+                vitaMaialinoBonus = 1,
+                moneteMaialinoBonus = 0
+            },
+            new Wave
+            {
+                nomeOndata = "Terra in movimento",
+                numeroNemici = 16,
+                sequenzaVolpi = new[]
+                {
+                    TipoVolpe.Comune,
+                    TipoVolpe.Agile,
+                    TipoVolpe.Robusta,
+                    TipoVolpe.Comune,
+                    TipoVolpe.Schivatrice,
+                    TipoVolpe.Ululatrice,
+                    TipoVolpe.Comune,
+                    TipoVolpe.Agile,
+                    TipoVolpe.Alfa,
+                    TipoVolpe.Robusta,
+                    TipoVolpe.Comune,
+                    TipoVolpe.Schivatrice,
+                    TipoVolpe.Sputafango,
+                    TipoVolpe.Agile,
+                    TipoVolpe.Comune,
+                    TipoVolpe.Scavatrice
+                },
+                intervalloTraNemici = 0.54f,
+                dimensioneMassimaGruppo = 3,
+                intervalloTraGruppi = 2.05f,
+                numeroMaialiniBonus = 0,
+                vitaMaialinoBonus = 1,
+                moneteMaialinoBonus = 0
             }
         };
     }
@@ -701,23 +809,26 @@ public sealed class GameBalanceConfig : ScriptableObject
         NormalizzaVariante(variantiVolpe.comune);
         NormalizzaVariante(variantiVolpe.agile);
         NormalizzaVariante(variantiVolpe.robusta);
-        NormalizzaVariante(variantiVolpe.ladra);
+        NormalizzaVariante(variantiVolpe.schivatrice);
         NormalizzaVariante(variantiVolpe.alfa);
-        variantiVolpe.intervalloRicercaGallina = Mathf.Max(
+        NormalizzaVariante(variantiVolpe.ululatrice);
+        NormalizzaVariante(variantiVolpe.sputafango);
+        NormalizzaVariante(variantiVolpe.scavatrice);
+        variantiVolpe.distanzaAttivazioneSchivata = Mathf.Max(
+            0.25f,
+            variantiVolpe.distanzaAttivazioneSchivata
+        );
+        variantiVolpe.durataSchivata = Mathf.Max(
             0.05f,
-            variantiVolpe.intervalloRicercaGallina
+            variantiVolpe.durataSchivata
         );
-        variantiVolpe.distanzaPrelievoGallina = Mathf.Max(
+        variantiVolpe.recuperoSchivata = Mathf.Max(
             0.1f,
-            variantiVolpe.distanzaPrelievoGallina
+            variantiVolpe.recuperoSchivata
         );
-        variantiVolpe.distanzaFugaLadra = Mathf.Max(
-            2f,
-            variantiVolpe.distanzaFugaLadra
-        );
-        variantiVolpe.moltiplicatoreFugaLadra = Mathf.Max(
+        variantiVolpe.moltiplicatoreVelocitaSchivata = Mathf.Max(
             1f,
-            variantiVolpe.moltiplicatoreFugaLadra
+            variantiVolpe.moltiplicatoreVelocitaSchivata
         );
         variantiVolpe.distanzaPreparazioneAlfa = Mathf.Max(
             0.5f,
@@ -738,6 +849,76 @@ public sealed class GameBalanceConfig : ScriptableObject
         variantiVolpe.recuperoScattoAlfa = Mathf.Max(
             0.1f,
             variantiVolpe.recuperoScattoAlfa
+        );
+        variantiVolpe.raggioUlulato = Mathf.Max(
+            0.5f,
+            variantiVolpe.raggioUlulato
+        );
+        variantiVolpe.recuperoUlulato = Mathf.Max(
+            0.1f,
+            variantiVolpe.recuperoUlulato
+        );
+        variantiVolpe.durataPreparazioneUlulato = Mathf.Max(
+            0.1f,
+            variantiVolpe.durataPreparazioneUlulato
+        );
+        variantiVolpe.durataRallentamentoUlulato = Mathf.Max(
+            0.1f,
+            variantiVolpe.durataRallentamentoUlulato
+        );
+        variantiVolpe.moltiplicatoreRallentamentoUlulato = Mathf.Clamp(
+            variantiVolpe.moltiplicatoreRallentamentoUlulato,
+            0.1f,
+            1f
+        );
+        variantiVolpe.distanzaTiroFango = Mathf.Max(
+            1f,
+            variantiVolpe.distanzaTiroFango
+        );
+        variantiVolpe.recuperoTiroFango = Mathf.Max(
+            0.1f,
+            variantiVolpe.recuperoTiroFango
+        );
+        variantiVolpe.velocitaProiettileFango = Mathf.Max(
+            0.5f,
+            variantiVolpe.velocitaProiettileFango
+        );
+        variantiVolpe.durataPozzaFango = Mathf.Max(
+            0.25f,
+            variantiVolpe.durataPozzaFango
+        );
+        variantiVolpe.raggioPozzaFango = Mathf.Max(
+            0.25f,
+            variantiVolpe.raggioPozzaFango
+        );
+        variantiVolpe.moltiplicatoreRallentamentoFango = Mathf.Clamp(
+            variantiVolpe.moltiplicatoreRallentamentoFango,
+            0.1f,
+            1f
+        );
+        variantiVolpe.dannoFango = Mathf.Max(
+            1,
+            variantiVolpe.dannoFango
+        );
+        variantiVolpe.distanzaInizioScavo = Mathf.Max(
+            1f,
+            variantiVolpe.distanzaInizioScavo
+        );
+        variantiVolpe.durataScavo = Mathf.Max(
+            0.1f,
+            variantiVolpe.durataScavo
+        );
+        variantiVolpe.durataEmersione = Mathf.Max(
+            0.1f,
+            variantiVolpe.durataEmersione
+        );
+        variantiVolpe.recuperoScavo = Mathf.Max(
+            0.1f,
+            variantiVolpe.recuperoScavo
+        );
+        variantiVolpe.moltiplicatoreVelocitaScavo = Mathf.Max(
+            1f,
+            variantiVolpe.moltiplicatoreVelocitaScavo
         );
         variantiVolpe.volumeVersi = Mathf.Clamp01(
             variantiVolpe.volumeVersi

@@ -335,12 +335,10 @@ public class Gallina : MonoBehaviour
         attive.Remove(this);
         if (Stato == StatoGallina.Persa) return;
 
-        EnemyAI ladra = ladraPrenotata;
         Stato = StatoGallina.Disponibile;
         ladraPrenotata = null;
         transform.position = posizioneCasa;
         if (rendererGallina != null) rendererGallina.enabled = true;
         if (colliderGallina != null) colliderGallina.enabled = true;
-        if (ladra != null) ladra.NotificaGallinaNonDisponibile(this);
     }
 }

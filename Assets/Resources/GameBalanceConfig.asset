@@ -72,47 +72,97 @@ MonoBehaviour:
       ampiezzaSerpentina: 0.34
       frequenzaSerpentina: 2.15
     robusta:
-      moltiplicatoreVelocita: 0.7
+      moltiplicatoreVelocita: 0.68
       moltiplicatoreAccelerazione: 0.74
       moltiplicatoreDecelerazione: 0.82
-      moltiplicatoreVita: 1.6
-      moltiplicatoreIntervalloAttacco: 1.2
-      scala: 1.2
-      moltiplicatoreRinculo: 0.2
+      moltiplicatoreVita: 2.2
+      moltiplicatoreIntervalloAttacco: 1.15
+      scala: 1.18
+      moltiplicatoreRinculo: 0.18
       monetePerEliminazione: 2
       ampiezzaSerpentina: 0
       frequenzaSerpentina: 0
-    ladra:
+    schivatrice:
       moltiplicatoreVelocita: 1.12
-      moltiplicatoreAccelerazione: 1.2
-      moltiplicatoreDecelerazione: 1.15
-      moltiplicatoreVita: 0.9
-      moltiplicatoreIntervalloAttacco: 1
+      moltiplicatoreAccelerazione: 1.35
+      moltiplicatoreDecelerazione: 1.42
+      moltiplicatoreVita: 0.85
+      moltiplicatoreIntervalloAttacco: 0.95
       scala: 0.96
-      moltiplicatoreRinculo: 0.9
+      moltiplicatoreRinculo: 1.1
       monetePerEliminazione: 2
-      ampiezzaSerpentina: 0
-      frequenzaSerpentina: 0
+      ampiezzaSerpentina: 0.48
+      frequenzaSerpentina: 2.8
     alfa:
       moltiplicatoreVelocita: 0.86
       moltiplicatoreAccelerazione: 1.05
       moltiplicatoreDecelerazione: 1.1
-      moltiplicatoreVita: 2
+      moltiplicatoreVita: 2.2
       moltiplicatoreIntervalloAttacco: 1.15
-      scala: 1.4
+      scala: 1.35
       moltiplicatoreRinculo: 0.12
       monetePerEliminazione: 5
       ampiezzaSerpentina: 0
       frequenzaSerpentina: 0
-    intervalloRicercaGallina: 0.3
-    distanzaPrelievoGallina: 0.58
-    distanzaFugaLadra: 11.6
-    moltiplicatoreFugaLadra: 1.34
+    ululatrice:
+      moltiplicatoreVelocita: 0.82
+      moltiplicatoreAccelerazione: 0.92
+      moltiplicatoreDecelerazione: 1
+      moltiplicatoreVita: 1.3
+      moltiplicatoreIntervalloAttacco: 1.25
+      scala: 1.08
+      moltiplicatoreRinculo: 0.72
+      monetePerEliminazione: 3
+      ampiezzaSerpentina: 0
+      frequenzaSerpentina: 0
+    sputafango:
+      moltiplicatoreVelocita: 0.78
+      moltiplicatoreAccelerazione: 0.9
+      moltiplicatoreDecelerazione: 0.95
+      moltiplicatoreVita: 1.35
+      moltiplicatoreIntervalloAttacco: 1.35
+      scala: 1.05
+      moltiplicatoreRinculo: 0.68
+      monetePerEliminazione: 3
+      ampiezzaSerpentina: 0
+      frequenzaSerpentina: 0
+    scavatrice:
+      moltiplicatoreVelocita: 0.88
+      moltiplicatoreAccelerazione: 1.05
+      moltiplicatoreDecelerazione: 1.05
+      moltiplicatoreVita: 1.55
+      moltiplicatoreIntervalloAttacco: 1.1
+      scala: 1.1
+      moltiplicatoreRinculo: 0.5
+      monetePerEliminazione: 4
+      ampiezzaSerpentina: 0
+      frequenzaSerpentina: 0
+    distanzaAttivazioneSchivata: 2.1
+    durataSchivata: 0.24
+    recuperoSchivata: 1.65
+    moltiplicatoreVelocitaSchivata: 2.8
     distanzaPreparazioneAlfa: 2.65
     durataPreparazioneAlfa: 0.72
     durataScattoAlfa: 0.32
     moltiplicatoreScattoAlfa: 3.15
     recuperoScattoAlfa: 2.25
+    raggioUlulato: 4.6
+    recuperoUlulato: 6.5
+    durataPreparazioneUlulato: 0.85
+    durataRallentamentoUlulato: 2.5
+    moltiplicatoreRallentamentoUlulato: 0.72
+    distanzaTiroFango: 5.5
+    recuperoTiroFango: 3.4
+    velocitaProiettileFango: 6.2
+    durataPozzaFango: 4.5
+    raggioPozzaFango: 1.35
+    moltiplicatoreRallentamentoFango: 0.58
+    dannoFango: 1
+    distanzaInizioScavo: 5
+    durataScavo: 0.8
+    durataEmersione: 0.35
+    recuperoScavo: 5.2
+    moltiplicatoreVelocitaScavo: 1.65
     volumeVersi: 0.16
   maialino:
     velocitaPasseggio: 1.45
@@ -267,48 +317,84 @@ MonoBehaviour:
       numeroMaialiniBonus: 0
       vitaMaialinoBonus: 1
       moneteMaialinoBonus: 0
-    - nomeOndata: Primi intrusi
+    - nomeOndata: Passi veloci
       numeroNemici: 4
-      sequenzaVolpi: 00000000000000000000000001000000
+      sequenzaVolpi: 00000000000000000100000000000000
       intervalloTraNemici: 0.7
       dimensioneMassimaGruppo: 2
-      intervalloTraGruppi: 3.25
-      numeroMaialiniBonus: 1
-      vitaMaialinoBonus: 2
-      moneteMaialinoBonus: 2
-    - nomeOndata: Branco in arrivo
+      intervalloTraGruppi: 3
+      numeroMaialiniBonus: 0
+      vitaMaialinoBonus: 1
+      moneteMaialinoBonus: 0
+    - nomeOndata: Pelle dura
       numeroNemici: 5
-      sequenzaVolpi: 0000000001000000000000000100000002000000
-      intervalloTraNemici: 0.7
+      sequenzaVolpi: 0000000001000000000000000200000000000000
+      intervalloTraNemici: 0.68
       dimensioneMassimaGruppo: 2
-      intervalloTraGruppi: 2
-      numeroMaialiniBonus: 1
-      vitaMaialinoBonus: 2
-      moneteMaialinoBonus: 2
-    - nomeOndata: Assalto alla fattoria
+      intervalloTraGruppi: 2.7
+      numeroMaialiniBonus: 0
+      vitaMaialinoBonus: 1
+      moneteMaialinoBonus: 0
+    - nomeOndata: Salti imprevedibili
       numeroNemici: 6
-      sequenzaVolpi: 000000000100000002000000000000000200000003000000
-      intervalloTraNemici: 0.65
-      dimensioneMassimaGruppo: 3
-      intervalloTraGruppi: 3.4
-      numeroMaialiniBonus: 1
-      vitaMaialinoBonus: 3
-      moneteMaialinoBonus: 3
-    - nomeOndata: Furia della campagna
+      sequenzaVolpi: 000000000100000000000000020000000300000000000000
+      intervalloTraNemici: 0.66
+      dimensioneMassimaGruppo: 2
+      intervalloTraGruppi: 2.55
+      numeroMaialiniBonus: 0
+      vitaMaialinoBonus: 1
+      moneteMaialinoBonus: 0
+    - nomeOndata: Carica alfa
       numeroNemici: 7
-      sequenzaVolpi: 01000000020000000300000001000000020000000000000004000000
+      sequenzaVolpi: 00000000010000000200000000000000030000000000000004000000
+      intervalloTraNemici: 0.64
+      dimensioneMassimaGruppo: 3
+      intervalloTraGruppi: 2.6
+      numeroMaialiniBonus: 0
+      vitaMaialinoBonus: 1
+      moneteMaialinoBonus: 0
+    - nomeOndata: Richiamo del branco
+      numeroNemici: 8
+      sequenzaVolpi: 0000000001000000020000000000000003000000050000000000000004000000
+      intervalloTraNemici: 0.62
+      dimensioneMassimaGruppo: 3
+      intervalloTraGruppi: 2.5
+      numeroMaialiniBonus: 0
+      vitaMaialinoBonus: 1
+      moneteMaialinoBonus: 0
+    - nomeOndata: Branco misto
+      numeroNemici: 10
+      sequenzaVolpi: 00000000010000000200000000000000030000000400000000000000010000000500000002000000
       intervalloTraNemici: 0.6
       dimensioneMassimaGruppo: 3
-      intervalloTraGruppi: 2.1
-      numeroMaialiniBonus: 2
-      vitaMaialinoBonus: 3
-      moneteMaialinoBonus: 3
-    - nomeOndata: Ultima difesa
-      numeroNemici: 8
-      sequenzaVolpi: 0000000001000000020000000100000003000000020000000300000004000000
-      intervalloTraNemici: 0.55
+      intervalloTraGruppi: 2.35
+      numeroMaialiniBonus: 0
+      vitaMaialinoBonus: 1
+      moneteMaialinoBonus: 0
+    - nomeOndata: Fango in arrivo
+      numeroNemici: 12
+      sequenzaVolpi: 000000000100000002000000000000000300000005000000000000000100000004000000020000000000000006000000
+      intervalloTraNemici: 0.58
       dimensioneMassimaGruppo: 3
-      intervalloTraGruppi: 2.3
-      numeroMaialiniBonus: 2
-      vitaMaialinoBonus: 4
-      moneteMaialinoBonus: 5
+      intervalloTraGruppi: 2.25
+      numeroMaialiniBonus: 0
+      vitaMaialinoBonus: 1
+      moneteMaialinoBonus: 0
+    - nomeOndata: Assedio del branco
+      numeroNemici: 14
+      sequenzaVolpi: 0000000001000000020000000000000003000000060000000000000001000000040000000200000000000000030000000500000001000000
+      intervalloTraNemici: 0.56
+      dimensioneMassimaGruppo: 3
+      intervalloTraGruppi: 2.15
+      numeroMaialiniBonus: 0
+      vitaMaialinoBonus: 1
+      moneteMaialinoBonus: 0
+    - nomeOndata: Terra in movimento
+      numeroNemici: 16
+      sequenzaVolpi: 00000000010000000200000000000000030000000500000000000000010000000400000002000000000000000300000006000000010000000000000007000000
+      intervalloTraNemici: 0.54
+      dimensioneMassimaGruppo: 3
+      intervalloTraGruppi: 2.05
+      numeroMaialiniBonus: 0
+      vitaMaialinoBonus: 1
+      moneteMaialinoBonus: 0

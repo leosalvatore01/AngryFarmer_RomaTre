@@ -501,15 +501,19 @@ public class EnemySpawner : MonoBehaviour
         int incrementiGruppo =
             numero / 4 - ondate.Length / 4;
         float accelerazione = Mathf.Pow(0.97f, extra);
+        int numeroNemici = Mathf.Max(
+            1,
+            baseFinale.numeroNemici + extra * 2
+        );
         return new Wave
         {
             nomeOndata = "Sopravvivenza " + numero,
-            numeroNemici = Mathf.Max(
-                1,
-                baseFinale.numeroNemici + extra * 2
-            ),
+            numeroNemici = numeroNemici,
             indiceSurvival = numero,
-            sequenzaVolpi = null,
+            sequenzaVolpi = CreaSequenzaSurvival(
+                numero,
+                numeroNemici
+            ),
             intervalloTraNemici = Mathf.Max(
                 0.18f,
                 baseFinale.intervalloTraNemici * accelerazione
@@ -527,6 +531,217 @@ public class EnemySpawner : MonoBehaviour
             vitaMaialinoBonus = 1,
             moneteMaialinoBonus = 0
         };
+    }
+
+    public static TipoVolpe[] CreaSequenzaSurvival(
+        int numeroOnda,
+        int numeroNemici
+    )
+    {
+        int onda = Mathf.Max(1, numeroOnda);
+        int totale = Mathf.Max(0, numeroNemici);
+        TipoVolpe[] risultato = new TipoVolpe[totale];
+        if (totale == 0) return risultato;
+
+        // La prima onda resta un tutorial puro anche se il metodo viene
+        // richiamato da configurazioni o difficolta personalizzate.
+        if (onda == 1) return risultato;
+
+        int comuni = Mathf.Clamp(
+            Mathf.CeilToInt(totale * 0.3f),
+            1,
+            totale
+        );
+        int slotSpeciali = totale - comuni;
+        if (slotSpeciali <= 0) return risultato;
+
+        int progressoSurvival = Mathf.Max(0, onda - 10);
+        int alfa = CalcolaQuotaRara(
+            onda >= 5,
+            totale,
+            0.07f,
+            1 + progressoSurvival / 8,
+            slotSpeciali
+        );
+        int ululatrici = CalcolaQuotaRara(
+            onda >= 6,
+            totale,
+            0.06f,
+            1 + progressoSurvival / 10,
+            slotSpeciali - alfa
+        );
+        int sputafango = CalcolaQuotaRara(
+            onda >= 8,
+            totale,
+            0.08f,
+            1 + progressoSurvival / 6,
+            slotSpeciali - alfa - ululatrici
+        );
+        int scavatrici = CalcolaQuotaRara(
+            onda >= 10,
+            totale,
+            0.05f,
+            1 + progressoSurvival / 10,
+            slotSpeciali - alfa - ululatrici - sputafango
+        );
+
+        int rimanentiBase = Mathf.Max(
+            0,
+            slotSpeciali - alfa - ululatrici - sputafango - scavatrici
+        );
+        int agili = 0;
+        int robuste = 0;
+        int schivatrici = 0;
+
+        // Anche se invocato fuori dalla curva configurata, il generatore
+        // rispetta gli sblocchi e mantiene singoli i primi esemplari.
+        if (onda == 2)
+        {
+            agili = Mathf.Min(1, rimanentiBase);
+        }
+        else if (onda == 3)
+        {
+            robuste = Mathf.Min(1, rimanentiBase);
+            agili = Mathf.Max(0, rimanentiBase - robuste);
+        }
+        else if (onda >= 4)
+        {
+            if (onda == 4 && rimanentiBase > 0)
+            {
+                schivatrici = 1;
+                rimanentiBase--;
+                agili = (rimanentiBase + 1) / 2;
+                robuste = rimanentiBase / 2;
+            }
+            else
+            {
+                int quotaBase = rimanentiBase / 3;
+                agili = quotaBase;
+                robuste = quotaBase;
+                schivatrici = quotaBase;
+                int resto = rimanentiBase - quotaBase * 3;
+
+                // La rotazione evita che la stessa categoria riceva sempre
+                // l'eventuale resto, senza usare Random globale.
+                for (int i = 0; i < resto; i++)
+                {
+                    switch ((onda + i) % 3)
+                    {
+                        case 0: agili++; break;
+                        case 1: robuste++; break;
+                        default: schivatrici++; break;
+                    }
+                }
+            }
+        }
+
+        List<TipoVolpe> speciali = new List<TipoVolpe>(slotSpeciali);
+        AggiungiTipi(speciali, TipoVolpe.Agile, agili);
+        AggiungiTipi(speciali, TipoVolpe.Robusta, robuste);
+        AggiungiTipi(speciali, TipoVolpe.Schivatrice, schivatrici);
+        AggiungiTipi(speciali, TipoVolpe.Alfa, alfa);
+        AggiungiTipi(speciali, TipoVolpe.Ululatrice, ululatrici);
+        AggiungiTipi(speciali, TipoVolpe.Sputafango, sputafango);
+        AggiungiTipi(speciali, TipoVolpe.Scavatrice, scavatrici);
+        MescolaDeterministicamente(speciali, onda, totale);
+        SeparaTipiRari(speciali);
+
+        int indiceSpeciale = 0;
+        int prossimoComune = 0;
+        for (int i = 0; i < totale; i++)
+        {
+            bool inserisciComune =
+                prossimoComune < comuni &&
+                i == Mathf.FloorToInt(
+                    prossimoComune * totale / (float)comuni
+                );
+            if (inserisciComune)
+            {
+                risultato[i] = TipoVolpe.Comune;
+                prossimoComune++;
+            }
+            else
+            {
+                risultato[i] = indiceSpeciale < speciali.Count
+                    ? speciali[indiceSpeciale++]
+                    : TipoVolpe.Comune;
+            }
+        }
+        return risultato;
+    }
+
+    private static int CalcolaQuotaRara(
+        bool sbloccata,
+        int totale,
+        float quota,
+        int limite,
+        int slotDisponibili
+    )
+    {
+        if (!sbloccata || slotDisponibili <= 0) return 0;
+        return Mathf.Clamp(
+            Mathf.Max(1, Mathf.FloorToInt(totale * quota)),
+            0,
+            Mathf.Min(Mathf.Max(1, limite), slotDisponibili)
+        );
+    }
+
+    private static void AggiungiTipi(
+        List<TipoVolpe> destinazione,
+        TipoVolpe tipo,
+        int quantita
+    )
+    {
+        for (int i = 0; i < Mathf.Max(0, quantita); i++)
+        {
+            destinazione.Add(tipo);
+        }
+    }
+
+    private static void MescolaDeterministicamente(
+        List<TipoVolpe> tipi,
+        int numeroOnda,
+        int totale
+    )
+    {
+        uint stato = unchecked(
+            (uint)numeroOnda * 747796405u +
+            (uint)totale * 2891336453u +
+            277803737u
+        );
+        for (int i = tipi.Count - 1; i > 0; i--)
+        {
+            stato = unchecked(stato * 1664525u + 1013904223u);
+            int altro = (int)(stato % (uint)(i + 1));
+            TipoVolpe temporanea = tipi[i];
+            tipi[i] = tipi[altro];
+            tipi[altro] = temporanea;
+        }
+    }
+
+    private static void SeparaTipiRari(List<TipoVolpe> tipi)
+    {
+        for (int i = 1; i < tipi.Count; i++)
+        {
+            if (!TipoRaro(tipi[i - 1]) || !TipoRaro(tipi[i])) continue;
+
+            for (int candidato = i + 1; candidato < tipi.Count; candidato++)
+            {
+                if (TipoRaro(tipi[candidato])) continue;
+                TipoVolpe temporanea = tipi[i];
+                tipi[i] = tipi[candidato];
+                tipi[candidato] = temporanea;
+                break;
+            }
+        }
+    }
+
+    private static bool TipoRaro(TipoVolpe tipo)
+    {
+        return tipo == TipoVolpe.Alfa ||
+               tipo == TipoVolpe.Ululatrice ||
+               tipo == TipoVolpe.Sputafango ||
+               tipo == TipoVolpe.Scavatrice;
     }
 
     IEnumerator SpawnMaialiniGraduali(Wave ondata, int tokenCorrente)
@@ -951,13 +1166,13 @@ public class EnemySpawner : MonoBehaviour
             indiceSpawnZeroBased >= onda.sequenzaVolpi.Length)
         {
             if (onda.indiceSurvival <= 0) return TipoVolpe.Comune;
-            switch ((indiceSpawnZeroBased + onda.indiceSurvival) % 4)
-            {
-                case 1: return TipoVolpe.Agile;
-                case 2: return TipoVolpe.Ladra;
-                case 3: return TipoVolpe.Alfa;
-                default: return TipoVolpe.Comune;
-            }
+            TipoVolpe[] sequenzaGenerata = CreaSequenzaSurvival(
+                onda.indiceSurvival,
+                onda.numeroNemici
+            );
+            return indiceSpawnZeroBased < sequenzaGenerata.Length
+                ? sequenzaGenerata[indiceSpawnZeroBased]
+                : TipoVolpe.Comune;
         }
         return FoxVariantStyle.Normalizza(
             onda.sequenzaVolpi[indiceSpawnZeroBased]

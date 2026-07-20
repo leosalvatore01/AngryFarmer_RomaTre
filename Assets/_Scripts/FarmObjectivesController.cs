@@ -187,10 +187,6 @@ public sealed class FarmObjectivesController : MonoBehaviour
         {
             alfaEliminate++;
         }
-        else if (tipoVolpe == TipoVolpe.Ladra && !richiedeRecupero)
-        {
-            furtiSventati++;
-        }
 
         ValutaIntermedia();
         AggiornaHUD();
@@ -307,7 +303,7 @@ public sealed class FarmObjectivesController : MonoBehaviour
 
     private int BersaglioLadre()
     {
-        return Mathf.Max(1, Mathf.Min(3, onda.Composizione.Ladre));
+        return 1;
     }
 
     public static TipoObiettivoFattoria SelezionaTipo(
@@ -325,16 +321,12 @@ public sealed class FarmObjectivesController : MonoBehaviour
             case 3:
                 return TipoObiettivoFattoria.SenzaDanni;
             case 4:
-                if (anteprima.Composizione.Ladre > 0)
-                    return TipoObiettivoFattoria.SalvaUova;
-                break;
+                return TipoObiettivoFattoria.SenzaDanni;
             case 5:
                 if (anteprima.Composizione.Alfa > 0)
                     return TipoObiettivoFattoria.EliminaAlfa;
                 break;
             default:
-                if (anteprima.Composizione.Ladre > 0)
-                    return TipoObiettivoFattoria.SalvaUova;
                 if (anteprima.Composizione.Alfa > 0)
                     return TipoObiettivoFattoria.EliminaAlfa;
                 if (anteprima.NumeroMaialini > 0)
