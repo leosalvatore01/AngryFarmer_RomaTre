@@ -30,6 +30,11 @@ public class PlayerMovement : MonoBehaviour
             : 1f;
     public float MoltiplicatoreVelocitaCorrente =>
         MoltiplicatoreBoostCorrente * MoltiplicatoreTerrenoCorrente;
+    public bool BoostVelocitaAttivo => tempoFineBoostVelocita > Time.time;
+    public float TempoBoostVelocitaRimasto => BoostVelocitaAttivo
+        ? Mathf.Max(0f, tempoFineBoostVelocita - Time.time)
+        : 0f;
+    public float DurataBoostVelocitaTotale => Mathf.Max(0f, durataBoost);
     public bool NelFango => tempoRallentamentoTerreno > 0f;
     public bool StaCamminando => VelocitaAttuale.sqrMagnitude > 0.01f;
 
@@ -43,6 +48,7 @@ public class PlayerMovement : MonoBehaviour
     private float moltiplicatoreInversione = 1.35f;
     private float tempoRallentamentoTerreno;
     private float moltiplicatoreRallentamentoTerreno = 1f;
+    private float tempoFineBoostVelocita;
     private Coroutine boostRoutine;
 
     void Awake()
@@ -135,9 +141,19 @@ public class PlayerMovement : MonoBehaviour
         if (boostRoutine != null)
         {
             StopCoroutine(boostRoutine);
+            boostRoutine = null;
         }
 
-        boostRoutine = StartCoroutine(BoostVelocita());
+        float durata = DurataBoostVelocitaTotale;
+        if (durata <= 0f)
+        {
+            AzzeraBoostVelocita();
+            return;
+        }
+
+        tempoFineBoostVelocita = Time.time + durata;
+        moltiplicatoreVelocita = moltiplicatoreBoost;
+        boostRoutine = StartCoroutine(BoostVelocita(durata));
     }
 
     public void ImpostaBonusVelocita(float valore)
@@ -180,11 +196,16 @@ public class PlayerMovement : MonoBehaviour
         AggiungiBonusVelocita(quantita);
     }
 
-    IEnumerator BoostVelocita()
+    IEnumerator BoostVelocita(float durata)
     {
-        moltiplicatoreVelocita = moltiplicatoreBoost;
-        yield return new WaitForSeconds(durataBoost);
+        yield return new WaitForSeconds(durata);
+        AzzeraBoostVelocita();
+    }
+
+    private void AzzeraBoostVelocita()
+    {
         moltiplicatoreVelocita = 1f;
+        tempoFineBoostVelocita = 0f;
         boostRoutine = null;
     }
 
@@ -207,11 +228,10 @@ public class PlayerMovement : MonoBehaviour
         if (boostRoutine != null)
         {
             StopCoroutine(boostRoutine);
-            boostRoutine = null;
         }
+        AzzeraBoostVelocita();
         tempoRallentamentoTerreno = 0f;
         moltiplicatoreRallentamentoTerreno = 1f;
-        moltiplicatoreVelocita = 1f;
         DirezioneMovimento = Vector2.zero;
         VelocitaAttuale = Vector2.zero;
     }

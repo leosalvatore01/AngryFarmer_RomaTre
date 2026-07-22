@@ -361,6 +361,174 @@ public class PlayerUpgrades : MonoBehaviour
         return "Livello " + OttieniLivello(tipo);
     }
 
+    /// <summary>
+    /// Descrive soltanto il vantaggio del prossimo acquisto, senza il
+    /// confronto prima/dopo che rallentava la lettura delle carte.
+    /// </summary>
+    public string OttieniBonusProssimoLivello(TipoPotenziamento tipo)
+    {
+        ShopBalanceSettings configurazione = Configurazione;
+        switch (tipo)
+        {
+            case TipoPotenziamento.Movimento:
+            {
+                float incremento =
+                    CalcolaBonusMovimento(livelloMovimento + 1) -
+                    CalcolaBonusMovimento(livelloMovimento);
+                return "VELOCITÀ +" + FormattaDecimale(incremento);
+            }
+            case TipoPotenziamento.Resistenza:
+            {
+                float incremento =
+                    CalcolaProbabilitaBlocco(livelloResistenza + 1) -
+                    CalcolaProbabilitaBlocco(livelloResistenza);
+                return "BLOCCO +" +
+                    Mathf.Max(1, Mathf.RoundToInt(incremento * 100f)) + "%";
+            }
+            case TipoPotenziamento.SaluteMassima:
+                return "VITA MASSIMA +" +
+                    Mathf.Max(1, configurazione.incrementoSaluteMassima);
+            case TipoPotenziamento.Cura:
+                return "CURA +" + Mathf.Max(1, configurazione.quantitaCura);
+            case TipoPotenziamento.Danno:
+                return "DANNO +" + Mathf.Max(1, configurazione.incrementoDanno);
+            case TipoPotenziamento.Cadenza:
+            {
+                float attuale = CalcolaIntervalloSparo(livelloCadenza);
+                float prossimo = CalcolaIntervalloSparo(livelloCadenza + 1);
+                int incremento = prossimo > 0f
+                    ? Mathf.Max(
+                        1,
+                        Mathf.RoundToInt((attuale / prossimo - 1f) * 100f)
+                    )
+                    : 0;
+                return "ATTACCO RAPIDO +" + incremento + "%";
+            }
+            case TipoPotenziamento.Penetrazione:
+                return "PENETRAZIONE +" +
+                    Mathf.Max(1, configurazione.incrementoPenetrazione);
+            case TipoPotenziamento.ColpoAggiuntivo:
+            {
+                if (ValoreColpiAggiuntivi < MassimoColpiAggiuntiviFisici)
+                {
+                    return "COLPO EXTRA +" + Mathf.RoundToInt(
+                        Mathf.Max(
+                            0.05f,
+                            configurazione.probabilitaColpoAggiuntivoPerLivello
+                        ) * 100f
+                    ) + "%";
+                }
+                return "POTENZA COLPI +3,5%";
+            }
+            case TipoPotenziamento.RafficaRaccolto:
+            {
+                int prossimoLivello = livelloRafficaRaccolto + 1;
+                int colpiAttuali = CalcolaNumeroProiettiliRaffica(
+                    livelloRafficaRaccolto
+                );
+                int colpiProssimi = CalcolaNumeroProiettiliRaffica(
+                    prossimoLivello
+                );
+                if (livelloRafficaRaccolto <= 0)
+                {
+                    return "RAFFICA " + colpiProssimi + " COLPI";
+                }
+                if (colpiProssimi > colpiAttuali)
+                {
+                    return "RAFFICA +" + (colpiProssimi - colpiAttuali) +
+                           " COLPI";
+                }
+                int intervallo = CalcolaIntervalloRaffica(prossimoLivello);
+                if (intervallo < CalcolaIntervalloRaffica(
+                    livelloRafficaRaccolto
+                ))
+                {
+                    return "RAFFICA OGNI " + intervallo + " SPARI";
+                }
+                return "DANNO RAFFICA +10%";
+            }
+            case TipoPotenziamento.PatataGigante:
+            {
+                float attuale = CalcolaScalaPatataGigante(livelloPatataGigante);
+                float prossimo = CalcolaScalaPatataGigante(
+                    livelloPatataGigante + 1
+                );
+                if (prossimo > attuale + 0.001f)
+                {
+                    return "DIMENSIONE +" + Mathf.RoundToInt(
+                        (prossimo - attuale) * 100f
+                    ) + "%";
+                }
+                return "POTENZA GIGANTE +5%";
+            }
+            case TipoPotenziamento.PatataEsplosiva:
+            {
+                if (livelloPatataEsplosiva <= 0)
+                    return "ESPLOSIONE SBLOCCATA";
+                float attuale = CalcolaRaggioEsplosione(
+                    livelloPatataEsplosiva
+                );
+                float prossimo = CalcolaRaggioEsplosione(
+                    livelloPatataEsplosiva + 1
+                );
+                int incremento = attuale > 0f
+                    ? Mathf.Max(
+                        1,
+                        Mathf.RoundToInt((prossimo / attuale - 1f) * 100f)
+                    )
+                    : 0;
+                return "ESPLOSIONE +" + incremento + "%";
+            }
+            case TipoPotenziamento.Critico:
+            {
+                if (ValoreCritico < 1f)
+                {
+                    return "CRITICO +" + Mathf.RoundToInt(
+                        Mathf.Max(
+                            0.01f,
+                            configurazione.probabilitaCriticoPerLivello
+                        ) * 100f
+                    ) + "%";
+                }
+                return "DANNO CRITICO +45%";
+            }
+            case TipoPotenziamento.Rimbalzo:
+                return livelloRimbalzo < MassimoRimbalziFisici
+                    ? "RIMBALZO +1"
+                    : "POTENZA RIMBALZO +3,5%";
+            case TipoPotenziamento.Rallentamento:
+            {
+                if (livelloRallentamento >=
+                    MassimoLivelloRallentamentoFisico)
+                {
+                    return "POTENZA CONTROLLO +2,5%";
+                }
+                int prossimoLivello = livelloRallentamento + 1;
+                int percentuale = Mathf.RoundToInt(
+                    (1f - CalcolaMoltiplicatoreRallentamento(prossimoLivello)) *
+                    100f
+                );
+                return "RALLENTA " + percentuale + "% / " +
+                    FormattaDecimale(
+                        CalcolaDurataRallentamento(prossimoLivello)
+                    ) + " s";
+            }
+            case TipoPotenziamento.Spinta:
+            {
+                float attuale = CalcolaForzaSpintaTotale(livelloSpinta, 0);
+                float prossimo = CalcolaForzaSpintaTotale(
+                    livelloSpinta + 1,
+                    0
+                );
+                return prossimo > attuale + 0.001f
+                    ? "SPINTA +" + FormattaDecimale(prossimo - attuale)
+                    : "POTENZA IMPATTO +2,5%";
+            }
+            default:
+                return "POTENZIAMENTO +1";
+        }
+    }
+
     public string OttieniConfronto(TipoPotenziamento tipo)
     {
         ShopBalanceSettings configurazione = Configurazione;

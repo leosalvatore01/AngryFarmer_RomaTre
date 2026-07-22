@@ -65,6 +65,7 @@ public class ShopInterOndata : MonoBehaviour
         public TMP_Text testoDescrizione;
         public TMP_Text testoConfronto;
         public TMP_Text testoStato;
+        public Image iconaPotenziamento;
         public Button pulsante;
         public TMP_Text testoPulsante;
         public Image iconaCosto;
@@ -648,15 +649,19 @@ public class ShopInterOndata : MonoBehaviour
         else
         {
             int costoReroll = CostoRerollCorrente;
+            int moneteMancantiReroll = Mathf.Max(0, costoReroll - monete);
+            bool rerollAcquistabile = moneteMancantiReroll == 0;
             if (testoReroll != null)
             {
-                testoReroll.text =
-                    "CAMBIA  |  " + EtichettaMonete(costoReroll);
-                testoReroll.color = monete >= costoReroll
+                testoReroll.text = rerollAcquistabile
+                    ? "CAMBIA  |  " + EtichettaMonete(costoReroll)
+                    : "MANCANO " + moneteMancantiReroll;
+                testoReroll.color = rerollAcquistabile
                     ? TestoPulsante
                     : TestoErrorePulsante;
             }
-            if (pulsanteReroll != null) pulsanteReroll.interactable = true;
+            if (pulsanteReroll != null)
+                pulsanteReroll.interactable = rerollAcquistabile;
             if (iconaCostoReroll != null) iconaCostoReroll.enabled = true;
 
             if (potenziamenti != null && testoCura != null)
@@ -664,13 +669,18 @@ public class ShopInterOndata : MonoBehaviour
                 bool disponibile =
                     potenziamenti.PuoAcquistare(TipoPotenziamento.Cura);
                 int costo = potenziamenti.OttieniCosto(TipoPotenziamento.Cura);
-                testoCura.text = disponibile
-                    ? "CURA  |  " + EtichettaMonete(costo)
-                    : "SALUTE PIENA";
-                testoCura.color = disponibile && monete < costo
+                int moneteMancantiCura = Mathf.Max(0, costo - monete);
+                bool curaAcquistabile =
+                    disponibile && moneteMancantiCura == 0;
+                testoCura.text = !disponibile
+                    ? "SALUTE PIENA"
+                    : (curaAcquistabile
+                        ? "CURA  |  " + EtichettaMonete(costo)
+                        : "MANCANO " + moneteMancantiCura);
+                testoCura.color = disponibile && !curaAcquistabile
                     ? TestoErrorePulsante
                     : TestoPulsante;
-                pulsanteCura.interactable = disponibile;
+                pulsanteCura.interactable = curaAcquistabile;
                 if (iconaCostoCura != null)
                     iconaCostoCura.enabled = disponibile;
             }
@@ -742,8 +752,15 @@ public class ShopInterOndata : MonoBehaviour
         carta.testoDescrizione.text =
             potenziamenti.OttieniDescrizione(carta.tipo);
         carta.testoConfronto.text =
-            potenziamenti.OttieniConfronto(carta.tipo);
+            potenziamenti.OttieniBonusProssimoLivello(carta.tipo);
         carta.testoStato.text = potenziamenti.OttieniStato(carta.tipo);
+        if (carta.iconaPotenziamento != null)
+        {
+            carta.iconaPotenziamento.sprite =
+                PowerUpIconCatalog.OttieniSprite(carta.tipo);
+            carta.iconaPotenziamento.enabled =
+                carta.iconaPotenziamento.sprite != null;
+        }
 
         bool disponibile = potenziamenti.PuoAcquistare(carta.tipo);
         int costo = potenziamenti.OttieniCosto(carta.tipo);
@@ -753,7 +770,7 @@ public class ShopInterOndata : MonoBehaviour
             carta.testoPulsante.color = TestoPulsante;
             carta.pulsante.interactable = false;
             carta.iconaCosto.enabled = false;
-            carta.sfondo.color = ColoreCartaDisabilitata;
+            ImpostaCartaAttenuata(carta, true);
         }
         else if (preparazioneIniziale && transizioneSceltaIniziale)
         {
@@ -761,7 +778,7 @@ public class ShopInterOndata : MonoBehaviour
             carta.testoPulsante.color = TestoPulsante;
             carta.pulsante.interactable = false;
             carta.iconaCosto.enabled = false;
-            carta.sfondo.color = ColoreCartaDisabilitata;
+            ImpostaCartaAttenuata(carta, true);
         }
         else if (preparazioneIniziale && scelteGratuiteRimaste == 0)
         {
@@ -769,7 +786,7 @@ public class ShopInterOndata : MonoBehaviour
             carta.testoPulsante.color = TestoPulsante;
             carta.pulsante.interactable = false;
             carta.iconaCosto.enabled = false;
-            carta.sfondo.color = ColoreCartaDisabilitata;
+            ImpostaCartaAttenuata(carta, true);
         }
         else if (!disponibile)
         {
@@ -777,7 +794,7 @@ public class ShopInterOndata : MonoBehaviour
             carta.testoPulsante.color = TestoPulsante;
             carta.pulsante.interactable = false;
             carta.iconaCosto.enabled = false;
-            carta.sfondo.color = ColoreCartaDisabilitata;
+            ImpostaCartaAttenuata(carta, true);
         }
         else if (preparazioneIniziale)
         {
@@ -785,17 +802,47 @@ public class ShopInterOndata : MonoBehaviour
             carta.testoPulsante.color = TestoPulsante;
             carta.pulsante.interactable = true;
             carta.iconaCosto.enabled = false;
-            carta.sfondo.color = ColoreCarta;
+            ImpostaCartaAttenuata(carta, false);
         }
         else
         {
-            carta.testoPulsante.text = EtichettaMonete(costo);
-            carta.testoPulsante.color = monete >= costo
+            int moneteMancanti = Mathf.Max(0, costo - monete);
+            bool acquistabile = moneteMancanti == 0;
+            carta.testoPulsante.text = acquistabile
+                ? EtichettaMonete(costo)
+                : "MANCANO " + moneteMancanti;
+            carta.testoPulsante.color = acquistabile
                 ? TestoPulsante
                 : TestoErrorePulsante;
-            carta.pulsante.interactable = true;
+            carta.pulsante.interactable = acquistabile;
             carta.iconaCosto.enabled = true;
-            carta.sfondo.color = ColoreCarta;
+            ImpostaCartaAttenuata(carta, !acquistabile);
+        }
+    }
+
+    static void ImpostaCartaAttenuata(CartaOfferta carta, bool attenuata)
+    {
+        if (carta == null) return;
+
+        carta.sfondo.color = attenuata
+            ? ColoreCartaDisabilitata
+            : ColoreCarta;
+        carta.testoTitolo.color = attenuata ? TestoMeta : TestoTitolo;
+        carta.testoDescrizione.color = attenuata ? TestoMeta : TestoChiaro;
+        carta.testoConfronto.color = attenuata ? TestoMeta : TestoConfronto;
+
+        if (carta.iconaPotenziamento != null)
+        {
+            carta.iconaPotenziamento.color = attenuata
+                ? new Color(1f, 1f, 1f, 0.42f)
+                : Color.white;
+        }
+
+        if (carta.fasciaPercorso != null)
+        {
+            Color coloreFascia = carta.fasciaPercorso.color;
+            coloreFascia.a = attenuata ? 0.38f : 1f;
+            carta.fasciaPercorso.color = coloreFascia;
         }
     }
 
@@ -1157,19 +1204,37 @@ public class ShopInterOndata : MonoBehaviour
             "PercorsoRarita",
             radice.transform,
             string.Empty,
-            new Vector2(-293f, 45f),
-            new Vector2(460f, 27f),
+            new Vector2(-240f, 45f),
+            new Vector2(370f, 27f),
             18f,
             Color.white,
             FontStyles.Bold,
             TextAlignmentOptions.MidlineLeft
         );
+
+        GameObject oggettoIcona = new GameObject(
+            "IconaPotenziamento",
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(Image)
+        );
+        oggettoIcona.transform.SetParent(radice.transform, false);
+        RectTransform iconaRect = oggettoIcona.GetComponent<RectTransform>();
+        iconaRect.anchorMin = new Vector2(0.5f, 0.5f);
+        iconaRect.anchorMax = new Vector2(0.5f, 0.5f);
+        iconaRect.pivot = new Vector2(0.5f, 0.5f);
+        iconaRect.anchoredPosition = new Vector2(-480f, 0f);
+        iconaRect.sizeDelta = new Vector2(76f, 76f);
+        Image iconaPotenziamento = oggettoIcona.GetComponent<Image>();
+        iconaPotenziamento.preserveAspect = true;
+        iconaPotenziamento.raycastTarget = false;
+
         TMP_Text titolo = CreaTesto(
             "Titolo",
             radice.transform,
             string.Empty,
-            new Vector2(-330f, 13f),
-            new Vector2(385f, 32f),
+            new Vector2(-235f, 13f),
+            new Vector2(380f, 32f),
             22f,
             TestoTitolo,
             FontStyles.Bold,
@@ -1179,8 +1244,8 @@ public class ShopInterOndata : MonoBehaviour
             "Descrizione",
             radice.transform,
             string.Empty,
-            new Vector2(-275f, -30f),
-            new Vector2(500f, 49f),
+            new Vector2(-210f, -30f),
+            new Vector2(430f, 49f),
             19f,
             TestoChiaro,
             FontStyles.Normal,
@@ -1248,6 +1313,7 @@ public class ShopInterOndata : MonoBehaviour
             testoDescrizione = descrizione,
             testoConfronto = confronto,
             testoStato = stato,
+            iconaPotenziamento = iconaPotenziamento,
             pulsante = pulsante,
             testoPulsante = testoCosto,
             iconaCosto = iconaCosto
@@ -1385,7 +1451,7 @@ public class ShopInterOndata : MonoBehaviour
         colori.highlightedColor = new Color(1.05f, 1.05f, 1.05f, 1f);
         colori.pressedColor = new Color(0.84f, 0.84f, 0.84f, 1f);
         colori.selectedColor = Color.white;
-        colori.disabledColor = new Color(0.85f, 0.85f, 0.85f, 1f);
+        colori.disabledColor = new Color(0.48f, 0.48f, 0.48f, 0.82f);
         colori.colorMultiplier = 1f;
         colori.fadeDuration = 0.06f;
         pulsante.colors = colori;

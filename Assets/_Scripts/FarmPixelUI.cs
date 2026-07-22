@@ -18,6 +18,16 @@ public enum FarmPixelIcon
     Danno,
     Cadenza,
     Penetrazione,
+    ColpoAggiuntivo,
+    RafficaRaccolto,
+    PatataGigante,
+    PatataEsplosiva,
+    Critico,
+    Rimbalzo,
+    Rallentamento,
+    Spinta,
+    TriploSparo,
+    BoostVelocita,
     Volpe,
     Gallina,
     Obiettivo
@@ -442,6 +452,36 @@ public static class FarmPixelUI
             case FarmPixelIcon.Penetrazione:
                 DisegnaPatata(pixel, true);
                 break;
+            case FarmPixelIcon.ColpoAggiuntivo:
+                DisegnaColpoAggiuntivo(pixel);
+                break;
+            case FarmPixelIcon.RafficaRaccolto:
+                DisegnaRafficaRaccolto(pixel);
+                break;
+            case FarmPixelIcon.PatataGigante:
+                DisegnaPatataGigante(pixel);
+                break;
+            case FarmPixelIcon.PatataEsplosiva:
+                DisegnaPatataEsplosiva(pixel);
+                break;
+            case FarmPixelIcon.Critico:
+                DisegnaCritico(pixel);
+                break;
+            case FarmPixelIcon.Rimbalzo:
+                DisegnaRimbalzo(pixel);
+                break;
+            case FarmPixelIcon.Rallentamento:
+                DisegnaRallentamento(pixel);
+                break;
+            case FarmPixelIcon.Spinta:
+                DisegnaSpinta(pixel);
+                break;
+            case FarmPixelIcon.TriploSparo:
+                DisegnaTriploSparo(pixel);
+                break;
+            case FarmPixelIcon.BoostVelocita:
+                DisegnaBoostVelocita(pixel);
+                break;
             case FarmPixelIcon.Volpe:
                 DisegnaVolpe(pixel);
                 break;
@@ -725,6 +765,172 @@ public static class FarmPixelUI
         Linea(pixel, 2, 14, 4, 14, luce, 1);
         Linea(pixel, 1, 10, 4, 10, luce, 1);
         Linea(pixel, 2, 6, 4, 6, luce, 1);
+    }
+
+    private static void DisegnaColpoAggiuntivo(Color32[] pixel)
+    {
+        Color32 metallo = new Color32(73, 91, 100, 255);
+        Color32 luce = new Color32(169, 193, 188, 255);
+        Rettangolo(pixel, 3, 5, 15, 8, Contorno);
+        Rettangolo(pixel, 4, 6, 14, 7, metallo);
+        Rettangolo(pixel, 3, 11, 15, 14, Contorno);
+        Rettangolo(pixel, 4, 12, 14, 13, luce);
+        Rettangolo(pixel, 14, 4, 18, 9, Contorno);
+        Rettangolo(pixel, 14, 10, 18, 15, Contorno);
+        Rettangolo(pixel, 15, 5, 17, 8, new Color32(173, 112, 53, 255));
+        Rettangolo(pixel, 15, 11, 17, 14, new Color32(173, 112, 53, 255));
+    }
+
+    private static void DisegnaRafficaRaccolto(Color32[] pixel)
+    {
+        Color32 oro = new Color32(255, 205, 69, 255);
+        DisegnaPatataPiccola(pixel, 10, 4, new Color32(183, 116, 50, 255));
+        DisegnaPatataPiccola(pixel, 5, 10, new Color32(183, 116, 50, 255));
+        DisegnaPatataPiccola(pixel, 15, 10, new Color32(183, 116, 50, 255));
+        Linea(pixel, 10, 8, 10, 16, Contorno, 2);
+        Linea(pixel, 6, 12, 3, 17, Contorno, 2);
+        Linea(pixel, 14, 12, 17, 17, Contorno, 2);
+        Linea(pixel, 10, 9, 10, 16, oro, 1);
+        Linea(pixel, 6, 13, 3, 17, oro, 1);
+        Linea(pixel, 14, 13, 17, 17, oro, 1);
+    }
+
+    private static void DisegnaPatataGigante(Color32[] pixel)
+    {
+        bool Dentro(int x, int y)
+        {
+            float nx = (x - 9.5f) / 8.2f;
+            float ny = (y - 9.5f) / 7.4f;
+            return nx * nx + ny * ny <= 1f;
+        }
+        DisegnaForma(pixel, Dentro, new Color32(154, 91, 40, 255), Contorno);
+        Rettangolo(pixel, 5, 12, 7, 14, new Color32(224, 149, 65, 255));
+        Rettangolo(pixel, 12, 5, 14, 7, new Color32(92, 50, 25, 255));
+        ContornaRettangolo(pixel, 1, 1, 18, 18, new Color32(238, 176, 61, 255));
+    }
+
+    private static void DisegnaPatataEsplosiva(Color32[] pixel)
+    {
+        Color32 fuoco = new Color32(242, 104, 35, 255);
+        Color32 luce = new Color32(255, 218, 71, 255);
+        Linea(pixel, 10, 1, 10, 18, Contorno, 2);
+        Linea(pixel, 1, 10, 18, 10, Contorno, 2);
+        Linea(pixel, 3, 3, 17, 17, fuoco, 2);
+        Linea(pixel, 3, 17, 17, 3, fuoco, 2);
+        Rettangolo(pixel, 6, 6, 14, 14, Contorno);
+        Rettangolo(pixel, 7, 7, 13, 13, new Color32(167, 102, 46, 255));
+        Rettangolo(pixel, 9, 9, 11, 11, luce);
+    }
+
+    private static void DisegnaCritico(Color32[] pixel)
+    {
+        Color32 crema = new Color32(246, 225, 175, 255);
+        Color32 rosso = new Color32(209, 55, 39, 255);
+        for (int y = 2; y <= 17; y++)
+        {
+            for (int x = 2; x <= 17; x++)
+            {
+                float distanza = Quadrato(x - 9.5f) + Quadrato(y - 9.5f);
+                if (distanza <= 58f && distanza >= 38f)
+                    Imposta(pixel, DimensioneIcona, DimensioneIcona, x, y, Contorno);
+                else if (distanza < 38f && distanza >= 20f)
+                    Imposta(pixel, DimensioneIcona, DimensioneIcona, x, y, crema);
+                else if (distanza < 20f)
+                    Imposta(pixel, DimensioneIcona, DimensioneIcona, x, y, rosso);
+            }
+        }
+        Linea(pixel, 10, 0, 10, 19, Contorno, 1);
+        Linea(pixel, 0, 10, 19, 10, Contorno, 1);
+        Rettangolo(pixel, 8, 8, 11, 11, new Color32(255, 206, 63, 255));
+    }
+
+    private static void DisegnaRimbalzo(Color32[] pixel)
+    {
+        Color32 azzurro = new Color32(92, 194, 210, 255);
+        DisegnaPatataPiccola(pixel, 4, 15, new Color32(174, 109, 48, 255));
+        Linea(pixel, 6, 14, 11, 9, Contorno, 2);
+        Linea(pixel, 11, 9, 16, 14, Contorno, 2);
+        Linea(pixel, 16, 14, 18, 6, Contorno, 2);
+        Linea(pixel, 6, 14, 11, 10, azzurro, 1);
+        Linea(pixel, 11, 10, 16, 14, azzurro, 1);
+        Linea(pixel, 16, 14, 18, 6, azzurro, 1);
+        Rettangolo(pixel, 15, 3, 19, 6, Contorno);
+        Rettangolo(pixel, 16, 4, 18, 6, azzurro);
+    }
+
+    private static void DisegnaRallentamento(Color32[] pixel)
+    {
+        DisegnaPatata(pixel, false);
+        Color32 ghiaccio = new Color32(127, 211, 226, 255);
+        Linea(pixel, 10, 1, 10, 18, ghiaccio, 1);
+        Linea(pixel, 2, 10, 18, 10, ghiaccio, 1);
+        Linea(pixel, 4, 4, 16, 16, ghiaccio, 1);
+        Linea(pixel, 4, 16, 16, 4, ghiaccio, 1);
+        Rettangolo(pixel, 8, 8, 11, 11, new Color32(224, 249, 247, 255));
+    }
+
+    private static void DisegnaSpinta(Color32[] pixel)
+    {
+        DisegnaPatataPiccola(pixel, 5, 10, new Color32(166, 98, 43, 255));
+        Color32 luce = new Color32(255, 190, 54, 255);
+        Linea(pixel, 9, 10, 17, 10, Contorno, 3);
+        Linea(pixel, 14, 6, 18, 10, Contorno, 3);
+        Linea(pixel, 14, 14, 18, 10, Contorno, 3);
+        Linea(pixel, 9, 10, 17, 10, luce, 1);
+        Linea(pixel, 14, 6, 18, 10, luce, 1);
+        Linea(pixel, 14, 14, 18, 10, luce, 1);
+        Linea(pixel, 1, 5, 4, 5, new Color32(239, 91, 54, 255), 2);
+        Linea(pixel, 1, 15, 4, 15, new Color32(239, 91, 54, 255), 2);
+    }
+
+    private static void DisegnaTriploSparo(Color32[] pixel)
+    {
+        Color32 viola = new Color32(181, 115, 217, 255);
+        DisegnaPatataPiccola(pixel, 10, 5, viola);
+        DisegnaPatataPiccola(pixel, 4, 12, viola);
+        DisegnaPatataPiccola(pixel, 16, 12, viola);
+        Linea(pixel, 10, 9, 10, 18, Contorno, 2);
+        Linea(pixel, 5, 15, 2, 18, Contorno, 2);
+        Linea(pixel, 15, 15, 18, 18, Contorno, 2);
+    }
+
+    private static void DisegnaBoostVelocita(Color32[] pixel)
+    {
+        DisegnaStivale(pixel);
+        Color32 giallo = new Color32(255, 218, 57, 255);
+        Linea(pixel, 15, 18, 11, 11, Contorno, 3);
+        Linea(pixel, 11, 11, 17, 11, Contorno, 3);
+        Linea(pixel, 17, 11, 13, 3, Contorno, 3);
+        Linea(pixel, 15, 18, 12, 12, giallo, 1);
+        Linea(pixel, 12, 12, 16, 12, giallo, 1);
+        Linea(pixel, 16, 12, 13, 3, giallo, 1);
+    }
+
+    private static void DisegnaPatataPiccola(
+        Color32[] pixel,
+        int centroX,
+        int centroY,
+        Color32 colore
+    )
+    {
+        for (int y = centroY - 3; y <= centroY + 3; y++)
+        {
+            for (int x = centroX - 3; x <= centroX + 3; x++)
+            {
+                float distanza = Quadrato((x - centroX) / 3f) +
+                                  Quadrato((y - centroY) / 2.4f);
+                if (distanza > 1f) continue;
+                bool bordo = distanza > 0.48f;
+                Imposta(
+                    pixel,
+                    DimensioneIcona,
+                    DimensioneIcona,
+                    x,
+                    y,
+                    bordo ? Contorno : colore
+                );
+            }
+        }
     }
 
     private static void DisegnaForma(

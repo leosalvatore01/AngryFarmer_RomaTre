@@ -241,47 +241,48 @@ public class GameManager : MonoBehaviour
         rect.anchorMin = new Vector2(0f, 1f);
         rect.anchorMax = new Vector2(0f, 1f);
         rect.pivot = new Vector2(0f, 1f);
-        rect.anchoredPosition = new Vector2(18f, -18f);
-        rect.sizeDelta = new Vector2(376f, 194f);
+        rect.anchoredPosition = new Vector2(12f, -12f);
+        rect.sizeDelta = new Vector2(286f, 124f);
 
         Image immagine = pannello.GetComponent<Image>();
         FarmPixelUI.ApplicaPannello(immagine, false, false);
+        ImpostaTrasparenzaPannello(immagine, 0.70f, 0.58f);
 
         CreaTitoloHUD(pannello.transform);
         CreaSchedaHUD(
             pannello.transform,
             "SchedaOndata",
             FarmPixelIcon.Ondata,
-            -68f
+            -44f
         );
         CreaSchedaHUD(
             pannello.transform,
             "SchedaVita",
             FarmPixelIcon.Cuore,
-            -110f
+            -75f
         );
         CreaSchedaHUD(
             pannello.transform,
             "SchedaMonete",
             FarmPixelIcon.Moneta,
-            -152f
+            -106f
         );
         schedaUovaHud = null;
         schedaUovaSalvateHud = null;
 
         ConfiguraTestoHUD(
             TrovaTestoInterfaccia("OndataText"),
-            new Vector2(82f, -86f),
+            new Vector2(52f, -56f),
             new Color(1f, 0.77f, 0.32f, 1f)
         );
         ConfiguraTestoHUD(
             TrovaTestoInterfaccia("VitaText"),
-            new Vector2(82f, -128f),
+            new Vector2(52f, -87f),
             new Color(0.5f, 0.95f, 0.47f, 1f)
         );
         ConfiguraTestoHUD(
             testoMonete,
-            new Vector2(82f, -170f),
+            new Vector2(52f, -118f),
             new Color(1f, 0.9f, 0.24f, 1f)
         );
     }
@@ -302,14 +303,14 @@ public class GameManager : MonoBehaviour
         rect.anchorMin = new Vector2(0.5f, 1f);
         rect.anchorMax = new Vector2(0.5f, 1f);
         rect.pivot = new Vector2(0.5f, 0.5f);
-        rect.anchoredPosition = new Vector2(0f, -26f);
-        rect.sizeDelta = new Vector2(330f, 34f);
+        rect.anchoredPosition = new Vector2(0f, -16f);
+        rect.sizeDelta = new Vector2(258f, 22f);
 
         TextMeshProUGUI titolo = oggetto.GetComponent<TextMeshProUGUI>();
         TMP_Text riferimento = TrovaTestoInterfaccia("OndataText");
         if (riferimento != null) titolo.font = riferimento.font;
         titolo.text = "SOPRAVVIVENZA";
-        titolo.fontSize = 24f;
+        titolo.fontSize = 17f;
         titolo.fontStyle = FontStyles.Bold;
         titolo.alignment = TextAlignmentOptions.Center;
         titolo.textWrappingMode = TextWrappingModes.NoWrap;
@@ -342,20 +343,41 @@ public class GameManager : MonoBehaviour
         rect.anchorMin = new Vector2(0f, 1f);
         rect.anchorMax = new Vector2(0f, 1f);
         rect.pivot = new Vector2(0f, 0.5f);
-        rect.anchoredPosition = new Vector2(14f, posizioneY);
-        rect.sizeDelta = new Vector2(346f, 40f);
+        rect.anchoredPosition = new Vector2(11f, posizioneY);
+        rect.sizeDelta = new Vector2(264f, 28f);
 
         Image sfondo = scheda.GetComponent<Image>();
         FarmPixelUI.ApplicaPannello(sfondo, true, false);
+        ImpostaTrasparenzaPannello(sfondo, 0.58f, 0.44f);
 
         FarmPixelUI.AggiungiIcona(
             scheda.transform,
             "Icona",
             icona,
-            new Vector2(-145f, 0f),
-            new Vector2(32f, 32f)
+            new Vector2(-111f, 0f),
+            new Vector2(22f, 22f)
         );
         return scheda;
+    }
+
+    static void ImpostaTrasparenzaPannello(
+        Image immagine,
+        float alphaSfondo,
+        float alphaBordo
+    )
+    {
+        if (immagine == null) return;
+
+        Color colore = immagine.color;
+        colore.a = Mathf.Clamp01(alphaSfondo);
+        immagine.color = colore;
+
+        Outline bordo = immagine.GetComponent<Outline>();
+        if (bordo == null) return;
+        Color coloreBordo = bordo.effectColor;
+        coloreBordo.a = Mathf.Clamp01(alphaBordo);
+        bordo.effectColor = coloreBordo;
+        bordo.effectDistance = new Vector2(1f, 1f);
     }
 
     static void ConfiguraTestoHUD(
@@ -371,9 +393,9 @@ public class GameManager : MonoBehaviour
         rect.anchorMax = new Vector2(0f, 1f);
         rect.pivot = new Vector2(0f, 0.5f);
         rect.anchoredPosition = posizione;
-        rect.sizeDelta = new Vector2(268f, 36f);
+        rect.sizeDelta = new Vector2(230f, 26f);
 
-        testo.fontSize = 25f;
+        testo.fontSize = 20f;
         testo.fontStyle = FontStyles.Bold;
         testo.alignment = TextAlignmentOptions.MidlineLeft;
         testo.textWrappingMode = TextWrappingModes.NoWrap;

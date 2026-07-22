@@ -75,6 +75,7 @@ public class PlayerShooting : MonoBehaviour
     private float angoloLateraleTriploSparo = 10f;
     private float nextFire;
     private bool triploSparoAttivo;
+    private float tempoFineTriploSparo;
     private Coroutine triploSparoRoutine;
     private Camera cameraPrincipale;
     private PlayerVisualController controllerVisivo;
@@ -87,6 +88,13 @@ public class PlayerShooting : MonoBehaviour
     public bool InAttesaRilascioMouse => attendiRilascioMouse;
     public int UltimoNumeroProiettiliCreati { get; private set; }
     public int CriticiGenerati { get; private set; }
+    public bool TriploSparoAttivo =>
+        triploSparoAttivo && tempoFineTriploSparo > Time.time;
+    public float TempoTriploSparoRimasto => TriploSparoAttivo
+        ? Mathf.Max(0f, tempoFineTriploSparo - Time.time)
+        : 0f;
+    public float DurataTriploSparoTotale =>
+        Mathf.Max(0f, durataTriploSparo);
 
     void Awake()
     {
@@ -137,6 +145,15 @@ public class PlayerShooting : MonoBehaviour
     void OnEnable()
     {
         attendiRilascioMouse = Input.GetMouseButton(0);
+    }
+
+    void OnDisable()
+    {
+        if (triploSparoRoutine != null)
+        {
+            StopCoroutine(triploSparoRoutine);
+        }
+        AzzeraTriploSparo();
     }
 
     void Update()
@@ -238,7 +255,7 @@ public class PlayerShooting : MonoBehaviour
                 rafficaRaccolto = true;
             }
         }
-        bool sparaVentaglio = triploSparoAttivo || rafficaRaccolto;
+        bool sparaVentaglio = TriploSparoAttivo || rafficaRaccolto;
         bool potente =
             bonusDanno > 0 ||
             sparaVentaglio ||
@@ -429,16 +446,31 @@ public class PlayerShooting : MonoBehaviour
         if (triploSparoRoutine != null)
         {
             StopCoroutine(triploSparoRoutine);
+            triploSparoRoutine = null;
         }
 
-        triploSparoRoutine = StartCoroutine(TriploSparoTimer());
+        float durata = DurataTriploSparoTotale;
+        if (durata <= 0f)
+        {
+            AzzeraTriploSparo();
+            return;
+        }
+
+        triploSparoAttivo = true;
+        tempoFineTriploSparo = Time.time + durata;
+        triploSparoRoutine = StartCoroutine(TriploSparoTimer(durata));
     }
 
-    IEnumerator TriploSparoTimer()
+    IEnumerator TriploSparoTimer(float durata)
     {
-        triploSparoAttivo = true;
-        yield return new WaitForSeconds(durataTriploSparo);
+        yield return new WaitForSeconds(durata);
+        AzzeraTriploSparo();
+    }
+
+    private void AzzeraTriploSparo()
+    {
         triploSparoAttivo = false;
+        tempoFineTriploSparo = 0f;
         triploSparoRoutine = null;
     }
 

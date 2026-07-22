@@ -14,6 +14,7 @@ public sealed class WaveReadabilityController : MonoBehaviour
     private const int NumeroSettori = 8;
     private const int DimensionePoolTelegraph = 16;
     private const int SegmentiBarra = 10;
+    private const int NumeroTipiVolpe = (int)TipoVolpe.Scavatrice + 1;
     private const float DurataSegnale = 1.45f;
     private const float MargineScadenzaPreavviso = 0.35f;
     private const float IntervalloCampionamento = 0.08f;
@@ -49,7 +50,8 @@ public sealed class WaveReadabilityController : MonoBehaviour
     private readonly TipoVolpe[] tipiPrioritariSettori =
         new TipoVolpe[NumeroSettori];
     private readonly int[] prioritaTipiSettori = new int[NumeroSettori];
-    private readonly int[] conteggiTipiVisualizzati = new int[5];
+    private readonly int[] conteggiTipiVisualizzati =
+        new int[NumeroTipiVolpe];
 
     private EnemySpawner spawner;
     private AnteprimaOndata anteprimaCorrente;
@@ -556,7 +558,7 @@ public sealed class WaveReadabilityController : MonoBehaviour
                     coloreTipo,
                     quantita > 0 ? 0.28f : 0.08f
                 );
-                colore.a = quantita > 0 ? 1f : 0.78f;
+                colore.a = quantita > 0 ? 0.64f : 0.36f;
                 sfondiChipTipi[i].color = colore;
             }
         }
@@ -680,11 +682,13 @@ public sealed class WaveReadabilityController : MonoBehaviour
                 indicatore.immagineFreccia.color = contieneMinacce
                     ? coloreTipo
                     : Color.Lerp(coloreTipo, Color.white, 0.34f);
-                indicatore.sfondo.color = Color.Lerp(
+                Color coloreSfondo = Color.Lerp(
                     FarmPixelUI.ColoreCartaFlat,
                     coloreTipo,
                     contieneMinacce ? 0.32f : 0.18f
                 );
+                coloreSfondo.a = contieneMinacce ? 0.62f : 0.52f;
+                indicatore.sfondo.color = coloreSfondo;
             }
 
             indicatore.quantitaVisualizzata = quantita;
@@ -998,8 +1002,8 @@ public sealed class WaveReadabilityController : MonoBehaviour
             new Vector2(1f, 1f),
             new Vector2(1f, 1f),
             new Vector2(1f, 1f),
-            new Vector2(-18f, -18f),
-            new Vector2(400f, 174f),
+            new Vector2(-12f, -12f),
+            new Vector2(360f, 112f),
             false
         );
 
@@ -1007,8 +1011,8 @@ public sealed class WaveReadabilityController : MonoBehaviour
             schedaHud.transform,
             "IconaVolpe",
             FarmPixelIcon.Volpe,
-            new Vector2(-160f, 38f),
-            new Vector2(56f, 56f)
+            new Vector2(-151f, 22f),
+            new Vector2(38f, 38f)
         );
 
         CreaTesto(
@@ -1016,9 +1020,9 @@ public sealed class WaveReadabilityController : MonoBehaviour
             schedaHud.transform,
             "VOLPI RIMASTE",
             font,
-            new Vector2(42f, 58f),
-            new Vector2(286f, 28f),
-            20f,
+            new Vector2(24f, 35f),
+            new Vector2(272f, 18f),
+            15f,
             new Color32(255, 220, 143, 255),
             TextAlignmentOptions.Center,
             FontStyles.Bold
@@ -1028,9 +1032,9 @@ public sealed class WaveReadabilityController : MonoBehaviour
             schedaHud.transform,
             "RIMASTE  0 / 0",
             font,
-            new Vector2(42f, 27f),
-            new Vector2(286f, 32f),
-            25f,
+            new Vector2(24f, 14f),
+            new Vector2(272f, 24f),
+            20f,
             new Color32(255, 181, 67, 255),
             TextAlignmentOptions.Center,
             FontStyles.Bold
@@ -1040,9 +1044,9 @@ public sealed class WaveReadabilityController : MonoBehaviour
             schedaHud.transform,
             string.Empty,
             font,
-            new Vector2(-140f, -12f),
-            new Vector2(116f, 24f),
-            16f,
+            new Vector2(-122f, -10f),
+            new Vector2(90f, 18f),
+            13f,
             new Color32(242, 211, 157, 255),
             TextAlignmentOptions.Center,
             FontStyles.Bold
@@ -1054,14 +1058,14 @@ public sealed class WaveReadabilityController : MonoBehaviour
             new Vector2(0.5f, 0.5f),
             new Vector2(0.5f, 0.5f),
             new Vector2(0.5f, 0.5f),
-            new Vector2(42f, -12f),
-            new Vector2(284f, 22f),
+            new Vector2(28f, -10f),
+            new Vector2(226f, 16f),
             true
         );
 
         segmentiBarra = new Image[SegmentiBarra];
-        const float larghezza = 22f;
-        const float spazio = 3f;
+        const float larghezza = 18f;
+        const float spazio = 2f;
         float totale = SegmentiBarra * larghezza +
                        (SegmentiBarra - 1) * spazio;
         float primoX = -totale * 0.5f + larghezza * 0.5f;
@@ -1078,7 +1082,7 @@ public sealed class WaveReadabilityController : MonoBehaviour
             ImpostaRectCentrato(
                 rect,
                 new Vector2(primoX + i * (larghezza + spazio), 0f),
-                new Vector2(larghezza, 12f)
+                new Vector2(larghezza, 9f)
             );
             Image immagine = segmento.GetComponent<Image>();
             immagine.raycastTarget = false;
@@ -1091,10 +1095,10 @@ public sealed class WaveReadabilityController : MonoBehaviour
 
     private void CreaChipTipi(Transform parent, TMP_FontAsset font)
     {
-        chipTipi = new TMP_Text[5];
-        sfondiChipTipi = new Image[5];
-        const float larghezza = 68f;
-        const float spazio = 5f;
+        chipTipi = new TMP_Text[NumeroTipiVolpe];
+        sfondiChipTipi = new Image[NumeroTipiVolpe];
+        const float larghezza = 40f;
+        const float spazio = 3f;
         float totale = chipTipi.Length * larghezza +
                        (chipTipi.Length - 1) * spazio;
         float primoX = -totale * 0.5f + larghezza * 0.5f;
@@ -1109,8 +1113,8 @@ public sealed class WaveReadabilityController : MonoBehaviour
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
-                new Vector2(primoX + i * (larghezza + spazio), -64f),
-                new Vector2(larghezza, 30f),
+                new Vector2(primoX + i * (larghezza + spazio), -40f),
+                new Vector2(larghezza, 22f),
                 true
             );
             Image sfondo = pannello.GetComponent<Image>();
@@ -1123,8 +1127,8 @@ public sealed class WaveReadabilityController : MonoBehaviour
                 FoxVariantStyle.Abbreviazione(tipo) + "  0",
                 font,
                 Vector2.zero,
-                new Vector2(larghezza - 4f, 25f),
-                16f,
+                new Vector2(larghezza - 2f, 19f),
+                12f,
                 new Color32(255, 247, 216, 255),
                 TextAlignmentOptions.Center,
                 FontStyles.Bold
@@ -1158,7 +1162,7 @@ public sealed class WaveReadabilityController : MonoBehaviour
                 ancore[i],
                 new Vector2(0.5f, 0.5f),
                 Vector2.zero,
-                new Vector2(94f, 48f),
+                new Vector2(84f, 36f),
                 false
             );
 
@@ -1172,8 +1176,8 @@ public sealed class WaveReadabilityController : MonoBehaviour
             RectTransform frecciaRect = freccia.GetComponent<RectTransform>();
             ImpostaRectCentrato(
                 frecciaRect,
-                new Vector2(-27f, 0f),
-                new Vector2(28f, 28f)
+                new Vector2(-25f, 0f),
+                new Vector2(22f, 22f)
             );
             frecciaRect.localRotation = Quaternion.Euler(0f, 0f, i * 45f);
             Image immagineFreccia = freccia.GetComponent<Image>();
@@ -1187,13 +1191,16 @@ public sealed class WaveReadabilityController : MonoBehaviour
                 pannello.transform,
                 "x1",
                 font,
-                new Vector2(16f, 0f),
-                new Vector2(56f, 34f),
-                24f,
+                new Vector2(13f, 0f),
+                new Vector2(52f, 28f),
+                18f,
                 new Color32(255, 229, 169, 255),
                 TextAlignmentOptions.Center,
                 FontStyles.Bold
             );
+            quantita.enableAutoSizing = true;
+            quantita.fontSizeMin = 12f;
+            quantita.fontSizeMax = 18f;
 
             indicatori[i] = new IndicatoreSettore
             {
@@ -1215,8 +1222,8 @@ public sealed class WaveReadabilityController : MonoBehaviour
             new Vector2(0.5f, 1f),
             new Vector2(0.5f, 1f),
             new Vector2(0.5f, 1f),
-            new Vector2(0f, -118f),
-            new Vector2(430f, 76f),
+            new Vector2(0f, -82f),
+            new Vector2(300f, 50f),
             false
         );
         gruppoSegnale = pannelloSegnale.AddComponent<CanvasGroup>();
@@ -1227,15 +1234,15 @@ public sealed class WaveReadabilityController : MonoBehaviour
             pannelloSegnale.transform,
             "VolpeSinistra",
             FarmPixelIcon.Volpe,
-            new Vector2(-180f, 0f),
-            new Vector2(46f, 46f)
+            new Vector2(-126f, 0f),
+            new Vector2(28f, 28f)
         );
         FarmPixelUI.AggiungiIcona(
             pannelloSegnale.transform,
             "VolpeDestra",
             FarmPixelIcon.Volpe,
-            new Vector2(180f, 0f),
-            new Vector2(46f, 46f)
+            new Vector2(126f, 0f),
+            new Vector2(28f, 28f)
         );
         testoSegnale = CreaTesto(
             "TestoSegnale",
@@ -1243,8 +1250,8 @@ public sealed class WaveReadabilityController : MonoBehaviour
             "ULTIME VOLPI!",
             font,
             Vector2.zero,
-            new Vector2(332f, 50f),
-            31f,
+            new Vector2(230f, 36f),
+            22f,
             new Color32(255, 182, 63, 255),
             TextAlignmentOptions.Center,
             FontStyles.Bold
@@ -1279,6 +1286,18 @@ public sealed class WaveReadabilityController : MonoBehaviour
 
         Image immagine = oggetto.GetComponent<Image>();
         FarmPixelUI.ApplicaPannello(immagine, incassato, false);
+        Color colore = immagine.color;
+        colore.a = incassato ? 0.48f : 0.66f;
+        immagine.color = colore;
+
+        Outline bordo = immagine.GetComponent<Outline>();
+        if (bordo != null)
+        {
+            Color coloreBordo = bordo.effectColor;
+            coloreBordo.a = incassato ? 0.34f : 0.48f;
+            bordo.effectColor = coloreBordo;
+            bordo.effectDistance = new Vector2(1f, 1f);
+        }
         return oggetto;
     }
 
