@@ -177,6 +177,7 @@ public class EnemySpawner : MonoBehaviour
             DifficoltaPartita.Normale
         );
     public bool DifficoltaApplicata => difficoltaApplicata;
+    public Vector2 CentroSpawnCorrente => OttieniCentroSpawnCorrente();
     public ProgressoOndata ProgressoCorrente => CreaProgressoCorrente();
     public AnteprimaOndata AnteprimaCorrente =>
         OttieniAnteprima(currentWaveIndex);
@@ -192,11 +193,7 @@ public class EnemySpawner : MonoBehaviour
         messaggioOndata =
             GameManager.TrovaTestoInterfaccia("MessaggioOndataText");
 
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-        if (player != null)
-        {
-            giocatore = player.transform;
-        }
+        AggiornaRiferimentoGiocatore();
 
         ConfiguraPannelloMessaggio();
         NascondiMessaggio();
@@ -318,8 +315,9 @@ public class EnemySpawner : MonoBehaviour
                         yield break;
                     }
 
-                    Vector2 posizioneSpawn =
-                        DirezioneCasuale() * spawnDistance;
+                    Vector2 posizioneSpawn = CalcolaPosizioneSpawnVolpe(
+                        DirezioneCasuale()
+                    );
                     int slotSpawn = indiceSpawn + 1;
                     TipoVolpe tipoSpawn = OttieniTipoVolpe(
                         ondataCorrente,
@@ -1423,11 +1421,10 @@ public class EnemySpawner : MonoBehaviour
     {
         if (pigPrefab == null) return false;
 
-        Vector2 centro = giocatore != null
-            ? (Vector2)giocatore.position
-            : Vector2.zero;
-        Vector2 spawnPos =
-            centro + DirezioneCasuale() * distanzaSpawnMaialino;
+        Vector2 spawnPos = CalcolaPosizioneSpawn(
+            DirezioneCasuale(),
+            distanzaSpawnMaialino
+        );
 
         GameObject nuovoMaialino =
             Instantiate(pigPrefab, spawnPos, Quaternion.identity);
@@ -1477,6 +1474,43 @@ public class EnemySpawner : MonoBehaviour
         return direzione.sqrMagnitude > 0.001f
             ? direzione.normalized
             : Vector2.right;
+    }
+
+    /// <summary>
+    /// Calcola un punto sull'anello di spawn centrato sulla posizione
+    /// attuale del contadino. Viene richiamato per ogni singola volpe.
+    /// </summary>
+    public Vector2 CalcolaPosizioneSpawnVolpe(Vector2 direzione)
+    {
+        return CalcolaPosizioneSpawn(direzione, spawnDistance);
+    }
+
+    private Vector2 CalcolaPosizioneSpawn(
+        Vector2 direzione,
+        float distanza
+    )
+    {
+        Vector2 direzioneValida = direzione.sqrMagnitude > 0.001f
+            ? direzione.normalized
+            : Vector2.right;
+        return OttieniCentroSpawnCorrente() +
+               direzioneValida * Mathf.Max(0f, distanza);
+    }
+
+    private Vector2 OttieniCentroSpawnCorrente()
+    {
+        AggiornaRiferimentoGiocatore();
+        return giocatore != null
+            ? (Vector2)giocatore.position
+            : (Vector2)transform.position;
+    }
+
+    private void AggiornaRiferimentoGiocatore()
+    {
+        if (giocatore != null) return;
+
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null) giocatore = player.transform;
     }
 
     void OnDisable()
