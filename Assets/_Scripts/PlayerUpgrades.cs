@@ -394,8 +394,16 @@ public class PlayerUpgrades : MonoBehaviour
                 return "DANNO +" + Mathf.Max(1, configurazione.incrementoDanno);
             case TipoPotenziamento.Cadenza:
             {
-                float attuale = CalcolaIntervalloSparo(livelloCadenza);
-                float prossimo = CalcolaIntervalloSparo(livelloCadenza + 1);
+                float attuale = sparo != null
+                    ? sparo.IntervalloSparoFinale
+                    : CalcolaIntervalloSparo(livelloCadenza);
+                float prossimoRun =
+                    CalcolaIntervalloSparo(livelloCadenza + 1);
+                float prossimo = sparo != null
+                    ? sparo.ApplicaBonusPermanenteAIntervallo(
+                        prossimoRun
+                    )
+                    : prossimoRun;
                 int incremento = prossimo > 0f
                     ? Mathf.Max(
                         1,
@@ -542,7 +550,9 @@ public class PlayerUpgrades : MonoBehaviour
                 return Confronto(
                     FormattaDecimale(attuale),
                     FormattaDecimale(
-                        CalcolaVelocitaMovimento(livelloMovimento + 1)
+                        attuale +
+                        CalcolaBonusMovimento(livelloMovimento + 1) -
+                        CalcolaBonusMovimento(livelloMovimento)
                     )
                 );
             }
@@ -551,9 +561,21 @@ public class PlayerUpgrades : MonoBehaviour
                 float attuale = salute != null
                     ? salute.ProbabilitaBloccoFinale
                     : 0f;
+                float prossimoRun =
+                    CalcolaProbabilitaBlocco(livelloResistenza + 1);
+                float prossimo = salute != null
+                    ? Mathf.Clamp(
+                        1f -
+                        (1f - salute.ProbabilitaBloccoBase) *
+                        (1f - prossimoRun) *
+                        (1f - salute.ProbabilitaBloccoPermanente),
+                        0f,
+                        0.9f
+                    )
+                    : prossimoRun;
                 return ConfrontoPercentuale(
                     attuale,
-                    CalcolaProbabilitaBlocco(livelloResistenza + 1)
+                    prossimo
                 );
             }
             case TipoPotenziamento.SaluteMassima:
@@ -596,7 +618,9 @@ public class PlayerUpgrades : MonoBehaviour
                     ? sparo.IntervalloSparoFinale
                     : 0f;
                 float prossimo = sparo != null
-                    ? CalcolaIntervalloSparo(livelloCadenza + 1)
+                    ? sparo.ApplicaBonusPermanenteAIntervallo(
+                        CalcolaIntervalloSparo(livelloCadenza + 1)
+                    )
                     : 0f;
                 return Confronto(
                     FormattaDecimale(attuale) + " s",

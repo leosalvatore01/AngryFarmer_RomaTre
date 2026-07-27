@@ -20,7 +20,13 @@ public class PlayerMovement : MonoBehaviour
 
     public float VelocitaBase => velocitaBase;
     public float BonusVelocita => bonusVelocita;
-    public float VelocitaFinale => Mathf.Max(0f, velocitaBase + bonusVelocita);
+    public float BonusVelocitaPermanente => bonusVelocitaPermanente;
+    public float BonusVelocitaTotale =>
+        bonusVelocita + bonusVelocitaPermanente;
+    public float VelocitaFinale => Mathf.Max(
+        0f,
+        velocitaBase + BonusVelocitaTotale
+    );
     public float VelocitaEffettiva =>
         VelocitaFinale * MoltiplicatoreVelocitaCorrente;
     public float MoltiplicatoreBoostCorrente => moltiplicatoreVelocita;
@@ -43,6 +49,7 @@ public class PlayerMovement : MonoBehaviour
 
     private Rigidbody2D corpo;
     private float bonusVelocita;
+    private float bonusVelocitaPermanente;
     private float moltiplicatoreVelocita = 1f;
     private float moltiplicatoreBoost = 2f;
     private float moltiplicatoreInversione = 1.35f;
@@ -159,6 +166,11 @@ public class PlayerMovement : MonoBehaviour
     public void ImpostaBonusVelocita(float valore)
     {
         bonusVelocita = Mathf.Max(0f, valore);
+    }
+
+    public void ImpostaBonusVelocitaPermanente(float valore)
+    {
+        bonusVelocitaPermanente = Mathf.Max(0f, valore);
     }
 
     public void AggiungiBonusVelocita(float quantita)

@@ -30,7 +30,8 @@ public enum FarmPixelIcon
     BoostVelocita,
     Volpe,
     Gallina,
-    Obiettivo
+    Obiettivo,
+    GettonePermanente
 }
 
 /// <summary>
@@ -428,6 +429,9 @@ public static class FarmPixelUI
             case FarmPixelIcon.Moneta:
                 DisegnaMoneta(pixel);
                 break;
+            case FarmPixelIcon.GettonePermanente:
+                DisegnaGettonePermanente(pixel);
+                break;
             case FarmPixelIcon.Uovo:
                 DisegnaUovo(pixel);
                 break;
@@ -584,6 +588,44 @@ public static class FarmPixelUI
             }
         }
         Rettangolo(pixel, 7, 12, 9, 14, new Color32(255, 230, 95, 255));
+    }
+
+    private static void DisegnaGettonePermanente(Color32[] pixel)
+    {
+        bool Dentro(int x, int y)
+        {
+            return Quadrato(x - 9.5f) + Quadrato(y - 9.5f) <= 58f;
+        }
+
+        Color32 viola = new Color32(156, 117, 193, 255);
+        Color32 violaScuro = new Color32(100, 73, 143, 255);
+        Color32 luce = new Color32(255, 224, 112, 255);
+        DisegnaForma(pixel, Dentro, viola, Contorno);
+
+        for (int y = 4; y <= 15; y++)
+        {
+            for (int x = 4; x <= 15; x++)
+            {
+                float distanza =
+                    Quadrato(x - 9.5f) + Quadrato(y - 9.5f);
+                if (distanza > 29f && distanza < 43f)
+                {
+                    Imposta(
+                        pixel,
+                        DimensioneIcona,
+                        DimensioneIcona,
+                        x,
+                        y,
+                        violaScuro
+                    );
+                }
+            }
+        }
+
+        Rettangolo(pixel, 8, 5, 11, 14, luce);
+        Rettangolo(pixel, 5, 8, 14, 11, luce);
+        Rettangolo(pixel, 7, 7, 12, 12, luce);
+        Rettangolo(pixel, 9, 8, 10, 11, new Color32(255, 248, 190, 255));
     }
 
     private static void DisegnaUovo(Color32[] pixel)

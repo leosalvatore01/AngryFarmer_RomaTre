@@ -125,6 +125,11 @@ public sealed class PauseSettingsMenu : MonoBehaviour
     private void Update()
     {
         AggiornaVisibilitaPulsanteApri();
+        if (ShopPermanentePrePartita.ApertoGlobale ||
+            ShopPermanentePrePartita.InputModaleConsumataQuestoFrame)
+        {
+            return;
+        }
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             AlternaMenu();
@@ -135,7 +140,9 @@ public sealed class PauseSettingsMenu : MonoBehaviour
     {
         if (pulsanteApri == null || Aperto) return;
         GameManager gestore = GameManager.instance;
-        bool visibile = gestore == null || gestore.DifficoltaConfermata;
+        bool visibile =
+            !ShopPermanentePrePartita.ApertoGlobale &&
+            (gestore == null || gestore.DifficoltaConfermata);
         if (pulsanteApri.gameObject.activeSelf != visibile)
         {
             pulsanteApri.gameObject.SetActive(visibile);
@@ -144,6 +151,12 @@ public sealed class PauseSettingsMenu : MonoBehaviour
 
     public void AlternaMenu()
     {
+        if (ShopPermanentePrePartita.ApertoGlobale ||
+            ShopPermanentePrePartita.InputModaleConsumataQuestoFrame)
+        {
+            return;
+        }
+
         GameManager gestore = GameManager.instance;
         if (!Aperto && gestore != null &&
             !gestore.DifficoltaConfermata)
@@ -156,6 +169,8 @@ public sealed class PauseSettingsMenu : MonoBehaviour
 
     public void Mostra()
     {
+        if (ShopPermanentePrePartita.ApertoGlobale) return;
+
         GameManager gestoreSelezione = GameManager.instance;
         if (gestoreSelezione != null &&
             !gestoreSelezione.DifficoltaConfermata)

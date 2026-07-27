@@ -28,7 +28,9 @@ public class GameManager : MonoBehaviour
     private Button pulsanteRiprova;
     private Button pulsanteCambiaDifficolta;
     private GameObject selettoreDifficolta;
+    private TMP_Text testoAccessoShopPermanente;
     private ShopInterOndata shopInterOndata;
+    private ShopPermanentePrePartita shopPermanente;
     private GameObject schedaUovaHud;
     private GameObject schedaUovaSalvateHud;
     private int gallineTotali;
@@ -38,6 +40,7 @@ public class GameManager : MonoBehaviour
     private int proiettiliSparati;
     private int proiettiliACentro;
     private int ondateCompletate;
+    private int bonusProvvistePermanentiApplicato;
     private int punteggioFinale;
     private bool ultimaPartitaVinta;
     private bool recordFinaliCalcolati;
@@ -48,6 +51,8 @@ public class GameManager : MonoBehaviour
     public int MoneteRaccolte { get; private set; }
     public int MoneteSpese { get; private set; }
     public int UltimoBonusCompletamento { get; private set; }
+    public int GettoniPermanentiGuadagnati { get; private set; }
+    public int UltimoBonusPermanente { get; private set; }
     public int GallineTotali => gallineTotali;
     public int GallineAlSicuro =>
         Mathf.Min(gallineTotali, Gallina.ContaAlSicuro());
@@ -70,6 +75,11 @@ public class GameManager : MonoBehaviour
     public DifficoltaPartita DifficoltaCorrente { get; private set; }
     public bool DifficoltaConfermata { get; private set; }
     public bool PreparazioneInizialeCompletata { get; private set; }
+    public bool PuoAprireShopPermanente =>
+        !isGameOver &&
+        !PreparazioneInizialeCompletata &&
+        !PausaManualeAttiva &&
+        StatoCorrente == StatoPartita.Intervallo;
     public string UltimoObiettivo { get; private set; } = string.Empty;
     public bool UltimoObiettivoValutato { get; private set; }
     public bool UltimoObiettivoCompletato { get; private set; }
@@ -102,6 +112,8 @@ public class GameManager : MonoBehaviour
             MoneteRaccolte = monete;
             MoneteSpese = 0;
             UltimoBonusCompletamento = 0;
+            GettoniPermanentiGuadagnati = 0;
+            UltimoBonusPermanente = 0;
             UovaSalvate = 0;
             SerieSalvataggi = 0;
             MiglioreSerieSalvataggi = 0;
@@ -114,6 +126,7 @@ public class GameManager : MonoBehaviour
             proiettiliSparati = 0;
             proiettiliACentro = 0;
             ondateCompletate = 0;
+            bonusProvvistePermanentiApplicato = 0;
             punteggioFinale = 0;
             recordFinaliCalcolati = false;
             DifficoltaCorrente = ProgressionePartita.DifficoltaCorrente;
@@ -141,12 +154,14 @@ public class GameManager : MonoBehaviour
             gameOverPanel.SetActive(false);
         }
 
+        shopInterOndata = ShopInterOndata.CreaOTrova();
+        shopPermanente = ShopPermanentePrePartita.CreaOTrova();
+        SincronizzaBonusPermanentiPrimaPartita();
+
         if (!DifficoltaConfermata)
         {
             MostraSelettoreDifficolta();
         }
-
-        shopInterOndata = ShopInterOndata.CreaOTrova();
         // Survival puro: nessun blocco interattivo o obiettivo-uovo.
         foreach (Gallina gallina in FindObjectsByType<Gallina>(FindObjectsSortMode.None))
         {
@@ -162,6 +177,11 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
+        if (ShopPermanentePrePartita.ApertoGlobale)
+        {
+            return;
+        }
+
         if (!DifficoltaConfermata)
         {
             if (Input.GetKeyDown(KeyCode.Alpha1) ||
@@ -613,7 +633,7 @@ public class GameManager : MonoBehaviour
             testoCambia = CreaTestoPannello(
                 cambiaOggetto.transform,
                 "TestoCambiaDifficolta",
-                "CAMBIA DIFFICOLTA",
+                "MENU E SHOP",
                 19f
             );
             RectTransform testoRect = testoCambia.rectTransform;
@@ -624,7 +644,7 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            testoCambia.text = "CAMBIA DIFFICOLTA";
+            testoCambia.text = "MENU E SHOP";
         }
         FarmPixelUI.ApplicaTesto(
             testoCambia,
@@ -648,6 +668,7 @@ public class GameManager : MonoBehaviour
 
         selettoreDifficolta.SetActive(true);
         selettoreDifficolta.transform.SetAsLastSibling();
+        AggiornaAccessoShopPermanente();
         AggiornaScalaTemporale();
     }
 
@@ -701,7 +722,7 @@ public class GameManager : MonoBehaviour
         pannelloRect.anchorMax = new Vector2(0.5f, 0.5f);
         pannelloRect.pivot = new Vector2(0.5f, 0.5f);
         pannelloRect.anchoredPosition = Vector2.zero;
-        pannelloRect.sizeDelta = new Vector2(900f, 650f);
+        pannelloRect.sizeDelta = new Vector2(900f, 760f);
         FarmPixelUI.ApplicaPannello(
             pannello.GetComponent<Image>(),
             false,
@@ -716,7 +737,7 @@ public class GameManager : MonoBehaviour
         );
         ConfiguraRettangoloCentrato(
             titolo.rectTransform,
-            new Vector2(0f, 255f),
+            new Vector2(0f, 305f),
             new Vector2(760f, 70f)
         );
         FarmPixelUI.ApplicaTesto(titolo, FarmPixelUI.TestoTitoloFlat);
@@ -729,7 +750,7 @@ public class GameManager : MonoBehaviour
         );
         ConfiguraRettangoloCentrato(
             sottotitolo.rectTransform,
-            new Vector2(0f, 205f),
+            new Vector2(0f, 255f),
             new Vector2(760f, 42f)
         );
         FarmPixelUI.ApplicaTesto(
@@ -743,7 +764,7 @@ public class GameManager : MonoBehaviour
             pannello.transform,
             DifficoltaPartita.Tranquilla,
             bilanciamento.Ottieni(DifficoltaPartita.Tranquilla),
-            new Vector2(0f, 105f),
+            new Vector2(0f, 155f),
             FarmPixelUI.ColorePulsanteNeutroFlat,
             "1"
         );
@@ -751,7 +772,7 @@ public class GameManager : MonoBehaviour
             pannello.transform,
             DifficoltaPartita.Normale,
             bilanciamento.Ottieni(DifficoltaPartita.Normale),
-            new Vector2(0f, -10f),
+            new Vector2(0f, 40f),
             FarmPixelUI.ColorePulsanteVerdeFlat,
             "2"
         );
@@ -759,9 +780,14 @@ public class GameManager : MonoBehaviour
             pannello.transform,
             DifficoltaPartita.Difficile,
             bilanciamento.Ottieni(DifficoltaPartita.Difficile),
-            new Vector2(0f, -125f),
+            new Vector2(0f, -75f),
             FarmPixelUI.ColorePulsanteViolaFlat,
             "3"
+        );
+
+        CreaAccessoShopPermanente(
+            pannello.transform,
+            new Vector2(0f, -184f)
         );
 
         TMP_Text nota = CreaTestoPannello(
@@ -772,10 +798,68 @@ public class GameManager : MonoBehaviour
         );
         ConfiguraRettangoloCentrato(
             nota.rectTransform,
-            new Vector2(0f, -250f),
+            new Vector2(0f, -305f),
             new Vector2(790f, 46f)
         );
         FarmPixelUI.ApplicaTesto(nota, FarmPixelUI.TestoMetaFlat);
+    }
+
+    void CreaAccessoShopPermanente(Transform parent, Vector2 posizione)
+    {
+        GameObject oggetto = new GameObject(
+            "ApriShopPermanente",
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(Image),
+            typeof(Button)
+        );
+        oggetto.transform.SetParent(parent, false);
+        ConfiguraRettangoloCentrato(
+            oggetto.GetComponent<RectTransform>(),
+            posizione,
+            new Vector2(700f, 68f)
+        );
+
+        Button pulsante = oggetto.GetComponent<Button>();
+        FarmPixelUI.ApplicaPulsante(
+            pulsante,
+            FarmPixelUI.ColorePulsanteOroFlat
+        );
+        pulsante.onClick.AddListener(ApriShopPermanente);
+
+        FarmPixelUI.AggiungiIcona(
+            oggetto.transform,
+            "Icona",
+            FarmPixelIcon.Bottega,
+            new Vector2(-300f, 0f),
+            new Vector2(38f, 38f)
+        );
+        testoAccessoShopPermanente = CreaTestoPannello(
+            oggetto.transform,
+            "Testo",
+            string.Empty,
+            21f
+        );
+        RectTransform testoRect =
+            testoAccessoShopPermanente.rectTransform;
+        testoRect.anchorMin = Vector2.zero;
+        testoRect.anchorMax = Vector2.one;
+        testoRect.offsetMin = new Vector2(58f, 6f);
+        testoRect.offsetMax = new Vector2(-20f, -6f);
+        FarmPixelUI.ApplicaTesto(
+            testoAccessoShopPermanente,
+            FarmPixelUI.TestoPulsanteFlat
+        );
+        AggiornaAccessoShopPermanente();
+    }
+
+    void AggiornaAccessoShopPermanente()
+    {
+        if (testoAccessoShopPermanente == null) return;
+
+        testoAccessoShopPermanente.text =
+            "MIGLIORAMENTI PERMANENTI  |  " +
+            ProgressionePermanente.SaldoGettoni + " GETTONI";
     }
 
     void CreaPulsanteDifficolta(
@@ -874,7 +958,11 @@ public class GameManager : MonoBehaviour
 
     public void ConfermaDifficolta(DifficoltaPartita difficolta)
     {
-        if (DifficoltaConfermata) return;
+        if (DifficoltaConfermata ||
+            ShopPermanentePrePartita.ApertoGlobale)
+        {
+            return;
+        }
 
         DifficoltaCorrente = difficolta;
         ProgressionePartita.ImpostaDifficolta(difficolta);
@@ -885,6 +973,70 @@ public class GameManager : MonoBehaviour
         }
         RichiediPreparazioneIniziale();
         FarmAudioController.RiproduciInterfaccia();
+    }
+
+    public void ApriShopPermanente()
+    {
+        if (!PuoAprireShopPermanente) return;
+
+        if (shopPermanente == null)
+        {
+            shopPermanente = ShopPermanentePrePartita.CreaOTrova();
+        }
+        shopPermanente?.Mostra();
+    }
+
+    public void SincronizzaBonusPermanentiPrimaPartita()
+    {
+        if (isGameOver ||
+            PreparazioneInizialeCompletata ||
+            ondateCompletate > 0 ||
+            StatoCorrente != StatoPartita.Intervallo)
+        {
+            return;
+        }
+
+        GameObject giocatore = GameObject.FindGameObjectWithTag("Player");
+        if (giocatore != null)
+        {
+            PlayerHealth salute = giocatore.GetComponent<PlayerHealth>();
+            PlayerMovement movimento =
+                giocatore.GetComponent<PlayerMovement>();
+            PlayerShooting sparo =
+                giocatore.GetComponent<PlayerShooting>();
+
+            salute?.ImpostaBonusVitaMassimaPermanente(
+                ProgressionePermanente.BonusVitaMassima
+            );
+            salute?.ImpostaProbabilitaBloccoPermanente(
+                ProgressionePermanente.BonusProbabilitaBlocco
+            );
+            movimento?.ImpostaBonusVelocitaPermanente(
+                ProgressionePermanente.BonusVelocitaMovimento
+            );
+            sparo?.ImpostaBonusDannoPermanente(
+                ProgressionePermanente.BonusDanno
+            );
+            sparo?.ImpostaBonusRiduzioneIntervalloSparoPermanente(
+                ProgressionePermanente.BonusRiduzioneIntervalloSparo
+            );
+        }
+
+        int bonusProvviste = ProgressionePermanente.BonusMoneteIniziali;
+        int differenza =
+            bonusProvviste - bonusProvvistePermanentiApplicato;
+        if (differenza != 0)
+        {
+            long nuovoSaldo = (long)monete + differenza;
+            monete = (int)Math.Max(
+                0L,
+                Math.Min(int.MaxValue, nuovoSaldo)
+            );
+            bonusProvvistePermanentiApplicato = bonusProvviste;
+            AggiornaContatoreMonete();
+            MoneteCambiate?.Invoke(monete);
+        }
+        AggiornaAccessoShopPermanente();
     }
 
     void RichiediPreparazioneIniziale()
@@ -1104,6 +1256,10 @@ public class GameManager : MonoBehaviour
         {
             shopInterOndata.Nascondi();
         }
+        if (shopPermanente != null)
+        {
+            shopPermanente.Nascondi();
+        }
         if (titoloFinePartita != null)
         {
             titoloFinePartita.text = titolo;
@@ -1139,8 +1295,15 @@ public class GameManager : MonoBehaviour
         int quantitaValida = Mathf.Max(0, quantita);
         if (quantitaValida == 0) return;
 
-        monete += quantitaValida;
-        MoneteRaccolte += quantitaValida;
+        int saldoPrecedente = monete;
+        monete = SommaSaturata(monete, quantitaValida);
+        int quantitaAccreditata = monete - saldoPrecedente;
+        if (quantitaAccreditata <= 0) return;
+
+        MoneteRaccolte = SommaSaturata(
+            MoneteRaccolte,
+            quantitaAccreditata
+        );
         AggiornaContatoreMonete();
         MoneteCambiate?.Invoke(monete);
         FarmAudioController.RiproduciMoneta();
@@ -1177,20 +1340,52 @@ public class GameManager : MonoBehaviour
         if (isGameOver)
         {
             UltimoBonusCompletamento = 0;
+            UltimoBonusPermanente = 0;
             return 0;
         }
 
-        ondateCompletate = Mathf.Max(ondateCompletate, indiceOnda);
+        int ultimaOndaValida = Mathf.Max(0, indiceOnda);
+        if (ondateCompletate == int.MaxValue)
+        {
+            UltimoBonusCompletamento = 0;
+            UltimoBonusPermanente = 0;
+            return 0;
+        }
+        int primaOndaNonPremiata = ondateCompletate + 1;
+        if (ultimaOndaValida < primaOndaNonPremiata)
+        {
+            UltimoBonusCompletamento = 0;
+            UltimoBonusPermanente = 0;
+            return 0;
+        }
 
-        int bonus = Mathf.Max(
+        int nuoveOndate =
+            ultimaOndaValida - primaOndaNonPremiata + 1;
+        ondateCompletate = ultimaOndaValida;
+
+        int bonusPerOnda = Mathf.Max(
             0,
             GameBalanceConfig.Corrente.Shop.bonusCompletamentoOnda
         );
+        int bonus = ProdottoSaturato(bonusPerOnda, nuoveOndate);
         UltimoBonusCompletamento = bonus;
         if (bonus > 0)
         {
             AggiungiMonete(bonus);
         }
+
+        int ricompensaPermanente = SommaRicompensePermanenti(
+            primaOndaNonPremiata,
+            ultimaOndaValida
+        );
+        UltimoBonusPermanente =
+            ProgressionePermanente.AggiungiGettoni(
+                ricompensaPermanente
+            );
+        GettoniPermanentiGuadagnati = SommaSaturata(
+            GettoniPermanentiGuadagnati,
+            UltimoBonusPermanente
+        );
         return bonus;
     }
 
@@ -1231,6 +1426,10 @@ public class GameManager : MonoBehaviour
             "\nMONETE RACCOLTE  " + MoneteRaccolte +
             "  |  SPESE  " + MoneteSpese +
             "  |  RIMASTE  " + monete +
+            "\nGETTONI PERMANENTI  +" +
+            GettoniPermanentiGuadagnati +
+            "  |  SALDO  " +
+            ProgressionePermanente.SaldoGettoni +
             "\nONDATE SUPERATE  " + ondateCompletate +
             "\nPUNTEGGIO  " + punteggioFinale +
             nuovoRecordPunteggio + altriRecord +
@@ -1327,6 +1526,7 @@ public class GameManager : MonoBehaviour
     {
         if (isGameOver ||
             PausaManualeAttiva ||
+            ShopPermanentePrePartita.ApertoGlobale ||
             StatoCorrente != StatoPartita.Intervallo)
         {
             return;
@@ -1389,5 +1589,52 @@ public class GameManager : MonoBehaviour
             !PausaManualeAttiva
                 ? 1f
                 : 0f;
+    }
+
+    private static int SommaRicompensePermanenti(
+        int primaOnda,
+        int ultimaOnda
+    )
+    {
+        if (ultimaOnda < primaOnda || ultimaOnda <= 0) return 0;
+
+        long totaleFinoAllaFine =
+            SommaRicompensePermanentiFinoA(ultimaOnda);
+        long totalePrima =
+            SommaRicompensePermanentiFinoA(primaOnda - 1);
+        long differenza = Math.Max(0L, totaleFinoAllaFine - totalePrima);
+        return differenza >= int.MaxValue
+            ? int.MaxValue
+            : (int)differenza;
+    }
+
+    private static long SommaRicompensePermanentiFinoA(int onda)
+    {
+        if (onda <= 0) return 0L;
+
+        long gruppiCompleti = (onda - 1L) / 5L;
+        long ondeUltimoGruppo = (onda - 1L) % 5L + 1L;
+        double totale =
+            5d * gruppiCompleti * (gruppiCompleti + 1d) / 2d +
+            ondeUltimoGruppo * (gruppiCompleti + 1d);
+        return totale >= long.MaxValue
+            ? long.MaxValue
+            : (long)totale;
+    }
+
+    private static int ProdottoSaturato(int primo, int secondo)
+    {
+        long prodotto =
+            (long)Mathf.Max(0, primo) * Mathf.Max(0, secondo);
+        return prodotto >= int.MaxValue
+            ? int.MaxValue
+            : (int)prodotto;
+    }
+
+    private static int SommaSaturata(int primo, int secondo)
+    {
+        long somma =
+            (long)Mathf.Max(0, primo) + Mathf.Max(0, secondo);
+        return somma >= int.MaxValue ? int.MaxValue : (int)somma;
     }
 }

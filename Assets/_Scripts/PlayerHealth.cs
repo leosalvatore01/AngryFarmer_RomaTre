@@ -12,9 +12,12 @@ public class PlayerHealth : MonoBehaviour
     private int vitaCorrente;
     private TMP_Text testoVita;
     private int bonusVitaMassima;
+    private int bonusVitaMassimaPermanente;
     private int frequenzaBloccoBase;
     private int frequenzaBloccoBonus;
     private float probabilitaBloccoBonus;
+    private float probabilitaBloccoPermanente;
+    private bool saluteInizializzata;
     private System.Random casualitaBlocco;
     private float durataInvulnerabilita;
     private float invulnerabileFinoA;
@@ -24,9 +27,14 @@ public class PlayerHealth : MonoBehaviour
     public int VitaCorrente => vitaCorrente;
     public int VitaMassimaBase => vitaMassimaBase;
     public int BonusVitaMassima => bonusVitaMassima;
+    public int BonusVitaMassimaPermanente => bonusVitaMassimaPermanente;
     public int VitaMassimaFinale => SommaSicura(
-        vitaMassimaBase,
-        bonusVitaMassima,
+        SommaSicura(
+            vitaMassimaBase,
+            bonusVitaMassima,
+            1
+        ),
+        bonusVitaMassimaPermanente,
         1
     );
     public int VitaMassima => VitaMassimaFinale;
@@ -39,22 +47,21 @@ public class PlayerHealth : MonoBehaviour
 
     public int FrequenzaBloccoBase => frequenzaBloccoBase;
     public int BonusFrequenzaBlocco => frequenzaBloccoBonus;
-    public int FrequenzaBloccoFinale
-    {
-        get
-        {
-            if (frequenzaBloccoBase <= 0) return frequenzaBloccoBonus;
-            if (frequenzaBloccoBonus <= 0) return frequenzaBloccoBase;
-            return Mathf.Min(frequenzaBloccoBase, frequenzaBloccoBonus);
-        }
-    }
+    public int FrequenzaBloccoFinale => ProbabilitaBloccoFinale > 0f
+        ? Mathf.Max(1, Mathf.RoundToInt(1f / ProbabilitaBloccoFinale))
+        : 0;
     public int FrequenzaBlocco => FrequenzaBloccoFinale;
     public float ProbabilitaBloccoBase => frequenzaBloccoBase > 0
         ? 1f / frequenzaBloccoBase
         : 0f;
     public float ProbabilitaBloccoBonus => probabilitaBloccoBonus;
+    public float ProbabilitaBloccoPermanente =>
+        probabilitaBloccoPermanente;
     public float ProbabilitaBloccoFinale => Mathf.Clamp(
-        Mathf.Max(ProbabilitaBloccoBase, probabilitaBloccoBonus),
+        1f -
+        (1f - ProbabilitaBloccoBase) *
+        (1f - probabilitaBloccoBonus) *
+        (1f - probabilitaBloccoPermanente),
         0f,
         0.9f
     );
@@ -88,6 +95,7 @@ public class PlayerHealth : MonoBehaviour
     void Start()
     {
         vitaCorrente = VitaMassimaFinale;
+        saluteInizializzata = true;
         testoVita = GameManager.TrovaTestoInterfaccia("VitaText");
         feedbackInvulnerabilita =
             PlayerInvulnerabilityFeedback.AggiungiOTrova(gameObject);
@@ -198,6 +206,30 @@ public class PlayerHealth : MonoBehaviour
         );
     }
 
+    public void ImpostaBonusVitaMassimaPermanente(int nuovoBonus)
+    {
+        int bonusValido = Mathf.Max(0, nuovoBonus);
+        if (bonusVitaMassimaPermanente == bonusValido) return;
+
+        int massimoPrecedente = VitaMassimaFinale;
+        bonusVitaMassimaPermanente = bonusValido;
+        int massimoAggiornato = VitaMassimaFinale;
+        if (saluteInizializzata)
+        {
+            int differenza = massimoAggiornato - massimoPrecedente;
+            vitaCorrente = differenza > 0
+                ? SommaSicura(
+                    vitaCorrente,
+                    differenza,
+                    0,
+                    massimoAggiornato
+                )
+                : Mathf.Clamp(vitaCorrente, 0, massimoAggiornato);
+            AggiornaInterfaccia();
+            VitaCambiata?.Invoke();
+        }
+    }
+
     [Obsolete("Usa AggiungiBonusVitaMassima.")]
     public void AumentaVitaMassima(int quantita, int curaBonus = 1)
     {
@@ -218,6 +250,15 @@ public class PlayerHealth : MonoBehaviour
         frequenzaBloccoBonus = probabilitaBloccoBonus > 0f
             ? Mathf.Max(1, Mathf.RoundToInt(1f / probabilitaBloccoBonus))
             : 0;
+    }
+
+    public void ImpostaProbabilitaBloccoPermanente(float probabilita)
+    {
+        probabilitaBloccoPermanente = Mathf.Clamp(
+            probabilita,
+            0f,
+            0.9f
+        );
     }
 
     public void ImpostaSeedBloccoPerTest(int seed)

@@ -30,10 +30,32 @@ public class PlayerShooting : MonoBehaviour
     public float IntervalloSparoBase => intervalloSparoBase;
     public float BonusRiduzioneIntervalloSparo =>
         bonusRiduzioneIntervalloSparo;
-    public float IntervalloSparoFinale => Mathf.Max(
+    public float BonusRiduzioneIntervalloSparoPermanente =>
+        bonusRiduzioneIntervalloSparoPermanente;
+    public float BonusRiduzioneIntervalloSparoTotale =>
+        bonusRiduzioneIntervalloSparo +
+        bonusRiduzioneIntervalloSparoPermanente;
+    public float IntervalloSparoDopoBonusRun => Mathf.Max(
         intervalloSparoMinimo,
         intervalloSparoBase - bonusRiduzioneIntervalloSparo
     );
+    public float MoltiplicatoreIntervalloPermanente
+    {
+        get
+        {
+            float spazioBase = Mathf.Max(
+                0.0001f,
+                intervalloSparoBase - intervalloSparoMinimo
+            );
+            float intensita =
+                bonusRiduzioneIntervalloSparoPermanente / spazioBase;
+            return 1f / (1f + Mathf.Max(0f, intensita));
+        }
+    }
+    public float IntervalloSparoFinale =>
+        ApplicaBonusPermanenteAIntervallo(
+            IntervalloSparoDopoBonusRun
+        );
 
     public float VelocitaProiettileBase => velocitaProiettileBase;
     public float BonusVelocitaProiettile => bonusVelocitaProiettile;
@@ -44,7 +66,17 @@ public class PlayerShooting : MonoBehaviour
 
     public int DannoBase => dannoBase;
     public int BonusDanno => bonusDanno;
-    public int DannoFinale => SommaSicura(dannoBase, bonusDanno, 1);
+    public int BonusDannoPermanente => bonusDannoPermanente;
+    public int BonusDannoTotale => SommaSicura(
+        bonusDanno,
+        bonusDannoPermanente,
+        0
+    );
+    public int DannoFinale => SommaSicura(
+        dannoBase,
+        BonusDannoTotale,
+        1
+    );
 
     public int PenetrazioneBase => penetrazioneBase;
     public int BonusPenetrazione => bonusPenetrazione;
@@ -68,8 +100,10 @@ public class PlayerShooting : MonoBehaviour
     public int penetrazioneProiettile => PenetrazioneFinale;
 
     private float bonusRiduzioneIntervalloSparo;
+    private float bonusRiduzioneIntervalloSparoPermanente;
     private float bonusVelocitaProiettile;
     private int bonusDanno;
+    private int bonusDannoPermanente;
     private int bonusPenetrazione;
     private float intervalloSparoMinimo = 0.12f;
     private float angoloLateraleTriploSparo = 10f;
@@ -479,9 +513,35 @@ public class PlayerShooting : MonoBehaviour
         bonusDanno = Mathf.Max(0, valore);
     }
 
+    public void ImpostaBonusDannoPermanente(int valore)
+    {
+        bonusDannoPermanente = Mathf.Max(0, valore);
+    }
+
     public void ImpostaBonusRiduzioneIntervalloSparo(float valore)
     {
         bonusRiduzioneIntervalloSparo = Mathf.Max(0f, valore);
+    }
+
+    public void ImpostaBonusRiduzioneIntervalloSparoPermanente(float valore)
+    {
+        bonusRiduzioneIntervalloSparoPermanente = Mathf.Max(0f, valore);
+    }
+
+    public float ApplicaBonusPermanenteAIntervallo(
+        float intervalloDopoBonusRun
+    )
+    {
+        float intervalloValido = Mathf.Max(
+            intervalloSparoMinimo,
+            intervalloDopoBonusRun
+        );
+        float spazioResiduo = Mathf.Max(
+            0f,
+            intervalloValido - intervalloSparoMinimo
+        );
+        return intervalloSparoMinimo +
+            spazioResiduo * MoltiplicatoreIntervalloPermanente;
     }
 
     public void ImpostaBonusPenetrazione(int valore)

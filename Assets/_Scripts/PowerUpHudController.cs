@@ -24,6 +24,9 @@ public sealed class PowerUpHudController : MonoBehaviour
 
     private readonly Dictionary<TipoPotenziamento, SlotHud> slotPermanenti =
         new Dictionary<TipoPotenziamento, SlotHud>();
+    private readonly Dictionary<TipoPotenziamentoPermanente, SlotHud>
+        slotInterpartita =
+            new Dictionary<TipoPotenziamentoPermanente, SlotHud>();
 
     private RectTransform rectRadice;
     private RectTransform rectGriglia;
@@ -39,6 +42,7 @@ public sealed class PowerUpHudController : MonoBehaviour
     private int numeroSlotVisibili;
 
     public int NumeroPotenziamentiPermanentiAttivi { get; private set; }
+    public int NumeroMiglioramentiInterpartitaAttivi { get; private set; }
     public int NumeroEffettiTemporaneiAttivi { get; private set; }
     public int NumeroSlotVisibili => numeroSlotVisibili;
 
@@ -174,6 +178,22 @@ public sealed class PowerUpHudController : MonoBehaviour
                 false
             );
             slotPermanenti[tipo] = slot;
+        }
+
+        IReadOnlyList<DefinizionePotenziamentoPermanente>
+            definizioniInterpartita = ProgressionePermanente.Catalogo;
+        for (int i = 0; i < definizioniInterpartita.Count; i++)
+        {
+            DefinizionePotenziamentoPermanente definizione =
+                definizioniInterpartita[i];
+            SlotHud slot = CreaSlot(
+                "Permanente_" + definizione.Tipo,
+                FarmPixelUI.OttieniIcona(definizione.Icona),
+                EtichettaInterpartita(definizione.Tipo),
+                ColoreInterpartita(definizione.Tipo),
+                false
+            );
+            slotInterpartita[definizione.Tipo] = slot;
         }
 
         slotTriploSparo = CreaSlot(
@@ -354,6 +374,23 @@ public sealed class PowerUpHudController : MonoBehaviour
             coppia.Value.testoLivello.text = "L" + livello;
         }
 
+        NumeroMiglioramentiInterpartitaAttivi = 0;
+        foreach (
+            KeyValuePair<TipoPotenziamentoPermanente, SlotHud> coppia
+            in slotInterpartita
+        )
+        {
+            int livello = ProgressionePermanente.OttieniLivello(
+                coppia.Key
+            );
+            bool attivo = livello > 0;
+            coppia.Value.radice.SetActive(attivo);
+            if (!attivo) continue;
+
+            NumeroMiglioramentiInterpartitaAttivi++;
+            coppia.Value.testoLivello.text = "P" + livello;
+        }
+
         bool triploAttivo = sparo != null && sparo.TriploSparoAttivo;
         bool boostAttivo = movimento != null && movimento.BoostVelocitaAttivo;
         slotTriploSparo.radice.SetActive(triploAttivo);
@@ -362,6 +399,7 @@ public sealed class PowerUpHudController : MonoBehaviour
             (triploAttivo ? 1 : 0) + (boostAttivo ? 1 : 0);
 
         numeroSlotVisibili = NumeroPotenziamentiPermanentiAttivi +
+                            NumeroMiglioramentiInterpartitaAttivi +
                             NumeroEffettiTemporaneiAttivi;
         intestazione.text = numeroSlotVisibili == 1
             ? "1 POWER-UP ATTIVO"
@@ -448,6 +486,52 @@ public sealed class PowerUpHudController : MonoBehaviour
         immagine.color = colore;
         immagine.raycastTarget = false;
         return oggetto;
+    }
+
+    private static string EtichettaInterpartita(
+        TipoPotenziamentoPermanente tipo
+    )
+    {
+        switch (tipo)
+        {
+            case TipoPotenziamentoPermanente.VitaMassima:
+                return "VITA P.";
+            case TipoPotenziamentoPermanente.Danno:
+                return "DANNO P.";
+            case TipoPotenziamentoPermanente.Cadenza:
+                return "RAPID. P.";
+            case TipoPotenziamentoPermanente.Movimento:
+                return "PASSO P.";
+            case TipoPotenziamentoPermanente.Resistenza:
+                return "BLOCCO P.";
+            case TipoPotenziamentoPermanente.Provviste:
+                return "SCORTE P.";
+            default:
+                return "PERM.";
+        }
+    }
+
+    private static Color ColoreInterpartita(
+        TipoPotenziamentoPermanente tipo
+    )
+    {
+        switch (tipo)
+        {
+            case TipoPotenziamentoPermanente.VitaMassima:
+                return new Color32(231, 91, 91, 255);
+            case TipoPotenziamentoPermanente.Danno:
+                return new Color32(242, 151, 61, 255);
+            case TipoPotenziamentoPermanente.Cadenza:
+                return new Color32(239, 202, 73, 255);
+            case TipoPotenziamentoPermanente.Movimento:
+                return new Color32(114, 201, 121, 255);
+            case TipoPotenziamentoPermanente.Resistenza:
+                return new Color32(105, 181, 211, 255);
+            case TipoPotenziamentoPermanente.Provviste:
+                return new Color32(184, 137, 214, 255);
+            default:
+                return FarmPixelUI.TestoTitoloFlat;
+        }
     }
 
     private static TMP_Text CreaTesto(

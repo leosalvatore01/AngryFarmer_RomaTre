@@ -97,6 +97,7 @@ public class ShopInterOndata : MonoBehaviour
     private Button pulsanteCura;
     private Button pulsanteAvviaBottega;
     private Button pulsanteIndietroBottega;
+    private Button pulsanteShopPermanente;
     private Image iconaCostoReroll;
     private Image iconaCostoCura;
     private Image iconaMoneteBottega;
@@ -187,6 +188,7 @@ public class ShopInterOndata : MonoBehaviour
     {
         if (GameManager.instance == null ||
             GameManager.instance.PausaManualeAttiva ||
+            ShopPermanentePrePartita.ApertoGlobale ||
             GameManager.instance.StatoCorrente != StatoPartita.Intervallo)
         {
             return;
@@ -225,9 +227,17 @@ public class ShopInterOndata : MonoBehaviour
         int bonus = GameManager.instance != null
             ? GameManager.instance.UltimoBonusCompletamento
             : 0;
+        int bonusPermanente = GameManager.instance != null
+            ? GameManager.instance.UltimoBonusPermanente
+            : 0;
         testoRiepilogo.text =
             "Ondata " + ondaCompletata +
-            " superata  -  +" + bonus + " moneta";
+            " superata  -  +" + bonus +
+            (bonus == 1 ? " moneta" : " monete") +
+            "\n+" + bonusPermanente +
+            (bonusPermanente == 1
+                ? " gettone permanente salvato"
+                : " gettoni permanenti salvati");
         string anteprima = FormattaAnteprima(prossimaOnda);
         testoAnteprimaRiepilogo.text = anteprima;
         testoAnteprimaBottega.text = anteprima;
@@ -688,6 +698,8 @@ public class ShopInterOndata : MonoBehaviour
 
         if (pulsanteIndietroBottega != null)
             pulsanteIndietroBottega.gameObject.SetActive(!preparazioneIniziale);
+        if (pulsanteShopPermanente != null)
+            pulsanteShopPermanente.gameObject.SetActive(preparazioneIniziale);
         if (pulsanteAvviaBottega != null)
         {
             pulsanteAvviaBottega.interactable =
@@ -1155,6 +1167,16 @@ public class ShopInterOndata : MonoBehaviour
             ColorePulsanteNeutro,
             TornaAlRiepilogo
         );
+        pulsanteShopPermanente = CreaPulsante(
+            "MiglioramentiPermanenti",
+            parent,
+            "MIGLIORAMENTI PERMANENTI",
+            new Vector2(-215f, -449f),
+            new Vector2(360f, 60f),
+            ColorePulsanteOro,
+            ApriShopPermanente
+        );
+        pulsanteShopPermanente.gameObject.SetActive(false);
         pulsanteAvviaBottega = CreaPulsante(
             "OndataSuccessiva",
             parent,
@@ -1166,6 +1188,16 @@ public class ShopInterOndata : MonoBehaviour
         );
         testoAvviaBottega =
             pulsanteAvviaBottega.GetComponentInChildren<TMP_Text>();
+    }
+
+    void ApriShopPermanente()
+    {
+        if (!preparazioneIniziale ||
+            GameManager.instance == null)
+        {
+            return;
+        }
+        GameManager.instance.ApriShopPermanente();
     }
 
     void CreaCartaOfferta(Transform parent, int indice, float posizioneY)
