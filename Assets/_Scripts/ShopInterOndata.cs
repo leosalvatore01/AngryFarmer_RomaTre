@@ -574,12 +574,21 @@ public class ShopInterOndata : MonoBehaviour
         string gruppi = anteprima.NumeroGruppi == 1
             ? "1 GRUPPO"
             : anteprima.NumeroGruppi + " GRUPPI";
+        string bonusMaialini = anteprima.NumeroMaialini > 0
+            ? "\nBONUS: " + anteprima.NumeroMaialini +
+              (anteprima.NumeroMaialini == 1
+                  ? " MAIALINO"
+                  : " MAIALINI") +
+              "  |  " + anteprima.VitaMaialino + " VITA  |  +" +
+              anteprima.MoneteMaialino + " MONETE CIASCUNO"
+            : string.Empty;
 
         return
             "PROSSIMA ONDATA  " + anteprima.Indice + "  |  " +
             anteprima.Nome.ToUpperInvariant() +
             "\n" + anteprima.NumeroVolpi + " VOLPI  |  " + gruppi +
-            "  |  TIPI: " + anteprima.Composizione.FormattaCompatta();
+            "  |  TIPI: " + anteprima.Composizione.FormattaCompatta() +
+            bonusMaialini;
     }
 
     void PreparaPotenziamentiGiocatore()

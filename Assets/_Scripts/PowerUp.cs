@@ -5,10 +5,16 @@ public class PowerUp : MonoBehaviour
     public int type; // 0 = Dente, 1 = Coda
 
     private Vector3 scalaBase;
+    public float DurataDespawn { get; private set; }
 
     void Start()
     {
         scalaBase = transform.localScale;
+        DurataDespawn = Mathf.Max(
+            0.1f,
+            GameBalanceConfig.Corrente.Volpe.durataDropSullaMappa
+        );
+        Destroy(gameObject, DurataDespawn);
     }
 
     void Update()

@@ -291,6 +291,13 @@ public class EnemySpawner : MonoBehaviour
             NascondiMessaggio();
             diagnostica.AvviaCombattimento();
 
+            if (ondataCorrente.numeroMaialiniBonus > 0)
+            {
+                StartCoroutine(
+                    SpawnMaialiniGraduali(ondataCorrente, tokenCorrente)
+                );
+            }
+
             int indiceSpawn = 0;
             for (int gruppo = 0; gruppo < totaleGruppi; gruppo++)
             {
@@ -525,9 +532,9 @@ public class EnemySpawner : MonoBehaviour
                 0.45f,
                 baseFinale.intervalloTraGruppi * accelerazione
             ),
-            numeroMaialiniBonus = 0,
-            vitaMaialinoBonus = 1,
-            moneteMaialinoBonus = 0
+            numeroMaialiniBonus = numero % 5 == 0 ? 3 : 2,
+            vitaMaialinoBonus = 5 + extra / 3,
+            moneteMaialinoBonus = 7 + extra / 2
         };
     }
 
@@ -821,11 +828,6 @@ public class EnemySpawner : MonoBehaviour
             difficolta
         );
         ondate = CreaOndatePerDifficolta(ondate, profiloDifficolta);
-        if (ondate == null) return;
-        for (int i = 0; i < ondate.Length; i++)
-        {
-            if (ondate[i] != null) ondate[i].numeroMaialiniBonus = 0;
-        }
     }
 
     public static Wave[] CreaOndatePerDifficolta(
@@ -1004,7 +1006,7 @@ public class EnemySpawner : MonoBehaviour
             numeroVolpi,
             vitaVolpi,
             composizione,
-            0,
+            Mathf.Max(0, onda.numeroMaialiniBonus),
             Mathf.Max(1, onda.vitaMaialinoBonus),
             Mathf.Max(0, onda.moneteMaialinoBonus),
             numeroGruppi
@@ -1021,7 +1023,7 @@ public class EnemySpawner : MonoBehaviour
         SganciaMinacce();
         totaleNemiciOnda = anteprima.NumeroVolpi;
         nemiciDaSpawnare = anteprima.NumeroVolpi;
-        maialiniDaSpawnare = 0;
+        maialiniDaSpawnare = Mathf.Max(0, onda.numeroMaialiniBonus);
         composizioneTotaleOnda = anteprima.Composizione;
         composizioneDaSpawnare = anteprima.Composizione;
         gruppoCorrente = 0;

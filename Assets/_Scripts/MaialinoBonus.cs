@@ -60,7 +60,6 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
     private int vitaMassima;
     private int vitaCorrente;
     private int moneteRicompensa;
-    private int uovaRicompensa;
     private bool morto;
     private bool ricompensaAssegnata;
     private Coroutine flashRoutine;
@@ -117,10 +116,6 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
         vitaMassima = Mathf.Max(1, vitaBase);
         vitaCorrente = vitaMassima;
         moneteRicompensa = Mathf.Max(0, moneteBase);
-        uovaRicompensa = Mathf.Max(
-            0,
-            GameBalanceConfig.Corrente.ObiettiviFattoria.uovaPerMaialino
-        );
 
         CreaBarraVita();
         AggiornaBarraVita();
@@ -371,9 +366,7 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
             if (GameManager.instance != null)
             {
                 GameManager.instance.AggiungiMonete(moneteRicompensa);
-                GameManager.instance.AggiungiUova(uovaRicompensa);
             }
-            FarmObjectivesController.Instance?.NotificaMaialinoCatturato();
         }
 
         CreaEsplosioneRicompense();
@@ -465,15 +458,6 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
             );
         }
 
-        for (int i = 0; i < Mathf.Min(2, uovaRicompensa); i++)
-        {
-            CreaParticella(
-                "UovoBonusVFX",
-                FarmPixelUI.OttieniIcona(FarmPixelIcon.Uovo),
-                new Color(1f, 0.92f, 0.67f, 1f),
-                Random.Range(0.1f, 0.14f)
-            );
-        }
     }
 
     void CreaParticella(
@@ -512,11 +496,7 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
         oggettoTesto.transform.localScale = Vector3.one * 0.16f;
 
         TextMeshPro testo = oggettoTesto.AddComponent<TextMeshPro>();
-        testo.text =
-            "+" + moneteRicompensa + " MONETE" +
-            (uovaRicompensa > 0
-                ? "  +" + uovaRicompensa + " UOVO"
-                : string.Empty);
+        testo.text = "+" + moneteRicompensa + " MONETE";
         testo.fontSize = 3.2f;
         testo.fontStyle = FontStyles.Bold;
         testo.alignment = TextAlignmentOptions.Center;

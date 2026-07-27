@@ -52,6 +52,7 @@ public sealed class FoxBalanceSettings
     [Min(0)] public int monetePerEliminazione = 1;
     [Range(0f, 100f)] public float probabilitaDrop = 30f;
     [Range(0f, 1f)] public float probabilitaDenteSulDrop = 0.5f;
+    [Min(0.1f)] public float durataDropSullaMappa = 12f;
 }
 
 [Serializable]
@@ -243,9 +244,9 @@ public sealed class WaveBalanceSettings
                 intervalloTraNemici = 0.7f,
                 dimensioneMassimaGruppo = 2,
                 intervalloTraGruppi = 3f,
-                numeroMaialiniBonus = 0,
-                vitaMaialinoBonus = 1,
-                moneteMaialinoBonus = 0
+                numeroMaialiniBonus = 1,
+                vitaMaialinoBonus = 2,
+                moneteMaialinoBonus = 3
             },
             new Wave
             {
@@ -262,9 +263,9 @@ public sealed class WaveBalanceSettings
                 intervalloTraNemici = 0.68f,
                 dimensioneMassimaGruppo = 2,
                 intervalloTraGruppi = 2.7f,
-                numeroMaialiniBonus = 0,
-                vitaMaialinoBonus = 1,
-                moneteMaialinoBonus = 0
+                numeroMaialiniBonus = 1,
+                vitaMaialinoBonus = 2,
+                moneteMaialinoBonus = 3
             },
             new Wave
             {
@@ -282,9 +283,9 @@ public sealed class WaveBalanceSettings
                 intervalloTraNemici = 0.66f,
                 dimensioneMassimaGruppo = 2,
                 intervalloTraGruppi = 2.55f,
-                numeroMaialiniBonus = 0,
-                vitaMaialinoBonus = 1,
-                moneteMaialinoBonus = 0
+                numeroMaialiniBonus = 1,
+                vitaMaialinoBonus = 2,
+                moneteMaialinoBonus = 4
             },
             new Wave
             {
@@ -303,9 +304,9 @@ public sealed class WaveBalanceSettings
                 intervalloTraNemici = 0.64f,
                 dimensioneMassimaGruppo = 3,
                 intervalloTraGruppi = 2.6f,
-                numeroMaialiniBonus = 0,
-                vitaMaialinoBonus = 1,
-                moneteMaialinoBonus = 0
+                numeroMaialiniBonus = 1,
+                vitaMaialinoBonus = 3,
+                moneteMaialinoBonus = 4
             },
             new Wave
             {
@@ -325,9 +326,9 @@ public sealed class WaveBalanceSettings
                 intervalloTraNemici = 0.62f,
                 dimensioneMassimaGruppo = 3,
                 intervalloTraGruppi = 2.5f,
-                numeroMaialiniBonus = 0,
-                vitaMaialinoBonus = 1,
-                moneteMaialinoBonus = 0
+                numeroMaialiniBonus = 2,
+                vitaMaialinoBonus = 3,
+                moneteMaialinoBonus = 5
             },
             new Wave
             {
@@ -349,9 +350,9 @@ public sealed class WaveBalanceSettings
                 intervalloTraNemici = 0.6f,
                 dimensioneMassimaGruppo = 3,
                 intervalloTraGruppi = 2.35f,
-                numeroMaialiniBonus = 0,
-                vitaMaialinoBonus = 1,
-                moneteMaialinoBonus = 0
+                numeroMaialiniBonus = 2,
+                vitaMaialinoBonus = 3,
+                moneteMaialinoBonus = 5
             },
             new Wave
             {
@@ -375,9 +376,9 @@ public sealed class WaveBalanceSettings
                 intervalloTraNemici = 0.58f,
                 dimensioneMassimaGruppo = 3,
                 intervalloTraGruppi = 2.25f,
-                numeroMaialiniBonus = 0,
-                vitaMaialinoBonus = 1,
-                moneteMaialinoBonus = 0
+                numeroMaialiniBonus = 2,
+                vitaMaialinoBonus = 4,
+                moneteMaialinoBonus = 6
             },
             new Wave
             {
@@ -403,9 +404,9 @@ public sealed class WaveBalanceSettings
                 intervalloTraNemici = 0.56f,
                 dimensioneMassimaGruppo = 3,
                 intervalloTraGruppi = 2.15f,
-                numeroMaialiniBonus = 0,
-                vitaMaialinoBonus = 1,
-                moneteMaialinoBonus = 0
+                numeroMaialiniBonus = 2,
+                vitaMaialinoBonus = 4,
+                moneteMaialinoBonus = 6
             },
             new Wave
             {
@@ -433,9 +434,9 @@ public sealed class WaveBalanceSettings
                 intervalloTraNemici = 0.54f,
                 dimensioneMassimaGruppo = 3,
                 intervalloTraGruppi = 2.05f,
-                numeroMaialiniBonus = 0,
-                vitaMaialinoBonus = 1,
-                moneteMaialinoBonus = 0
+                numeroMaialiniBonus = 2,
+                vitaMaialinoBonus = 5,
+                moneteMaialinoBonus = 7
             }
         };
     }
@@ -597,6 +598,10 @@ public sealed class GameBalanceConfig : ScriptableObject
             giocatore.durataInvulnerabilitaDopoColpo,
             0f,
             2f
+        );
+        volpe.durataDropSullaMappa = Mathf.Max(
+            0.1f,
+            volpe.durataDropSullaMappa
         );
         maialino.cambioDirezioneMassimo = Mathf.Max(
             maialino.cambioDirezioneMinimo,

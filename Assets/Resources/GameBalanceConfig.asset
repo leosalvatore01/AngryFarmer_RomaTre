@@ -48,6 +48,7 @@ MonoBehaviour:
     monetePerEliminazione: 1
     probabilitaDrop: 30
     probabilitaDenteSulDrop: 0.5
+    durataDropSullaMappa: 12
   variantiVolpe:
     comune:
       moltiplicatoreVelocita: 1
@@ -323,78 +324,78 @@ MonoBehaviour:
       intervalloTraNemici: 0.7
       dimensioneMassimaGruppo: 2
       intervalloTraGruppi: 3
-      numeroMaialiniBonus: 0
-      vitaMaialinoBonus: 1
-      moneteMaialinoBonus: 0
+      numeroMaialiniBonus: 1
+      vitaMaialinoBonus: 2
+      moneteMaialinoBonus: 3
     - nomeOndata: Pelle dura
       numeroNemici: 5
       sequenzaVolpi: 0000000001000000000000000200000000000000
       intervalloTraNemici: 0.68
       dimensioneMassimaGruppo: 2
       intervalloTraGruppi: 2.7
-      numeroMaialiniBonus: 0
-      vitaMaialinoBonus: 1
-      moneteMaialinoBonus: 0
+      numeroMaialiniBonus: 1
+      vitaMaialinoBonus: 2
+      moneteMaialinoBonus: 3
     - nomeOndata: Salti imprevedibili
       numeroNemici: 6
       sequenzaVolpi: 000000000100000000000000020000000300000000000000
       intervalloTraNemici: 0.66
       dimensioneMassimaGruppo: 2
       intervalloTraGruppi: 2.55
-      numeroMaialiniBonus: 0
-      vitaMaialinoBonus: 1
-      moneteMaialinoBonus: 0
+      numeroMaialiniBonus: 1
+      vitaMaialinoBonus: 2
+      moneteMaialinoBonus: 4
     - nomeOndata: Carica alfa
       numeroNemici: 7
       sequenzaVolpi: 00000000010000000200000000000000030000000000000004000000
       intervalloTraNemici: 0.64
       dimensioneMassimaGruppo: 3
       intervalloTraGruppi: 2.6
-      numeroMaialiniBonus: 0
-      vitaMaialinoBonus: 1
-      moneteMaialinoBonus: 0
+      numeroMaialiniBonus: 1
+      vitaMaialinoBonus: 3
+      moneteMaialinoBonus: 4
     - nomeOndata: Richiamo del branco
       numeroNemici: 8
       sequenzaVolpi: 0000000001000000020000000000000003000000050000000000000004000000
       intervalloTraNemici: 0.62
       dimensioneMassimaGruppo: 3
       intervalloTraGruppi: 2.5
-      numeroMaialiniBonus: 0
-      vitaMaialinoBonus: 1
-      moneteMaialinoBonus: 0
+      numeroMaialiniBonus: 2
+      vitaMaialinoBonus: 3
+      moneteMaialinoBonus: 5
     - nomeOndata: Branco misto
       numeroNemici: 10
       sequenzaVolpi: 00000000010000000200000000000000030000000400000000000000010000000500000002000000
       intervalloTraNemici: 0.6
       dimensioneMassimaGruppo: 3
       intervalloTraGruppi: 2.35
-      numeroMaialiniBonus: 0
-      vitaMaialinoBonus: 1
-      moneteMaialinoBonus: 0
+      numeroMaialiniBonus: 2
+      vitaMaialinoBonus: 3
+      moneteMaialinoBonus: 5
     - nomeOndata: Fango in arrivo
       numeroNemici: 12
       sequenzaVolpi: 000000000100000002000000000000000300000005000000000000000100000004000000020000000000000006000000
       intervalloTraNemici: 0.58
       dimensioneMassimaGruppo: 3
       intervalloTraGruppi: 2.25
-      numeroMaialiniBonus: 0
-      vitaMaialinoBonus: 1
-      moneteMaialinoBonus: 0
+      numeroMaialiniBonus: 2
+      vitaMaialinoBonus: 4
+      moneteMaialinoBonus: 6
     - nomeOndata: Assedio del branco
       numeroNemici: 14
       sequenzaVolpi: 0000000001000000020000000000000003000000060000000000000001000000040000000200000000000000030000000500000001000000
       intervalloTraNemici: 0.56
       dimensioneMassimaGruppo: 3
       intervalloTraGruppi: 2.15
-      numeroMaialiniBonus: 0
-      vitaMaialinoBonus: 1
-      moneteMaialinoBonus: 0
+      numeroMaialiniBonus: 2
+      vitaMaialinoBonus: 4
+      moneteMaialinoBonus: 6
     - nomeOndata: Terra in movimento
       numeroNemici: 16
       sequenzaVolpi: 00000000010000000200000000000000030000000500000000000000010000000400000002000000000000000300000006000000010000000000000007000000
       intervalloTraNemici: 0.54
       dimensioneMassimaGruppo: 3
       intervalloTraGruppi: 2.05
-      numeroMaialiniBonus: 0
-      vitaMaialinoBonus: 1
-      moneteMaialinoBonus: 0
+      numeroMaialiniBonus: 2
+      vitaMaialinoBonus: 5
+      moneteMaialinoBonus: 7
