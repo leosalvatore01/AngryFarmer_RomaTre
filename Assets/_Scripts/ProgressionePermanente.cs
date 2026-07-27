@@ -66,14 +66,6 @@ public static class ProgressionePermanente
 {
     public const int CostoMassimo = 1000000000;
 
-    private const string Prefisso = "AngryFarmer.Meta.v1";
-    private const string ChiaveSaldo = Prefisso + ".Gettoni.Saldo";
-    private const string ChiaveTotaleGuadagnato =
-        Prefisso + ".Gettoni.Guadagnati";
-    private const string ChiaveTotaleSpeso =
-        Prefisso + ".Gettoni.Spesi";
-    private const string PrefissoLivello = Prefisso + ".Livello.";
-
     private const float LimiteRiduzioneCadenza = 0.18f;
     private const float CurvaCadenza = 7f;
     private const float LimiteVelocitaMovimento = 2.25f;
@@ -315,10 +307,20 @@ public static class ProgressionePermanente
             costo
         );
 
-        PlayerPrefs.SetInt(ChiaveSaldo, nuovoSaldo);
-        PlayerPrefs.SetInt(ChiaveTotaleSpeso, nuovoTotaleSpeso);
-        PlayerPrefs.SetInt(ChiaveLivello(tipo), nuovoLivello);
-        PlayerPrefs.Save();
+        bool salvato = SaveService.ModificaProfilo(dati =>
+        {
+            DatiProgressionePermanente meta =
+                dati.progressionePermanente;
+            meta.saldoGettoni = nuovoSaldo;
+            meta.totaleGettoniSpesi = nuovoTotaleSpeso;
+            meta.livelli[indice] = nuovoLivello;
+        });
+        if (!salvato)
+        {
+            messaggio =
+                "Impossibile salvare il potenziamento. Riprova.";
+            return false;
+        }
 
         saldoGettoni = nuovoSaldo;
         totaleGettoniSpesi = nuovoTotaleSpeso;
@@ -351,12 +353,18 @@ public static class ProgressionePermanente
             quantitaAccreditata
         );
 
-        PlayerPrefs.SetInt(ChiaveSaldo, nuovoSaldo);
-        PlayerPrefs.SetInt(
-            ChiaveTotaleGuadagnato,
-            nuovoTotaleGuadagnato
-        );
-        PlayerPrefs.Save();
+        bool salvato = SaveService.ModificaProfilo(dati =>
+        {
+            DatiProgressionePermanente meta =
+                dati.progressionePermanente;
+            meta.saldoGettoni = nuovoSaldo;
+            meta.totaleGettoniGuadagnati =
+                nuovoTotaleGuadagnato;
+        });
+        if (!salvato)
+        {
+            return 0;
+        }
 
         saldoGettoni = nuovoSaldo;
         totaleGettoniGuadagnati = nuovoTotaleGuadagnato;
@@ -513,33 +521,28 @@ public static class ProgressionePermanente
             return;
         }
 
-        saldoGettoni = LeggiInteroNonNegativo(ChiaveSaldo);
-        totaleGettoniGuadagnati =
-            LeggiInteroNonNegativo(ChiaveTotaleGuadagnato);
-        totaleGettoniSpesi =
-            LeggiInteroNonNegativo(ChiaveTotaleSpeso);
+        DatiProgressionePermanente meta =
+            SaveService.Profilo.progressionePermanente;
+        saldoGettoni = Mathf.Max(0, meta.saldoGettoni);
+        totaleGettoniGuadagnati = Mathf.Max(
+            0,
+            meta.totaleGettoniGuadagnati
+        );
+        totaleGettoniSpesi = Mathf.Max(
+            0,
+            meta.totaleGettoniSpesi
+        );
         livelli = new int[catalogo.Length];
 
         for (int i = 0; i < livelli.Length; i++)
         {
-            livelli[i] = LeggiInteroNonNegativo(
-                ChiaveLivello((TipoPotenziamentoPermanente)i)
-            );
+            livelli[i] =
+                meta.livelli != null && i < meta.livelli.Length
+                    ? Mathf.Max(0, meta.livelli[i])
+                    : 0;
         }
 
         inizializzata = true;
-    }
-
-    private static int LeggiInteroNonNegativo(string chiave)
-    {
-        return Mathf.Max(0, PlayerPrefs.GetInt(chiave, 0));
-    }
-
-    private static string ChiaveLivello(
-        TipoPotenziamentoPermanente tipo
-    )
-    {
-        return PrefissoLivello + (int)tipo;
     }
 
     private static bool TipoValido(TipoPotenziamentoPermanente tipo)

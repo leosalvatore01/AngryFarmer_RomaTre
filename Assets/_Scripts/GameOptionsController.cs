@@ -7,15 +7,6 @@ using UnityEngine;
 /// </summary>
 public sealed class GameOptionsController : MonoBehaviour
 {
-    private const string Prefisso = "AngryFarmer.Opzioni.";
-    private const string ChiaveVolumeMusica = Prefisso + "VolumeMusica";
-    private const string ChiaveVolumeEffetti = Prefisso + "VolumeEffetti";
-    private const string ChiaveVibrazione = Prefisso + "Vibrazione";
-    private const string ChiaveFlash = Prefisso + "Flash";
-    private const string ChiaveNumeriDanno = Prefisso + "NumeriDanno";
-    private const string ChiaveDimensioneMirino =
-        Prefisso + "DimensioneMirino";
-
     public const float DimensioneMirinoMinima = 14f;
     public const float DimensioneMirinoMassima = 48f;
 
@@ -110,7 +101,10 @@ public sealed class GameOptionsController : MonoBehaviour
         if (Mathf.Approximately(VolumeMusica, valore)) return;
 
         VolumeMusica = valore;
-        PlayerPrefs.SetFloat(ChiaveVolumeMusica, VolumeMusica);
+        SaveService.ModificaDispositivo(dati =>
+        {
+            dati.volumeMusica = VolumeMusica;
+        });
         RegistraModifica();
     }
 
@@ -120,7 +114,10 @@ public sealed class GameOptionsController : MonoBehaviour
         if (Mathf.Approximately(VolumeEffetti, valore)) return;
 
         VolumeEffetti = valore;
-        PlayerPrefs.SetFloat(ChiaveVolumeEffetti, VolumeEffetti);
+        SaveService.ModificaDispositivo(dati =>
+        {
+            dati.volumeEffetti = VolumeEffetti;
+        });
         RegistraModifica();
     }
 
@@ -129,7 +126,10 @@ public sealed class GameOptionsController : MonoBehaviour
         if (VibrazioneAttiva == attiva) return;
 
         VibrazioneAttiva = attiva;
-        PlayerPrefs.SetInt(ChiaveVibrazione, attiva ? 1 : 0);
+        SaveService.ModificaDispositivo(dati =>
+        {
+            dati.vibrazioneAttiva = VibrazioneAttiva;
+        });
         RegistraModifica();
     }
 
@@ -138,7 +138,10 @@ public sealed class GameOptionsController : MonoBehaviour
         if (FlashAttivi == attivi) return;
 
         FlashAttivi = attivi;
-        PlayerPrefs.SetInt(ChiaveFlash, attivi ? 1 : 0);
+        SaveService.ModificaDispositivo(dati =>
+        {
+            dati.flashAttivi = FlashAttivi;
+        });
         RegistraModifica();
     }
 
@@ -147,7 +150,10 @@ public sealed class GameOptionsController : MonoBehaviour
         if (NumeriDannoAttivi == attivi) return;
 
         NumeriDannoAttivi = attivi;
-        PlayerPrefs.SetInt(ChiaveNumeriDanno, attivi ? 1 : 0);
+        SaveService.ModificaDispositivo(dati =>
+        {
+            dati.numeriDannoAttivi = NumeriDannoAttivi;
+        });
         RegistraModifica();
     }
 
@@ -161,7 +167,10 @@ public sealed class GameOptionsController : MonoBehaviour
         if (Mathf.Approximately(DimensioneMirino, dimensione)) return;
 
         DimensioneMirino = dimensione;
-        PlayerPrefs.SetFloat(ChiaveDimensioneMirino, DimensioneMirino);
+        SaveService.ModificaDispositivo(dati =>
+        {
+            dati.dimensioneMirino = DimensioneMirino;
+        });
         RegistraModifica();
     }
 
@@ -183,41 +192,22 @@ public sealed class GameOptionsController : MonoBehaviour
     {
         if (!salvataggioInAttesa) return;
 
-        PlayerPrefs.Save();
-        salvataggioInAttesa = false;
+        if (SaveService.SalvaDispositivoOra())
+        {
+            salvataggioInAttesa = false;
+        }
     }
 
     private void Carica()
     {
-        CombatFeedbackSettings feedback =
-            GameBalanceConfig.Corrente.FeedbackCombattimento;
-
-        float musicaPredefinita = feedback.audioAttivo ? 0.55f : 0f;
-        float effettiPredefiniti = feedback.audioAttivo ? 1f : 0f;
-
-        VolumeMusica = Mathf.Clamp01(
-            PlayerPrefs.GetFloat(ChiaveVolumeMusica, musicaPredefinita)
-        );
-        VolumeEffetti = Mathf.Clamp01(
-            PlayerPrefs.GetFloat(ChiaveVolumeEffetti, effettiPredefiniti)
-        );
-        VibrazioneAttiva = PlayerPrefs.GetInt(
-            ChiaveVibrazione,
-            feedback.vibrazioneCameraAttiva ? 1 : 0
-        ) != 0;
-        FlashAttivi = PlayerPrefs.GetInt(
-            ChiaveFlash,
-            feedback.effettiVisiviAttivi ? 1 : 0
-        ) != 0;
-        NumeriDannoAttivi = PlayerPrefs.GetInt(
-            ChiaveNumeriDanno,
-            1
-        ) != 0;
+        DeviceSettingsData dati = SaveService.Dispositivo;
+        VolumeMusica = Mathf.Clamp01(dati.volumeMusica);
+        VolumeEffetti = Mathf.Clamp01(dati.volumeEffetti);
+        VibrazioneAttiva = dati.vibrazioneAttiva;
+        FlashAttivi = dati.flashAttivi;
+        NumeriDannoAttivi = dati.numeriDannoAttivi;
         DimensioneMirino = Mathf.Clamp(
-            Mathf.Round(PlayerPrefs.GetFloat(
-                ChiaveDimensioneMirino,
-                feedback.dimensioneMirino
-            )),
+            Mathf.Round(dati.dimensioneMirino),
             DimensioneMirinoMinima,
             DimensioneMirinoMassima
         );

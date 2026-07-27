@@ -24,6 +24,7 @@ public sealed class PauseSettingsMenu : MonoBehaviour
     private GameObject pannelloOverlay;
     private Button pulsanteApri;
     private Button pulsanteChiudi;
+    private Button pulsanteMenuPrincipale;
     private TMP_Text testoTitolo;
     private TMP_Text testoPulsanteChiudi;
     private TMP_Text testoValoreMusica;
@@ -132,6 +133,14 @@ public sealed class PauseSettingsMenu : MonoBehaviour
         }
         if (Input.GetKeyDown(KeyCode.Escape))
         {
+            if (GameManager.instance == null)
+            {
+                if (Aperto)
+                {
+                    Nascondi();
+                }
+                return;
+            }
             AlternaMenu();
         }
     }
@@ -142,7 +151,8 @@ public sealed class PauseSettingsMenu : MonoBehaviour
         GameManager gestore = GameManager.instance;
         bool visibile =
             !ShopPermanentePrePartita.ApertoGlobale &&
-            (gestore == null || gestore.DifficoltaConfermata);
+            gestore != null &&
+            gestore.DifficoltaConfermata;
         if (pulsanteApri.gameObject.activeSelf != visibile)
         {
             pulsanteApri.gameObject.SetActive(visibile);
@@ -198,7 +208,8 @@ public sealed class PauseSettingsMenu : MonoBehaviour
         if (!costruito || !Aperto) return;
 
         pannelloOverlay.SetActive(false);
-        pulsanteApri.gameObject.SetActive(true);
+        pulsanteApri.gameObject.SetActive(false);
+        AggiornaVisibilitaPulsanteApri();
         FarmAudioController.RiproduciInterfaccia();
         opzioni.Salva();
 
@@ -387,17 +398,26 @@ public sealed class PauseSettingsMenu : MonoBehaviour
             "Ripristina",
             pannello.transform,
             "PREDEFINITI",
-            new Vector2(-176f, -346f),
-            new Vector2(260f, 58f),
+            new Vector2(-245f, -346f),
+            new Vector2(210f, 58f),
             FarmPixelUI.ColorePulsanteNeutroFlat,
             opzioni.RipristinaPredefiniti
+        );
+        pulsanteMenuPrincipale = CreaPulsante(
+            "MenuPrincipale",
+            pannello.transform,
+            "MENU PRINCIPALE",
+            new Vector2(0f, -346f),
+            new Vector2(250f, 58f),
+            FarmPixelUI.ColorePulsanteNeutroFlat,
+            TornaAlMenuPrincipale
         );
         pulsanteChiudi = CreaPulsante(
             "Chiudi",
             pannello.transform,
             "RIPRENDI",
-            new Vector2(176f, -346f),
-            new Vector2(330f, 58f),
+            new Vector2(245f, -346f),
+            new Vector2(210f, 58f),
             FarmPixelUI.ColorePulsanteVerdeFlat,
             Nascondi
         );
@@ -467,6 +487,23 @@ public sealed class PauseSettingsMenu : MonoBehaviour
             ? "PAUSA NEL FIENILE"
             : "OPZIONI DELLA FATTORIA";
         testoPulsanteChiudi.text = duranteOnda ? "RIPRENDI" : "CHIUDI";
+        if (pulsanteMenuPrincipale != null)
+        {
+            pulsanteMenuPrincipale.gameObject.SetActive(gestore != null);
+        }
+    }
+
+    private void TornaAlMenuPrincipale()
+    {
+        GameManager gestore = GameManager.instance;
+        if (gestore == null)
+        {
+            Nascondi();
+            return;
+        }
+
+        Nascondi();
+        gestore.TornaAlMenuPrincipale();
     }
 
     private static void AggiornaStatoToggle(TMP_Text testo, bool attivo)

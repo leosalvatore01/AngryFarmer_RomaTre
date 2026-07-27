@@ -31,8 +31,6 @@ public class GameManager : MonoBehaviour
     private TMP_Text testoAccessoShopPermanente;
     private ShopInterOndata shopInterOndata;
     private ShopPermanentePrePartita shopPermanente;
-    private GameObject schedaUovaHud;
-    private GameObject schedaUovaSalvateHud;
     private int gallineTotali;
     private int uovaInizioOnda;
     private float durataPartita;
@@ -287,8 +285,6 @@ public class GameManager : MonoBehaviour
             FarmPixelIcon.Moneta,
             -106f
         );
-        schedaUovaHud = null;
-        schedaUovaSalvateHud = null;
 
         ConfiguraTestoHUD(
             TrovaTestoInterfaccia("OndataText"),
@@ -633,7 +629,7 @@ public class GameManager : MonoBehaviour
             testoCambia = CreaTestoPannello(
                 cambiaOggetto.transform,
                 "TestoCambiaDifficolta",
-                "MENU E SHOP",
+                "MENU PRINCIPALE",
                 19f
             );
             RectTransform testoRect = testoCambia.rectTransform;
@@ -644,7 +640,7 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            testoCambia.text = "MENU E SHOP";
+            testoCambia.text = "MENU PRINCIPALE";
         }
         FarmPixelUI.ApplicaTesto(
             testoCambia,
@@ -655,7 +651,7 @@ public class GameManager : MonoBehaviour
             FarmPixelUI.ColorePulsanteNeutroFlat
         );
         pulsanteCambiaDifficolta.onClick.RemoveAllListeners();
-        pulsanteCambiaDifficolta.onClick.AddListener(CambiaDifficolta);
+        pulsanteCambiaDifficolta.onClick.AddListener(TornaAlMenuPrincipale);
     }
 
     void MostraSelettoreDifficolta()
@@ -1285,9 +1281,15 @@ public class GameManager : MonoBehaviour
 
     public void CambiaDifficolta()
     {
+        TornaAlMenuPrincipale();
+    }
+
+    public void TornaAlMenuPrincipale()
+    {
         ProgressionePartita.PreparaCambioDifficolta();
         ImpostaPausaManuale(false);
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        Time.timeScale = 1f;
+        SceneManager.LoadScene("MenuIniziale");
     }
 
     public void AggiungiMonete(int quantita)
@@ -1435,7 +1437,8 @@ public class GameManager : MonoBehaviour
             nuovoRecordPunteggio + altriRecord +
             "\nRECORD " + profilo.Nome + "  " +
             recordFinali.MigliorPunteggio + " PT  |  " +
-            recordFinali.MassimoVolpi + " VOLPI" +
+            recordFinali.MassimoVolpi + " VOLPI  |  ONDATA " +
+            recordFinali.MassimaOndata +
             "\n------------------------------" +
             "\nBUILD FINALE" +
             "\n" + buildLeggibile;
@@ -1447,6 +1450,7 @@ public class GameManager : MonoBehaviour
         if (recordFinali.NuovoRecordVolpi) record += "VOLPI ";
         if (recordFinali.NuovoRecordGalline) record += "GALLINE ";
         if (recordFinali.NuovoRecordTempo) record += "TEMPO ";
+        if (recordFinali.NuovoRecordOndata) record += "ONDATA ";
         return string.IsNullOrEmpty(record)
             ? string.Empty
             : "\nNUOVI RECORD  " + record.TrimEnd();
@@ -1478,7 +1482,8 @@ public class GameManager : MonoBehaviour
             durataPartita,
             volpiEliminate,
             GallineAlSicuro,
-            gallineTotali
+            gallineTotali,
+            ondateCompletate
         );
         recordFinaliCalcolati = true;
     }

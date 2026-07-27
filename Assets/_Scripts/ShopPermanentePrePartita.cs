@@ -65,6 +65,7 @@ public sealed class ShopPermanentePrePartita : MonoBehaviour
     private TMP_Text testoMessaggio;
     private bool costruito;
     private bool eventoSottoscritto;
+    private bool accessoDaMenu;
 
     public static bool ApertoGlobale =>
         istanza != null &&
@@ -101,6 +102,38 @@ public sealed class ShopPermanentePrePartita : MonoBehaviour
         );
         overlay.transform.SetParent(interfaccia.transform, false);
         return overlay.AddComponent<ShopPermanentePrePartita>();
+    }
+
+    public static ShopPermanentePrePartita CreaNelMenu(Transform parent)
+    {
+        if (parent == null)
+        {
+            Debug.LogError(
+                "Lo shop permanente richiede un contenitore UI nel menu."
+            );
+            return null;
+        }
+
+        ShopPermanentePrePartita esistente =
+            parent.GetComponentInChildren<ShopPermanentePrePartita>(true);
+        if (esistente != null)
+        {
+            istanza = esistente;
+            esistente.accessoDaMenu = true;
+            return esistente;
+        }
+
+        GameObject overlay = new GameObject(
+            "ShopPermanentePrePartita",
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(Image)
+        );
+        overlay.transform.SetParent(parent, false);
+        ShopPermanentePrePartita creato =
+            overlay.AddComponent<ShopPermanentePrePartita>();
+        creato.accessoDaMenu = true;
+        return creato;
     }
 
     private void Awake()
@@ -141,8 +174,7 @@ public sealed class ShopPermanentePrePartita : MonoBehaviour
 
     private void Update()
     {
-        GameManager gameManager = GameManager.instance;
-        if (gameManager == null || !gameManager.PuoAprireShopPermanente)
+        if (!AccessoConsentito())
         {
             Nascondi(false);
             return;
@@ -157,8 +189,7 @@ public sealed class ShopPermanentePrePartita : MonoBehaviour
 
     public void Mostra()
     {
-        GameManager gameManager = GameManager.instance;
-        if (gameManager == null || !gameManager.PuoAprireShopPermanente)
+        if (!AccessoConsentito())
         {
             Debug.LogWarning(
                 "Lo shop permanente e disponibile solo prima della partita."
@@ -505,7 +536,7 @@ public sealed class ShopPermanentePrePartita : MonoBehaviour
     private void Acquista(TipoPotenziamentoPermanente tipo)
     {
         GameManager gameManager = GameManager.instance;
-        if (gameManager == null || !gameManager.PuoAprireShopPermanente)
+        if (!AccessoConsentito())
         {
             Nascondi(false);
             return;
@@ -528,7 +559,10 @@ public sealed class ShopPermanentePrePartita : MonoBehaviour
 
         if (acquistato)
         {
-            gameManager.SincronizzaBonusPermanentiPrimaPartita();
+            if (gameManager != null)
+            {
+                gameManager.SincronizzaBonusPermanentiPrimaPartita();
+            }
             FarmAudioController.RiproduciAcquisto(0.9f);
         }
         else
@@ -537,6 +571,17 @@ public sealed class ShopPermanentePrePartita : MonoBehaviour
         }
 
         AggiornaInterfaccia();
+    }
+
+    private bool AccessoConsentito()
+    {
+        if (accessoDaMenu)
+        {
+            return true;
+        }
+
+        GameManager gameManager = GameManager.instance;
+        return gameManager != null && gameManager.PuoAprireShopPermanente;
     }
 
     private void AggiornaInterfaccia()

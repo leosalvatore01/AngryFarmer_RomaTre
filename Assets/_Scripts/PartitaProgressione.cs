@@ -137,43 +137,47 @@ public readonly struct EsitoRecordPartita
     public int MassimoVolpi { get; }
     public int MigliorePercentualeGalline { get; }
     public float MigliorTempoVittoria { get; }
+    public int MassimaOndata { get; }
     public bool NuovoPunteggio { get; }
     public bool NuovoRecordVolpi { get; }
     public bool NuovoRecordGalline { get; }
     public bool NuovoRecordTempo { get; }
+    public bool NuovoRecordOndata { get; }
     public bool HaNuovoRecord =>
         NuovoPunteggio ||
         NuovoRecordVolpi ||
         NuovoRecordGalline ||
-        NuovoRecordTempo;
+        NuovoRecordTempo ||
+        NuovoRecordOndata;
 
     public EsitoRecordPartita(
         int migliorPunteggio,
         int massimoVolpi,
         int migliorePercentualeGalline,
         float migliorTempoVittoria,
+        int massimaOndata,
         bool nuovoPunteggio,
         bool nuovoRecordVolpi,
         bool nuovoRecordGalline,
-        bool nuovoRecordTempo
+        bool nuovoRecordTempo,
+        bool nuovoRecordOndata
     )
     {
         MigliorPunteggio = migliorPunteggio;
         MassimoVolpi = massimoVolpi;
         MigliorePercentualeGalline = migliorePercentualeGalline;
         MigliorTempoVittoria = migliorTempoVittoria;
+        MassimaOndata = massimaOndata;
         NuovoPunteggio = nuovoPunteggio;
         NuovoRecordVolpi = nuovoRecordVolpi;
         NuovoRecordGalline = nuovoRecordGalline;
         NuovoRecordTempo = nuovoRecordTempo;
+        NuovoRecordOndata = nuovoRecordOndata;
     }
 }
 
 public static class ProgressionePartita
 {
-    private const string Prefisso = "AngryFarmer.Blocco8";
-    private const string ChiaveDifficolta = Prefisso + ".Difficolta";
-
     private static bool inizializzata;
     private static DifficoltaPartita difficoltaCorrente;
     private static bool saltaSelezioneAlProssimoCaricamento;
@@ -187,6 +191,9 @@ public static class ProgressionePartita
         }
     }
 
+    public static int MiglioreOndataAssoluta =>
+        Mathf.Max(0, SaveService.Profilo.miglioreOndataAssoluta);
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void AzzeraSessione()
     {
@@ -199,11 +206,19 @@ public static class ProgressionePartita
     {
         InizializzaSeNecessario();
         difficoltaCorrente = Normalizza(difficolta);
-        PlayerPrefs.SetInt(ChiaveDifficolta, (int)difficoltaCorrente);
-        PlayerPrefs.Save();
+        SaveService.ModificaProfilo(dati =>
+        {
+            dati.difficoltaPreferita = (int)difficoltaCorrente;
+        });
     }
 
     public static void PreparaRiavvioImmediato()
+    {
+        InizializzaSeNecessario();
+        saltaSelezioneAlProssimoCaricamento = true;
+    }
+
+    public static void PreparaAvvioDaMenu()
     {
         InizializzaSeNecessario();
         saltaSelezioneAlProssimoCaricamento = true;
@@ -258,24 +273,38 @@ public static class ProgressionePartita
         float durata,
         int volpiEliminate,
         int gallineSalve,
-        int gallineTotali
+        int gallineTotali,
+        int ondateCompletate = 0
     )
     {
-        string prefisso = PrefissoRecord(difficolta);
+        difficolta = Normalizza(difficolta);
+        DatiRecordDifficolta recordPrecedente =
+            OttieniDatiRecord(difficolta);
         int percentualeGalline = gallineTotali > 0
             ? Mathf.RoundToInt(
                 Mathf.Clamp01(gallineSalve / (float)gallineTotali) * 100f
             )
             : 0;
 
-        int vecchioPunteggio = PlayerPrefs.GetInt(prefisso + ".Punti", 0);
-        int vecchieVolpi = PlayerPrefs.GetInt(prefisso + ".Volpi", 0);
-        int vecchieGalline = PlayerPrefs.GetInt(prefisso + ".Galline", 0);
-        float vecchioTempo = PlayerPrefs.GetFloat(prefisso + ".Tempo", 0f);
+        int vecchioPunteggio =
+            Mathf.Max(0, recordPrecedente.migliorPunteggio);
+        int vecchieVolpi =
+            Mathf.Max(0, recordPrecedente.massimoVolpi);
+        int vecchieGalline = Mathf.Clamp(
+            recordPrecedente.migliorePercentualeGalline,
+            0,
+            100
+        );
+        float vecchioTempo =
+            Mathf.Max(0f, recordPrecedente.migliorTempoVittoria);
+        int vecchiaOndata =
+            Mathf.Max(0, recordPrecedente.massimaOndata);
+        int ondateValide = Mathf.Max(0, ondateCompletate);
 
         bool nuovoPunteggio = punteggio > vecchioPunteggio;
         bool nuovoRecordVolpi = volpiEliminate > vecchieVolpi;
         bool nuovoRecordGalline = percentualeGalline > vecchieGalline;
+        bool nuovoRecordOndata = ondateValide > vecchiaOndata;
         bool nuovoRecordTempo =
             vittoria &&
             durata > 0f &&
@@ -285,19 +314,28 @@ public static class ProgressionePartita
         int massimoVolpi = Mathf.Max(vecchieVolpi, volpiEliminate);
         int miglioriGalline = Mathf.Max(vecchieGalline, percentualeGalline);
         float migliorTempo = nuovoRecordTempo ? durata : vecchioTempo;
+        int massimaOndata = Mathf.Max(vecchiaOndata, ondateValide);
 
-        if (nuovoPunteggio)
-            PlayerPrefs.SetInt(prefisso + ".Punti", migliorPunteggio);
-        if (nuovoRecordVolpi)
-            PlayerPrefs.SetInt(prefisso + ".Volpi", massimoVolpi);
-        if (nuovoRecordGalline)
-            PlayerPrefs.SetInt(prefisso + ".Galline", miglioriGalline);
-        if (nuovoRecordTempo)
-            PlayerPrefs.SetFloat(prefisso + ".Tempo", migliorTempo);
         if (nuovoPunteggio || nuovoRecordVolpi ||
-            nuovoRecordGalline || nuovoRecordTempo)
+            nuovoRecordGalline || nuovoRecordTempo ||
+            nuovoRecordOndata)
         {
-            PlayerPrefs.Save();
+            int indice = (int)difficolta;
+            SaveService.ModificaProfilo(dati =>
+            {
+                DatiRecordDifficolta record =
+                    dati.recordDifficolta[indice];
+                record.migliorPunteggio = migliorPunteggio;
+                record.massimoVolpi = massimoVolpi;
+                record.migliorePercentualeGalline =
+                    miglioriGalline;
+                record.migliorTempoVittoria = migliorTempo;
+                record.massimaOndata = massimaOndata;
+                dati.miglioreOndataAssoluta = Mathf.Max(
+                    dati.miglioreOndataAssoluta,
+                    massimaOndata
+                );
+            });
         }
 
         return new EsitoRecordPartita(
@@ -305,10 +343,32 @@ public static class ProgressionePartita
             massimoVolpi,
             miglioriGalline,
             migliorTempo,
+            massimaOndata,
             nuovoPunteggio,
             nuovoRecordVolpi,
             nuovoRecordGalline,
-            nuovoRecordTempo
+            nuovoRecordTempo,
+            nuovoRecordOndata
+        );
+    }
+
+    public static EsitoRecordPartita OttieniRecord(
+        DifficoltaPartita difficolta
+    )
+    {
+        DatiRecordDifficolta record =
+            OttieniDatiRecord(Normalizza(difficolta));
+        return new EsitoRecordPartita(
+            Mathf.Max(0, record.migliorPunteggio),
+            Mathf.Max(0, record.massimoVolpi),
+            Mathf.Clamp(record.migliorePercentualeGalline, 0, 100),
+            Mathf.Max(0f, record.migliorTempoVittoria),
+            Mathf.Max(0, record.massimaOndata),
+            false,
+            false,
+            false,
+            false,
+            false
         );
     }
 
@@ -324,10 +384,8 @@ public static class ProgressionePartita
     {
         if (inizializzata) return;
         difficoltaCorrente = Normalizza(
-            (DifficoltaPartita)PlayerPrefs.GetInt(
-                ChiaveDifficolta,
-                (int)DifficoltaPartita.Normale
-            )
+            (DifficoltaPartita)
+                SaveService.Profilo.difficoltaPreferita
         );
         inizializzata = true;
     }
@@ -342,8 +400,12 @@ public static class ProgressionePartita
             : difficolta;
     }
 
-    private static string PrefissoRecord(DifficoltaPartita difficolta)
+    private static DatiRecordDifficolta OttieniDatiRecord(
+        DifficoltaPartita difficolta
+    )
     {
-        return Prefisso + ".Record." + (int)Normalizza(difficolta);
+        SaveData dati = SaveService.Profilo;
+        int indice = (int)Normalizza(difficolta);
+        return dati.recordDifficolta[indice];
     }
 }
