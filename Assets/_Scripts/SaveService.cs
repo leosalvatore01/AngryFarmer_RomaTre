@@ -57,6 +57,11 @@ public static class SaveService
     private static DeviceSettingsData dispositivo;
     private static string radiceDatiPersistenti;
 
+#if UNITY_EDITOR
+    private const string ChiaveRadicePlayModeTest =
+        "AngryFarmer.Tests.PlayModeSaveRoot";
+#endif
+
     public static event Action ProfiloCambiato;
     public static event Action ImpostazioniDispositivoCambiate;
 
@@ -101,6 +106,19 @@ public static class SaveService
             {
                 return radiceDatiPersistenti;
             }
+
+#if UNITY_EDITOR
+            string radicePlayModeTest = UnityEditor.SessionState.GetString(
+                ChiaveRadicePlayModeTest,
+                string.Empty
+            );
+            if (!string.IsNullOrWhiteSpace(radicePlayModeTest))
+            {
+                radiceDatiPersistenti =
+                    Path.GetFullPath(radicePlayModeTest);
+                return radiceDatiPersistenti;
+            }
+#endif
 
             string[] argomenti = Environment.GetCommandLineArgs();
             for (int i = 0; i < argomenti.Length - 1; i++)
@@ -266,6 +284,127 @@ public static class SaveService
             dispositivoSolaLettura || SalvaDispositivoInterno();
         return profiloSalvato && dispositivoSalvato;
     }
+
+#if UNITY_EDITOR
+    public static string RadicePlayModePerTestAttiva =>
+        UnityEditor.SessionState.GetString(
+            ChiaveRadicePlayModeTest,
+            string.Empty
+        );
+
+    /// <summary>
+    /// Mantiene una radice temporanea attraverso il domain reload necessario
+    /// ai test che entrano in Play Mode dall'Editor.
+    /// </summary>
+    public static void PreparaRadicePlayModePerTest(string percorso)
+    {
+        if (string.IsNullOrWhiteSpace(percorso))
+        {
+            throw new ArgumentException(
+                "La radice Play Mode dei test non puo essere vuota.",
+                nameof(percorso)
+            );
+        }
+
+        UnityEditor.SessionState.SetString(
+            ChiaveRadicePlayModeTest,
+            Path.GetFullPath(percorso)
+        );
+    }
+
+    /// <summary>
+    /// Rimuove l'override persistito per il test Play Mode corrente.
+    /// </summary>
+    public static void RimuoviRadicePlayModePerTest()
+    {
+        UnityEditor.SessionState.EraseString(ChiaveRadicePlayModeTest);
+    }
+
+    /// <summary>
+    /// Isola i file di persistenza usati da un test dell'Editor e restituisce
+    /// uno scope che ripristina integralmente lo stato precedente. Il metodo
+    /// non viene incluso nelle build.
+    /// </summary>
+    public static IDisposable IsolaDatiPerTest(string percorso)
+    {
+        if (string.IsNullOrWhiteSpace(percorso))
+        {
+            throw new ArgumentException(
+                "La radice dati dei test non puo essere vuota.",
+                nameof(percorso)
+            );
+        }
+
+        return new AmbitoDatiTest(Path.GetFullPath(percorso));
+    }
+
+    /// <summary>
+    /// Forza un nuovo caricamento dalla radice temporanea dello scope corrente.
+    /// </summary>
+    public static void RicaricaDatiPerTest()
+    {
+        if (string.IsNullOrWhiteSpace(radiceDatiPersistenti))
+        {
+            throw new InvalidOperationException(
+                "Nessun ambiente dati di test attivo."
+            );
+        }
+
+        string radiceTest = radiceDatiPersistenti;
+        AzzeraStatoSessione();
+        radiceDatiPersistenti = radiceTest;
+    }
+
+    private sealed class AmbitoDatiTest : IDisposable
+    {
+        private readonly bool inizializzatoPrecedente;
+        private readonly bool profiloSolaLetturaPrecedente;
+        private readonly bool dispositivoSolaLetturaPrecedente;
+        private readonly SaveData profiloPrecedente;
+        private readonly DeviceSettingsData dispositivoPrecedente;
+        private readonly string radicePrecedente;
+        private readonly Action profiloCambiatoPrecedente;
+        private readonly Action dispositivoCambiatoPrecedente;
+        private bool chiuso;
+
+        public AmbitoDatiTest(string radiceTest)
+        {
+            inizializzatoPrecedente = inizializzato;
+            profiloSolaLetturaPrecedente = profiloSolaLettura;
+            dispositivoSolaLetturaPrecedente = dispositivoSolaLettura;
+            profiloPrecedente = profilo;
+            dispositivoPrecedente = dispositivo;
+            radicePrecedente = radiceDatiPersistenti;
+            profiloCambiatoPrecedente = ProfiloCambiato;
+            dispositivoCambiatoPrecedente =
+                ImpostazioniDispositivoCambiate;
+
+            AzzeraStatoSessione();
+            radiceDatiPersistenti = radiceTest;
+        }
+
+        public void Dispose()
+        {
+            if (chiuso)
+            {
+                return;
+            }
+
+            chiuso = true;
+            AzzeraStatoSessione();
+            inizializzato = inizializzatoPrecedente;
+            profiloSolaLettura = profiloSolaLetturaPrecedente;
+            dispositivoSolaLettura =
+                dispositivoSolaLetturaPrecedente;
+            profilo = profiloPrecedente;
+            dispositivo = dispositivoPrecedente;
+            radiceDatiPersistenti = radicePrecedente;
+            ProfiloCambiato = profiloCambiatoPrecedente;
+            ImpostazioniDispositivoCambiate =
+                dispositivoCambiatoPrecedente;
+        }
+    }
+#endif
 
     private static void AssicuraInizializzato()
     {
