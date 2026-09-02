@@ -222,8 +222,8 @@ public class EnemySpawner : MonoBehaviour
             };
         }
 
-        // Garantisce che GameManager e galline completino Start prima
-        // di fotografare lo stato iniziale del primo obiettivo.
+        // Lascia completare Start al GameManager prima di applicare
+        // difficolta e preparazione iniziale del survival.
         yield return null;
 
         yield return new WaitUntil(
@@ -412,8 +412,7 @@ public class EnemySpawner : MonoBehaviour
 
             while (
                 minacceAttive.Count > 0 ||
-                GameObject.FindGameObjectWithTag("Nemico") != null ||
-                false
+                GameObject.FindGameObjectWithTag("Nemico") != null
             )
             {
                 diagnostica.CampionaNemiciVivi();

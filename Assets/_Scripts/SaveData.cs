@@ -15,8 +15,6 @@ public sealed class DatiRecordDifficolta
     public int difficolta;
     public int migliorPunteggio;
     public int massimoVolpi;
-    public int migliorePercentualeGalline;
-    public float migliorTempoVittoria;
     public int massimaOndata;
 }
 

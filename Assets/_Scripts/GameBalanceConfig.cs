@@ -73,24 +73,6 @@ public sealed class PigBalanceSettings
 }
 
 [Serializable]
-public sealed class FarmObjectivesBalanceSettings
-{
-    [Header("Recupero delle uova")]
-    [Min(1f)] public float durataRecuperoUovo = 7f;
-    [Min(0.2f)] public float raggioRecuperoUovo = 0.85f;
-    [Min(0)] public int uovaPerRecupero = 1;
-
-    [Header("Ricompense")]
-    [Min(0)] public int uovaPerMaialino = 1;
-    [Min(0)] public int uovaPerObiettivo = 2;
-
-    [Header("Serie di difesa")]
-    [Min(1)] public int salvataggiPerBonusSerie = 2;
-    [Min(0)] public int uovaBonusSeriePerLivello = 1;
-    [Min(0)] public int bonusMassimoSerie = 2;
-}
-
-[Serializable]
 public sealed class ShopBalanceSettings
 {
     [Header("Offerte e ritmo della bottega")]
@@ -153,42 +135,6 @@ public sealed class ShopBalanceSettings
     [Min(0.1f)] public float durataRallentamentoBase = 1.1f;
     [Min(0f)] public float durataRallentamentoPerLivello = 0.35f;
     [Min(0f)] public float forzaSpintaPerLivello = 0.85f;
-}
-
-[Serializable]
-public sealed class FarmInteractiveBalanceSettings
-{
-    [Header("Distribuzione deterministica")]
-    public int seedArena = 51027;
-    [Range(1, 5)] public int numeroZoneFango = 3;
-    [Range(0, 4)] public int numeroBallePaglia = 2;
-    [Range(0, 4)] public int numeroZuccheEsplosive = 2;
-    [Range(0, 3)] public int numeroCasseMonete = 1;
-    [Range(0, 3)] public int numeroCasseCura = 1;
-    [Min(2f)] public float raggioMinimoArena = 4.1f;
-    [Min(3f)] public float raggioMassimoArena = 8f;
-    [Range(0.4f, 1f)] public float scalaVerticaleArena = 0.68f;
-    [Min(0.5f)] public float distanzaMinimaElementi = 2.15f;
-    [Min(0.5f)] public float raggioLiberoGiocatore = 2.8f;
-    [Min(0.5f)] public float raggioLiberoGalline = 1.6f;
-
-    [Header("Fango")]
-    [Min(0.5f)] public float raggioFango = 1.35f;
-    [Range(0.2f, 1f)] public float velocitaGiocatoreNelFango = 0.72f;
-    [Range(0.2f, 1f)] public float velocitaVolpiNelFango = 0.52f;
-
-    [Header("Oggetti colpibili")]
-    [Min(1)] public int vitaBallaPaglia = 2;
-    [Min(1)] public int vitaZucca = 1;
-    [Min(0.5f)] public float raggioEsplosioneZucca = 2.15f;
-    [Min(1)] public int dannoEsplosioneZucca = 3;
-    [Min(0f)] public float spintaEsplosioneZucca = 2.4f;
-    [Min(1)] public int vitaCassa = 1;
-    [Min(0)] public int moneteCassa = 2;
-    [Min(0)] public int curaCassa = 2;
-
-    [Header("Leggibilita")]
-    [Min(0f)] public float durataSuggerimentoIniziale = 5.5f;
 }
 
 [Serializable]
@@ -479,7 +425,7 @@ public sealed class GameBalanceConfig : ScriptableObject
 
     [SerializeField]
     private string versioneRiferimento =
-        "Blocco 8 - Fine partita e bilanciamento - 2026-07-20";
+        "Survival infinito - pulizia sistemi legacy - 2026-07-27";
 
     [SerializeField] private PlayerBalanceSettings giocatore =
         new PlayerBalanceSettings();
@@ -489,12 +435,8 @@ public sealed class GameBalanceConfig : ScriptableObject
         new FoxVariantsBalanceSettings();
     [SerializeField] private PigBalanceSettings maialino =
         new PigBalanceSettings();
-    [SerializeField] private FarmObjectivesBalanceSettings obiettiviFattoria =
-        new FarmObjectivesBalanceSettings();
     [SerializeField] private ShopBalanceSettings shop =
         new ShopBalanceSettings();
-    [SerializeField] private FarmInteractiveBalanceSettings fattoria =
-        new FarmInteractiveBalanceSettings();
     [SerializeField] private WaveBalanceSettings ondate =
         new WaveBalanceSettings();
     [SerializeField] private BilanciamentoDifficolta difficolta =
@@ -512,12 +454,7 @@ public sealed class GameBalanceConfig : ScriptableObject
         variantiVolpe ??
         (variantiVolpe = new FoxVariantsBalanceSettings());
     public PigBalanceSettings Maialino => maialino;
-    public FarmObjectivesBalanceSettings ObiettiviFattoria =>
-        obiettiviFattoria ??
-        (obiettiviFattoria = new FarmObjectivesBalanceSettings());
     public ShopBalanceSettings Shop => shop;
-    public FarmInteractiveBalanceSettings Fattoria =>
-        fattoria ?? (fattoria = new FarmInteractiveBalanceSettings());
     public WaveBalanceSettings Ondate => ondate;
     public BilanciamentoDifficolta Difficolta =>
         difficolta ?? (difficolta = new BilanciamentoDifficolta());
@@ -572,14 +509,6 @@ public sealed class GameBalanceConfig : ScriptableObject
         {
             variantiVolpe = new FoxVariantsBalanceSettings();
         }
-        if (fattoria == null)
-        {
-            fattoria = new FarmInteractiveBalanceSettings();
-        }
-        if (obiettiviFattoria == null)
-        {
-            obiettiviFattoria = new FarmObjectivesBalanceSettings();
-        }
         if (difficolta == null)
         {
             difficolta = new BilanciamentoDifficolta();
@@ -606,38 +535,6 @@ public sealed class GameBalanceConfig : ScriptableObject
         maialino.cambioDirezioneMassimo = Mathf.Max(
             maialino.cambioDirezioneMinimo,
             maialino.cambioDirezioneMassimo
-        );
-        obiettiviFattoria.durataRecuperoUovo = Mathf.Max(
-            1f,
-            obiettiviFattoria.durataRecuperoUovo
-        );
-        obiettiviFattoria.raggioRecuperoUovo = Mathf.Max(
-            0.2f,
-            obiettiviFattoria.raggioRecuperoUovo
-        );
-        obiettiviFattoria.uovaPerRecupero = Mathf.Max(
-            0,
-            obiettiviFattoria.uovaPerRecupero
-        );
-        obiettiviFattoria.uovaPerMaialino = Mathf.Max(
-            0,
-            obiettiviFattoria.uovaPerMaialino
-        );
-        obiettiviFattoria.uovaPerObiettivo = Mathf.Max(
-            0,
-            obiettiviFattoria.uovaPerObiettivo
-        );
-        obiettiviFattoria.salvataggiPerBonusSerie = Mathf.Max(
-            1,
-            obiettiviFattoria.salvataggiPerBonusSerie
-        );
-        obiettiviFattoria.uovaBonusSeriePerLivello = Mathf.Max(
-            0,
-            obiettiviFattoria.uovaBonusSeriePerLivello
-        );
-        obiettiviFattoria.bonusMassimoSerie = Mathf.Max(
-            0,
-            obiettiviFattoria.bonusMassimoSerie
         );
         NormalizzaArrayNonNegativo(shop.costiMovimento);
         NormalizzaArrayNonNegativo(shop.costiResistenza);
@@ -699,92 +596,6 @@ public sealed class GameBalanceConfig : ScriptableObject
         shop.forzaSpintaPerLivello = Mathf.Max(
             0f,
             shop.forzaSpintaPerLivello
-        );
-
-        fattoria.numeroZoneFango = Mathf.Clamp(
-            fattoria.numeroZoneFango,
-            1,
-            5
-        );
-        fattoria.numeroBallePaglia = Mathf.Clamp(
-            fattoria.numeroBallePaglia,
-            0,
-            4
-        );
-        fattoria.numeroZuccheEsplosive = Mathf.Clamp(
-            fattoria.numeroZuccheEsplosive,
-            0,
-            4
-        );
-        fattoria.numeroCasseMonete = Mathf.Clamp(
-            fattoria.numeroCasseMonete,
-            0,
-            3
-        );
-        fattoria.numeroCasseCura = Mathf.Clamp(
-            fattoria.numeroCasseCura,
-            0,
-            3
-        );
-        fattoria.raggioMinimoArena = Mathf.Max(
-            2f,
-            fattoria.raggioMinimoArena
-        );
-        fattoria.raggioMassimoArena = Mathf.Max(
-            fattoria.raggioMinimoArena + 0.5f,
-            fattoria.raggioMassimoArena
-        );
-        fattoria.scalaVerticaleArena = Mathf.Clamp(
-            fattoria.scalaVerticaleArena,
-            0.4f,
-            1f
-        );
-        fattoria.distanzaMinimaElementi = Mathf.Max(
-            0.5f,
-            fattoria.distanzaMinimaElementi
-        );
-        fattoria.raggioLiberoGiocatore = Mathf.Max(
-            0.5f,
-            fattoria.raggioLiberoGiocatore
-        );
-        fattoria.raggioLiberoGalline = Mathf.Max(
-            0.5f,
-            fattoria.raggioLiberoGalline
-        );
-        fattoria.raggioFango = Mathf.Max(0.5f, fattoria.raggioFango);
-        fattoria.velocitaGiocatoreNelFango = Mathf.Clamp(
-            fattoria.velocitaGiocatoreNelFango,
-            0.2f,
-            1f
-        );
-        fattoria.velocitaVolpiNelFango = Mathf.Clamp(
-            fattoria.velocitaVolpiNelFango,
-            0.2f,
-            1f
-        );
-        fattoria.vitaBallaPaglia = Mathf.Max(
-            1,
-            fattoria.vitaBallaPaglia
-        );
-        fattoria.vitaZucca = Mathf.Max(1, fattoria.vitaZucca);
-        fattoria.raggioEsplosioneZucca = Mathf.Max(
-            0.5f,
-            fattoria.raggioEsplosioneZucca
-        );
-        fattoria.dannoEsplosioneZucca = Mathf.Max(
-            1,
-            fattoria.dannoEsplosioneZucca
-        );
-        fattoria.spintaEsplosioneZucca = Mathf.Max(
-            0f,
-            fattoria.spintaEsplosioneZucca
-        );
-        fattoria.vitaCassa = Mathf.Max(1, fattoria.vitaCassa);
-        fattoria.moneteCassa = Mathf.Max(0, fattoria.moneteCassa);
-        fattoria.curaCassa = Mathf.Max(0, fattoria.curaCassa);
-        fattoria.durataSuggerimentoIniziale = Mathf.Max(
-            0f,
-            fattoria.durataSuggerimentoIniziale
         );
 
         feedbackCombattimento.dimensioneMirino = Mathf.Clamp(

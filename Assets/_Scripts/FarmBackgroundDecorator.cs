@@ -34,18 +34,7 @@ public class FarmBackgroundDecorator : MonoBehaviour
     private Sprite ciuffoErba;
     private Sprite fiorellini;
     private Sprite sassolini;
-    private Sprite paglia;
-    private Sprite cassetta;
-    private Sprite zucche;
     private Sprite staccionata;
-
-    public Sprite SpriteFangoInterattivo =>
-        macchieTerra != null && macchieTerra.Length > 0
-            ? macchieTerra[0]
-            : null;
-    public Sprite SpritePagliaInterattiva => paglia;
-    public Sprite SpriteCassaInterattiva => cassetta;
-    public Sprite SpriteZuccheInterattive => zucche;
 
     void Awake()
     {
@@ -273,9 +262,6 @@ public class FarmBackgroundDecorator : MonoBehaviour
         ciuffoErba = CreaCiuffoErba();
         fiorellini = CreaFiorellini();
         sassolini = CreaSassolini();
-        paglia = CreaBallaPaglia();
-        cassetta = CreaCassetta();
-        zucche = CreaZucche();
         staccionata = CreaStaccionata();
     }
 
@@ -433,58 +419,6 @@ public class FarmBackgroundDecorator : MonoBehaviour
         return CreaSprite("Sassolini", pixel, w, h);
     }
 
-    private Sprite CreaBallaPaglia()
-    {
-        const int w = 36;
-        const int h = 28;
-        Color32[] pixel = TelaTrasparente(w, h);
-        Color32 contorno = new Color32(47, 27, 17, 255);
-        Color32 scuro = new Color32(150, 91, 30, 255);
-        Color32 medio = new Color32(214, 161, 59, 255);
-        Color32 luce = new Color32(246, 198, 77, 255);
-
-        Rettangolo(pixel, w, h, 4, 5, 31, 22, contorno);
-        Rettangolo(pixel, w, h, 6, 7, 29, 20, medio);
-        Rettangolo(pixel, w, h, 6, 7, 29, 9, scuro);
-        Rettangolo(pixel, w, h, 9, 10, 11, 20, scuro);
-        Rettangolo(pixel, w, h, 24, 10, 26, 20, scuro);
-        for (int x = 7; x < 29; x += 5)
-        {
-            Linea(pixel, w, h, x, 12, x + 3, 17, luce, 1);
-        }
-        return CreaSprite("BallaPaglia", pixel, w, h);
-    }
-
-    private Sprite CreaCassetta()
-    {
-        const int w = 34;
-        const int h = 28;
-        Color32[] pixel = TelaTrasparente(w, h);
-        Color32 contorno = new Color32(45, 24, 16, 255);
-        Color32 scuro = new Color32(96, 48, 23, 255);
-        Color32 medio = new Color32(151, 80, 35, 255);
-        Color32 luce = new Color32(198, 122, 54, 255);
-
-        Rettangolo(pixel, w, h, 3, 4, 30, 23, contorno);
-        Rettangolo(pixel, w, h, 5, 6, 28, 21, medio);
-        Rettangolo(pixel, w, h, 5, 9, 28, 11, scuro);
-        Rettangolo(pixel, w, h, 5, 17, 28, 19, scuro);
-        Linea(pixel, w, h, 6, 7, 27, 21, luce, 2);
-        Linea(pixel, w, h, 27, 7, 6, 21, scuro, 2);
-        return CreaSprite("CassettaLegno", pixel, w, h);
-    }
-
-    private Sprite CreaZucche()
-    {
-        const int w = 38;
-        const int h = 24;
-        Color32[] pixel = TelaTrasparente(w, h);
-        DisegnaZucca(pixel, w, h, 2, 3, 13, 13);
-        DisegnaZucca(pixel, w, h, 13, 4, 15, 15);
-        DisegnaZucca(pixel, w, h, 27, 3, 9, 11);
-        return CreaSprite("ZuccheCampo", pixel, w, h);
-    }
-
     private Sprite CreaStaccionata()
     {
         const int w = 54;
@@ -620,78 +554,6 @@ public class FarmBackgroundDecorator : MonoBehaviour
         Rettangolo(pixel, w, h, xMin, yMin + 1, xMax, yMax - 1, contorno);
         Rettangolo(pixel, w, h, xMin + 2, yMin + 2, xMax - 2, yMax - 2, medio);
         Rettangolo(pixel, w, h, xMin + 2, yMax - 3, xMax - 4, yMax - 2, luce);
-    }
-
-    private static void DisegnaZucca(
-        Color32[] pixel,
-        int w,
-        int h,
-        int x,
-        int y,
-        int larghezza,
-        int altezza
-    )
-    {
-        Color32 contorno = new Color32(63, 34, 18, 255);
-        Color32 arancioScuro = new Color32(177, 76, 25, 255);
-        Color32 arancio = new Color32(224, 113, 32, 255);
-        Color32 luce = new Color32(244, 153, 45, 255);
-        Color32 gambo = new Color32(69, 104, 42, 255);
-
-        Rettangolo(
-            pixel,
-            w,
-            h,
-            x + 1,
-            y,
-            x + larghezza - 2,
-            y + altezza - 1,
-            contorno
-        );
-        Rettangolo(
-            pixel,
-            w,
-            h,
-            x,
-            y + 2,
-            x + larghezza - 1,
-            y + altezza - 3,
-            contorno
-        );
-        Rettangolo(
-            pixel,
-            w,
-            h,
-            x + 2,
-            y + 2,
-            x + larghezza - 3,
-            y + altezza - 3,
-            arancio
-        );
-
-        int centro = x + larghezza / 2;
-        Rettangolo(
-            pixel,
-            w,
-            h,
-            centro - 1,
-            y + 2,
-            centro,
-            y + altezza - 3,
-            arancioScuro
-        );
-        Imposta(pixel, w, h, centro + 2, y + altezza - 4, luce);
-        Imposta(pixel, w, h, centro + 3, y + altezza - 4, luce);
-        Rettangolo(
-            pixel,
-            w,
-            h,
-            centro,
-            y + altezza,
-            centro + 1,
-            y + altezza + 2,
-            gambo
-        );
     }
 
     private static void Rettangolo(

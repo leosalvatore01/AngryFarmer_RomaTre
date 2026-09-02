@@ -111,8 +111,6 @@ public sealed class SaveServiceRegressionTests
                     difficolta = 99,
                     migliorPunteggio = -100,
                     massimoVolpi = -2,
-                    migliorePercentualeGalline = 140,
-                    migliorTempoVittoria = -4f,
                     massimaOndata = -1
                 }
             }
@@ -136,8 +134,15 @@ public sealed class SaveServiceRegressionTests
             Is.EqualTo((int)DifficoltaPartita.Difficile)
         );
         Assert.That(normalizzato.miglioreOndataAssoluta, Is.Zero);
-        Assert.That(normalizzato.revisione, Is.Zero);
-        Assert.That(normalizzato.ultimoSalvataggioUtcTicks, Is.Zero);
+        Assert.That(
+            normalizzato.revisione,
+            Is.GreaterThan(0),
+            "La normalizzazione di schema deve essere salvata subito."
+        );
+        Assert.That(
+            normalizzato.ultimoSalvataggioUtcTicks,
+            Is.GreaterThan(0)
+        );
 
         DatiProgressionePermanente meta =
             normalizzato.progressionePermanente;
@@ -164,8 +169,108 @@ public sealed class SaveServiceRegressionTests
         DatiRecordDifficolta primo = normalizzato.recordDifficolta[0];
         Assert.That(primo.migliorPunteggio, Is.Zero);
         Assert.That(primo.massimoVolpi, Is.Zero);
-        Assert.That(primo.migliorTempoVittoria, Is.Zero);
         Assert.That(primo.massimaOndata, Is.Zero);
+    }
+
+    [Test]
+    public void Profilo_SchemaUno_RimuoveRecordLegacySenzaPerdereProgressi()
+    {
+        ScriviFixture(
+            CreaProfiloValido("Placeholder"),
+            CreaDispositivoValido()
+        );
+        const string profiloVersioneUno =
+            "{\"versioneSchema\":1,\"idProfilo\":\"guest\"," +
+            "\"nomeProfilo\":\"Veterano\",\"migrazioneLegacyVersione\":1," +
+            "\"miglioreOndataAssoluta\":7,\"recordDifficolta\":[{" +
+            "\"difficolta\":0,\"migliorPunteggio\":1234," +
+            "\"massimoVolpi\":12,\"migliorePercentualeGalline\":100," +
+            "\"migliorTempoVittoria\":45.5,\"massimaOndata\":7},null,null]}";
+        File.WriteAllText(
+            SaveService.PercorsoProfiloOspite,
+            profiloVersioneUno,
+            Utf8
+        );
+
+        SaveData migrato = SaveService.Profilo;
+
+        Assert.That(
+            migrato.versioneSchema,
+            Is.EqualTo(SaveService.VersioneSchemaCorrente)
+        );
+        Assert.That(migrato.nomeProfilo, Is.EqualTo("Veterano"));
+        Assert.That(migrato.miglioreOndataAssoluta, Is.EqualTo(7));
+        Assert.That(
+            migrato.recordDifficolta[0].migliorPunteggio,
+            Is.Zero,
+            "Il vecchio punteggio includeva obiettivi non più presenti."
+        );
+        Assert.That(migrato.recordDifficolta[0].massimoVolpi, Is.EqualTo(12));
+        Assert.That(migrato.recordDifficolta[0].massimaOndata, Is.EqualTo(7));
+
+        string jsonMigrato = File.ReadAllText(
+            SaveService.PercorsoProfiloOspite,
+            Utf8
+        );
+        SaveData persistito = JsonUtility.FromJson<SaveData>(jsonMigrato);
+        Assert.That(
+            persistito.versioneSchema,
+            Is.EqualTo(SaveService.VersioneSchemaCorrente),
+            "La migrazione deve essere persistita già al primo caricamento."
+        );
+        Assert.That(
+            persistito.recordDifficolta[0].migliorPunteggio,
+            Is.Zero
+        );
+        Assert.That(
+            jsonMigrato,
+            Does.Not.Contain("migliorePercentualeGalline")
+        );
+        Assert.That(jsonMigrato, Does.Not.Contain("migliorTempoVittoria"));
+    }
+
+    [Test]
+    public void ImportLegacy_IgnoraPunteggioPreSurvivalMaConservaVolpi()
+    {
+        SaveData profilo = CreaProfiloValido("Veterano PlayerPrefs");
+        profilo.migrazioneLegacyVersione = 0;
+        ScriviFixture(profilo, CreaDispositivoValido());
+
+        const string prefisso = "AngryFarmer.Blocco8.Record.0";
+        string chiavePunti = prefisso + ".Punti";
+        string chiaveVolpi = prefisso + ".Volpi";
+        bool puntiEsistevano = PlayerPrefs.HasKey(chiavePunti);
+        bool volpiEsistevano = PlayerPrefs.HasKey(chiaveVolpi);
+        int puntiPrecedenti = PlayerPrefs.GetInt(chiavePunti, 0);
+        int volpiPrecedenti = PlayerPrefs.GetInt(chiaveVolpi, 0);
+        PlayerPrefs.SetInt(chiavePunti, 999999);
+        PlayerPrefs.SetInt(chiaveVolpi, 37);
+        try
+        {
+            SaveData migrato = SaveService.Profilo;
+
+            Assert.That(
+                migrato.recordDifficolta[0].migliorPunteggio,
+                Is.Zero
+            );
+            Assert.That(
+                migrato.recordDifficolta[0].massimoVolpi,
+                Is.EqualTo(37)
+            );
+        }
+        finally
+        {
+            RipristinaPlayerPref(
+                chiavePunti,
+                puntiEsistevano,
+                puntiPrecedenti
+            );
+            RipristinaPlayerPref(
+                chiaveVolpi,
+                volpiEsistevano,
+                volpiPrecedenti
+            );
+        }
     }
 
     [Test]
@@ -264,5 +369,21 @@ public sealed class SaveServiceRegressionTests
     private static T LeggiJson<T>(string percorso)
     {
         return JsonUtility.FromJson<T>(File.ReadAllText(percorso, Utf8));
+    }
+
+    private static void RipristinaPlayerPref(
+        string chiave,
+        bool esisteva,
+        int valore
+    )
+    {
+        if (esisteva)
+        {
+            PlayerPrefs.SetInt(chiave, valore);
+        }
+        else
+        {
+            PlayerPrefs.DeleteKey(chiave);
+        }
     }
 }

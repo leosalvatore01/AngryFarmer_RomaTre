@@ -9,7 +9,6 @@ public enum FarmPixelIcon
     Ondata,
     Cuore,
     Moneta,
-    Uovo,
     Bottega,
     Movimento,
     Resistenza,
@@ -29,7 +28,6 @@ public enum FarmPixelIcon
     TriploSparo,
     BoostVelocita,
     Volpe,
-    Gallina,
     Obiettivo,
     GettonePermanente
 }
@@ -432,9 +430,6 @@ public static class FarmPixelUI
             case FarmPixelIcon.GettonePermanente:
                 DisegnaGettonePermanente(pixel);
                 break;
-            case FarmPixelIcon.Uovo:
-                DisegnaUovo(pixel);
-                break;
             case FarmPixelIcon.Bottega:
                 DisegnaBottega(pixel);
                 break;
@@ -488,9 +483,6 @@ public static class FarmPixelUI
                 break;
             case FarmPixelIcon.Volpe:
                 DisegnaVolpe(pixel);
-                break;
-            case FarmPixelIcon.Gallina:
-                DisegnaGallina(pixel);
                 break;
             case FarmPixelIcon.Obiettivo:
                 DisegnaObiettivo(pixel);
@@ -626,46 +618,6 @@ public static class FarmPixelUI
         Rettangolo(pixel, 5, 8, 14, 11, luce);
         Rettangolo(pixel, 7, 7, 12, 12, luce);
         Rettangolo(pixel, 9, 8, 10, 11, new Color32(255, 248, 190, 255));
-    }
-
-    private static void DisegnaUovo(Color32[] pixel)
-    {
-        bool Dentro(int x, int y)
-        {
-            float nx = (x - 9.5f) / (y > 10 ? 5.1f : 6.2f);
-            float ny = (y - 9f) / 7.5f;
-            return nx * nx + ny * ny <= 1f;
-        }
-
-        DisegnaForma(pixel, Dentro, new Color32(245, 232, 194, 255), Contorno);
-        Rettangolo(pixel, 7, 12, 9, 14, Color.white);
-        Rettangolo(pixel, 12, 5, 14, 7, new Color32(224, 202, 153, 255));
-    }
-
-    private static void DisegnaGallina(Color32[] pixel)
-    {
-        Color32 bianco = new Color32(245, 235, 205, 255);
-        Color32 ombra = new Color32(211, 190, 148, 255);
-        Color32 rosso = new Color32(202, 53, 42, 255);
-        Color32 becco = new Color32(237, 154, 42, 255);
-
-        bool Corpo(int x, int y)
-        {
-            float nx = (x - 9f) / 6.6f;
-            float ny = (y - 8f) / 5.6f;
-            return nx * nx + ny * ny <= 1f;
-        }
-        DisegnaForma(pixel, Corpo, bianco, Contorno);
-        Rettangolo(pixel, 11, 10, 15, 15, Contorno);
-        Rettangolo(pixel, 12, 10, 14, 14, bianco);
-        Rettangolo(pixel, 8, 7, 11, 10, ombra);
-        Rettangolo(pixel, 14, 11, 18, 13, Contorno);
-        Rettangolo(pixel, 15, 11, 18, 12, becco);
-        Rettangolo(pixel, 12, 15, 14, 18, rosso);
-        Rettangolo(pixel, 11, 16, 12, 18, rosso);
-        Rettangolo(pixel, 13, 13, 13, 13, Contorno);
-        Linea(pixel, 7, 3, 7, 5, becco, 1);
-        Linea(pixel, 11, 3, 11, 5, becco, 1);
     }
 
     private static void DisegnaObiettivo(Color32[] pixel)

@@ -15,13 +15,10 @@ public enum StatoPartita
 public class GameManager : MonoBehaviour
 {
     public static GameManager instance;
-    public int gallineRimaste = 0;
     public bool isGameOver = false;
 
     [SerializeField] private GameObject gameOverPanel;
 
-    private TMP_Text testoUova;
-    private TMP_Text testoUovaSalvate;
     private TMP_Text testoMonete;
     private TMP_Text titoloFinePartita;
     private TMP_Text riepilogoFinePartita;
@@ -31,8 +28,6 @@ public class GameManager : MonoBehaviour
     private TMP_Text testoAccessoShopPermanente;
     private ShopInterOndata shopInterOndata;
     private ShopPermanentePrePartita shopPermanente;
-    private int gallineTotali;
-    private int uovaInizioOnda;
     private float durataPartita;
     private int volpiEliminate;
     private int proiettiliSparati;
@@ -40,7 +35,6 @@ public class GameManager : MonoBehaviour
     private int ondateCompletate;
     private int bonusProvvistePermanentiApplicato;
     private int punteggioFinale;
-    private bool ultimaPartitaVinta;
     private bool recordFinaliCalcolati;
     private EsitoRecordPartita recordFinali;
     private Coroutine aperturaPreparazioneRoutine;
@@ -51,16 +45,6 @@ public class GameManager : MonoBehaviour
     public int UltimoBonusCompletamento { get; private set; }
     public int GettoniPermanentiGuadagnati { get; private set; }
     public int UltimoBonusPermanente { get; private set; }
-    public int GallineTotali => gallineTotali;
-    public int GallineAlSicuro =>
-        Mathf.Min(gallineTotali, Gallina.ContaAlSicuro());
-    public int UovaSalvate { get; private set; }
-    public int SerieSalvataggi { get; private set; }
-    public int MiglioreSerieSalvataggi { get; private set; }
-    public int UltimoBonusSerie { get; private set; }
-    public int UovaUltimaOnda { get; private set; }
-    public int ObiettiviCompletati { get; private set; }
-    public int ObiettiviFalliti { get; private set; }
     public float DurataPartita => durataPartita;
     public int VolpiEliminate => volpiEliminate;
     public int ProiettiliSparati => proiettiliSparati;
@@ -78,10 +62,6 @@ public class GameManager : MonoBehaviour
         !PreparazioneInizialeCompletata &&
         !PausaManualeAttiva &&
         StatoCorrente == StatoPartita.Intervallo;
-    public string UltimoObiettivo { get; private set; } = string.Empty;
-    public bool UltimoObiettivoValutato { get; private set; }
-    public bool UltimoObiettivoCompletato { get; private set; }
-    public int UovaUltimoObiettivo { get; private set; }
     public StatoPartita StatoCorrente { get; private set; } = StatoPartita.Onda;
     public bool PausaManualeAttiva { get; private set; }
     public bool GameplayAttivo =>
@@ -93,8 +73,6 @@ public class GameManager : MonoBehaviour
         !isGameOver && StatoCorrente == StatoPartita.Intervallo;
 
     public event Action<int> MoneteCambiate;
-    public event Action<int> UovaCambiate;
-    public event Action<int, int> GallineCambiate;
     public event Action<StatoPartita> StatoPartitaCambiato;
     public event Action<bool> PausaManualeCambiata;
 
@@ -112,13 +90,6 @@ public class GameManager : MonoBehaviour
             UltimoBonusCompletamento = 0;
             GettoniPermanentiGuadagnati = 0;
             UltimoBonusPermanente = 0;
-            UovaSalvate = 0;
-            SerieSalvataggi = 0;
-            MiglioreSerieSalvataggi = 0;
-            UltimoBonusSerie = 0;
-            UovaUltimaOnda = 0;
-            ObiettiviCompletati = 0;
-            ObiettiviFalliti = 0;
             durataPartita = 0f;
             volpiEliminate = 0;
             proiettiliSparati = 0;
@@ -160,12 +131,6 @@ public class GameManager : MonoBehaviour
         {
             MostraSelettoreDifficolta();
         }
-        // Survival puro: nessun blocco interattivo o obiettivo-uovo.
-        foreach (Gallina gallina in FindObjectsByType<Gallina>(FindObjectsSortMode.None))
-        {
-            if (gallina != null) Destroy(gallina.gameObject);
-        }
-        gallineRimaste = 0;
 
         if (DifficoltaConfermata)
         {
@@ -1110,144 +1075,20 @@ public class GameManager : MonoBehaviour
         volpiEliminate++;
     }
 
-    public void RegistraGallina()
-    {
-        // Le galline della vecchia scena non partecipano al survival.
-    }
-
-    public void GallinaMorta()
-    {
-        if (isGameOver) return;
-
-        gallineRimaste = Mathf.Max(0, gallineRimaste - 1);
-        SerieSalvataggi = 0;
-        UltimoBonusSerie = 0;
-        AggiornaContatoreUova();
-        AggiornaContatoreUovaSalvate();
-        GallineCambiate?.Invoke(GallineAlSicuro, gallineTotali);
-
-        // Le galline non sono una condizione di sconfitta nel survival.
-    }
-
-    void AggiornaContatoreUova()
-    {
-        if (testoUova != null)
-        {
-            testoUova.text =
-                "Galline   " + GallineAlSicuro + " / " + gallineTotali;
-        }
-    }
-
-    public void NotificaStatoGallineCambiato()
-    {
-        AggiornaContatoreUova();
-        GallineCambiate?.Invoke(GallineAlSicuro, gallineTotali);
-    }
-
-    public void AggiungiUova(int quantita)
-    {
-        int quantitaValida = Mathf.Max(0, quantita);
-        if (quantitaValida == 0) return;
-
-        UovaSalvate += quantitaValida;
-        AggiornaContatoreUovaSalvate();
-        UovaCambiate?.Invoke(UovaSalvate);
-    }
-
-    public int RegistraUovoRecuperato()
-    {
-        FarmObjectivesBalanceSettings config =
-            GameBalanceConfig.Corrente.ObiettiviFattoria;
-        SerieSalvataggi++;
-        MiglioreSerieSalvataggi = Mathf.Max(
-            MiglioreSerieSalvataggi,
-            SerieSalvataggi
-        );
-
-        int livelloBonus = Mathf.Min(
-            config.bonusMassimoSerie,
-            SerieSalvataggi / Mathf.Max(1, config.salvataggiPerBonusSerie)
-        );
-        UltimoBonusSerie =
-            livelloBonus * config.uovaBonusSeriePerLivello;
-        int premio = Mathf.Max(0, config.uovaPerRecupero) +
-                     UltimoBonusSerie;
-        AggiungiUova(premio);
-        AggiornaContatoreUovaSalvate();
-        return premio;
-    }
-
-    public void PreparaNuovaOnda()
-    {
-        uovaInizioOnda = UovaSalvate;
-        UovaUltimaOnda = 0;
-        UltimoBonusSerie = 0;
-        UltimoObiettivo = string.Empty;
-        UltimoObiettivoValutato = false;
-        UltimoObiettivoCompletato = false;
-        UovaUltimoObiettivo = 0;
-    }
-
-    public void RegistraEsitoObiettivo(
-        string nome,
-        bool completato,
-        int premioUova
-    )
-    {
-        UltimoObiettivo = nome ?? string.Empty;
-        UltimoObiettivoValutato = true;
-        UltimoObiettivoCompletato = completato;
-        UovaUltimoObiettivo = completato
-            ? Mathf.Max(0, premioUova)
-            : 0;
-
-        if (completato)
-        {
-            ObiettiviCompletati++;
-            AggiungiUova(UovaUltimoObiettivo);
-        }
-        else
-        {
-            ObiettiviFalliti++;
-        }
-    }
-
-    public void ConcludiRegistroOnda()
-    {
-        UovaUltimaOnda = Mathf.Max(0, UovaSalvate - uovaInizioOnda);
-    }
-
-    void AggiornaContatoreUovaSalvate()
-    {
-        if (testoUovaSalvate != null)
-        {
-            testoUovaSalvate.text =
-                "Uova   " + UovaSalvate +
-                "   Serie x" + SerieSalvataggi;
-        }
-    }
-
-    void GameOver()
-    {
-        FarmAudioController.RiproduciPericolo();
-        MostraFinePartita("FATTORIA PERDUTA");
-    }
-
     public void GameOverGiocatore()
     {
         if (isGameOver) return;
 
         Debug.Log("Game over: il contadino e stato sconfitto.");
         FarmAudioController.RiproduciPericolo();
-        MostraFinePartita("CONTADINO SCONFITTO");
+        MostraFinePartita();
     }
 
-    void MostraFinePartita(string titolo)
+    void MostraFinePartita()
     {
         if (isGameOver) return;
 
         isGameOver = true;
-        ultimaPartitaVinta = titolo == "FATTORIA SALVA!";
         if (shopInterOndata != null)
         {
             shopInterOndata.Nascondi();
@@ -1258,7 +1099,7 @@ public class GameManager : MonoBehaviour
         }
         if (titoloFinePartita != null)
         {
-            titoloFinePartita.text = titolo;
+            titoloFinePartita.text = "CONTADINO SCONFITTO";
         }
         CalcolaRecordFinali();
         AggiornaRiepilogoFinale();
@@ -1328,13 +1169,6 @@ public class GameManager : MonoBehaviour
         {
             testoMonete.text = "Monete   " + monete;
         }
-    }
-
-    public void Vittoria()
-    {
-        if (isGameOver) return;
-        FarmAudioController.RiproduciSuccesso();
-        MostraFinePartita("FATTORIA SALVA!");
     }
 
     public int RegistraCompletamentoOnda(int indiceOnda)
@@ -1407,11 +1241,6 @@ public class GameManager : MonoBehaviour
             GameBalanceConfig.Corrente.Difficolta.Ottieni(
                 DifficoltaCorrente
             );
-        string migliorTempo = recordFinali.MigliorTempoVittoria > 0f
-            ? ProgressionePartita.FormattaTempo(
-                recordFinali.MigliorTempoVittoria
-            )
-            : "--:--";
         string nuovoRecordPunteggio = recordFinali.NuovoPunteggio
             ? "  NUOVO RECORD!"
             : string.Empty;
@@ -1448,8 +1277,6 @@ public class GameManager : MonoBehaviour
     {
         string record = string.Empty;
         if (recordFinali.NuovoRecordVolpi) record += "VOLPI ";
-        if (recordFinali.NuovoRecordGalline) record += "GALLINE ";
-        if (recordFinali.NuovoRecordTempo) record += "TEMPO ";
         if (recordFinali.NuovoRecordOndata) record += "ONDATA ";
         return string.IsNullOrEmpty(record)
             ? string.Empty
@@ -1465,24 +1292,16 @@ public class GameManager : MonoBehaviour
                 DifficoltaCorrente
             );
         punteggioFinale = ProgressionePartita.CalcolaPunteggio(
-            ultimaPartitaVinta,
             volpiEliminate,
             ondateCompletate,
             MoneteRaccolte,
-            GallineAlSicuro,
-            UovaSalvate,
-            ObiettiviCompletati,
             Precisione,
             profilo.moltiplicatorePunteggio
         );
         recordFinali = ProgressionePartita.SalvaRecord(
             DifficoltaCorrente,
-            ultimaPartitaVinta,
             punteggioFinale,
-            durataPartita,
             volpiEliminate,
-            GallineAlSicuro,
-            gallineTotali,
             ondateCompletate
         );
         recordFinaliCalcolati = true;

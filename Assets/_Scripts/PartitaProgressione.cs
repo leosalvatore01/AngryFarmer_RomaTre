@@ -135,43 +135,29 @@ public readonly struct EsitoRecordPartita
 {
     public int MigliorPunteggio { get; }
     public int MassimoVolpi { get; }
-    public int MigliorePercentualeGalline { get; }
-    public float MigliorTempoVittoria { get; }
     public int MassimaOndata { get; }
     public bool NuovoPunteggio { get; }
     public bool NuovoRecordVolpi { get; }
-    public bool NuovoRecordGalline { get; }
-    public bool NuovoRecordTempo { get; }
     public bool NuovoRecordOndata { get; }
     public bool HaNuovoRecord =>
         NuovoPunteggio ||
         NuovoRecordVolpi ||
-        NuovoRecordGalline ||
-        NuovoRecordTempo ||
         NuovoRecordOndata;
 
     public EsitoRecordPartita(
         int migliorPunteggio,
         int massimoVolpi,
-        int migliorePercentualeGalline,
-        float migliorTempoVittoria,
         int massimaOndata,
         bool nuovoPunteggio,
         bool nuovoRecordVolpi,
-        bool nuovoRecordGalline,
-        bool nuovoRecordTempo,
         bool nuovoRecordOndata
     )
     {
         MigliorPunteggio = migliorPunteggio;
         MassimoVolpi = massimoVolpi;
-        MigliorePercentualeGalline = migliorePercentualeGalline;
-        MigliorTempoVittoria = migliorTempoVittoria;
         MassimaOndata = massimaOndata;
         NuovoPunteggio = nuovoPunteggio;
         NuovoRecordVolpi = nuovoRecordVolpi;
-        NuovoRecordGalline = nuovoRecordGalline;
-        NuovoRecordTempo = nuovoRecordTempo;
         NuovoRecordOndata = nuovoRecordOndata;
     }
 }
@@ -238,13 +224,9 @@ public static class ProgressionePartita
     }
 
     public static int CalcolaPunteggio(
-        bool vittoria,
         int volpiEliminate,
         int ondateCompletate,
         int moneteRaccolte,
-        int gallineSalve,
-        int uovaSalvate,
-        int obiettiviCompletati,
         float precisione,
         float moltiplicatoreDifficolta
     )
@@ -253,11 +235,7 @@ public static class ProgressionePartita
             Mathf.Max(0, volpiEliminate) * 100 +
             Mathf.Max(0, ondateCompletate) * 250 +
             Mathf.Max(0, moneteRaccolte) * 10 +
-            Mathf.Max(0, gallineSalve) * 150 +
-            Mathf.Max(0, uovaSalvate) * 80 +
-            Mathf.Max(0, obiettiviCompletati) * 200 +
-            Mathf.RoundToInt(Mathf.Clamp01(precisione) * 200f) +
-            (vittoria ? 1000 : 0);
+            Mathf.RoundToInt(Mathf.Clamp01(precisione) * 200f);
         return Mathf.Max(
             0,
             Mathf.RoundToInt(
@@ -268,57 +246,32 @@ public static class ProgressionePartita
 
     public static EsitoRecordPartita SalvaRecord(
         DifficoltaPartita difficolta,
-        bool vittoria,
         int punteggio,
-        float durata,
         int volpiEliminate,
-        int gallineSalve,
-        int gallineTotali,
         int ondateCompletate = 0
     )
     {
         difficolta = Normalizza(difficolta);
         DatiRecordDifficolta recordPrecedente =
             OttieniDatiRecord(difficolta);
-        int percentualeGalline = gallineTotali > 0
-            ? Mathf.RoundToInt(
-                Mathf.Clamp01(gallineSalve / (float)gallineTotali) * 100f
-            )
-            : 0;
 
         int vecchioPunteggio =
             Mathf.Max(0, recordPrecedente.migliorPunteggio);
         int vecchieVolpi =
             Mathf.Max(0, recordPrecedente.massimoVolpi);
-        int vecchieGalline = Mathf.Clamp(
-            recordPrecedente.migliorePercentualeGalline,
-            0,
-            100
-        );
-        float vecchioTempo =
-            Mathf.Max(0f, recordPrecedente.migliorTempoVittoria);
         int vecchiaOndata =
             Mathf.Max(0, recordPrecedente.massimaOndata);
         int ondateValide = Mathf.Max(0, ondateCompletate);
 
         bool nuovoPunteggio = punteggio > vecchioPunteggio;
         bool nuovoRecordVolpi = volpiEliminate > vecchieVolpi;
-        bool nuovoRecordGalline = percentualeGalline > vecchieGalline;
         bool nuovoRecordOndata = ondateValide > vecchiaOndata;
-        bool nuovoRecordTempo =
-            vittoria &&
-            durata > 0f &&
-            (vecchioTempo <= 0f || durata < vecchioTempo);
 
         int migliorPunteggio = Mathf.Max(vecchioPunteggio, punteggio);
         int massimoVolpi = Mathf.Max(vecchieVolpi, volpiEliminate);
-        int miglioriGalline = Mathf.Max(vecchieGalline, percentualeGalline);
-        float migliorTempo = nuovoRecordTempo ? durata : vecchioTempo;
         int massimaOndata = Mathf.Max(vecchiaOndata, ondateValide);
 
-        if (nuovoPunteggio || nuovoRecordVolpi ||
-            nuovoRecordGalline || nuovoRecordTempo ||
-            nuovoRecordOndata)
+        if (nuovoPunteggio || nuovoRecordVolpi || nuovoRecordOndata)
         {
             int indice = (int)difficolta;
             SaveService.ModificaProfilo(dati =>
@@ -327,9 +280,6 @@ public static class ProgressionePartita
                     dati.recordDifficolta[indice];
                 record.migliorPunteggio = migliorPunteggio;
                 record.massimoVolpi = massimoVolpi;
-                record.migliorePercentualeGalline =
-                    miglioriGalline;
-                record.migliorTempoVittoria = migliorTempo;
                 record.massimaOndata = massimaOndata;
                 dati.miglioreOndataAssoluta = Mathf.Max(
                     dati.miglioreOndataAssoluta,
@@ -341,13 +291,9 @@ public static class ProgressionePartita
         return new EsitoRecordPartita(
             migliorPunteggio,
             massimoVolpi,
-            miglioriGalline,
-            migliorTempo,
             massimaOndata,
             nuovoPunteggio,
             nuovoRecordVolpi,
-            nuovoRecordGalline,
-            nuovoRecordTempo,
             nuovoRecordOndata
         );
     }
@@ -361,11 +307,7 @@ public static class ProgressionePartita
         return new EsitoRecordPartita(
             Mathf.Max(0, record.migliorPunteggio),
             Mathf.Max(0, record.massimoVolpi),
-            Mathf.Clamp(record.migliorePercentualeGalline, 0, 100),
-            Mathf.Max(0f, record.migliorTempoVittoria),
             Mathf.Max(0, record.massimaOndata),
-            false,
-            false,
             false,
             false,
             false

@@ -10,7 +10,7 @@ using UnityEngine;
 /// </summary>
 public static class SaveService
 {
-    public const int VersioneSchemaCorrente = 1;
+    public const int VersioneSchemaCorrente = 2;
     public const int VersioneMigrazioneLegacy = 1;
     public const string IdProfiloOspite = "guest";
 
@@ -425,6 +425,13 @@ public static class SaveService
             out bool dispositivoCaricato
         ) ?? CreaDispositivoPredefinito();
 
+        bool profiloRichiedeAggiornamentoSchema =
+            profiloCaricato &&
+            profilo.versioneSchema < VersioneSchemaCorrente;
+        bool dispositivoRichiedeAggiornamentoSchema =
+            dispositivoCaricato &&
+            dispositivo.versioneSchema < VersioneSchemaCorrente;
+
         profiloSolaLettura =
             profilo.versioneSchema > VersioneSchemaCorrente;
         dispositivoSolaLettura =
@@ -467,7 +474,8 @@ public static class SaveService
                 VersioneMigrazioneLegacy;
             SalvaProfiloInterno();
         }
-        else if (!profiloCaricato && !profiloSolaLettura)
+        else if ((!profiloCaricato || profiloRichiedeAggiornamentoSchema) &&
+                 !profiloSolaLettura)
         {
             SalvaProfiloInterno();
         }
@@ -481,7 +489,9 @@ public static class SaveService
                 VersioneMigrazioneLegacy;
             SalvaDispositivoInterno();
         }
-        else if (!dispositivoCaricato && !dispositivoSolaLettura)
+        else if ((!dispositivoCaricato ||
+                  dispositivoRichiedeAggiornamentoSchema) &&
+                 !dispositivoSolaLettura)
         {
             SalvaDispositivoInterno();
         }
@@ -527,33 +537,10 @@ public static class SaveService
             string prefisso =
                 PartitaPrefisso + ".Record." + i;
 
-            record.migliorPunteggio = MassimoConPlayerPrefs(
-                record.migliorPunteggio,
-                prefisso + ".Punti"
-            );
             record.massimoVolpi = MassimoConPlayerPrefs(
                 record.massimoVolpi,
                 prefisso + ".Volpi"
             );
-            record.migliorePercentualeGalline = MassimoConPlayerPrefs(
-                record.migliorePercentualeGalline,
-                prefisso + ".Galline"
-            );
-
-            string chiaveTempo = prefisso + ".Tempo";
-            if (PlayerPrefs.HasKey(chiaveTempo))
-            {
-                float tempoLegacy = Mathf.Max(
-                    0f,
-                    PlayerPrefs.GetFloat(chiaveTempo, 0f)
-                );
-                if (tempoLegacy > 0f &&
-                    (record.migliorTempoVittoria <= 0f ||
-                     tempoLegacy < record.migliorTempoVittoria))
-                {
-                    record.migliorTempoVittoria = tempoLegacy;
-                }
-            }
         }
 
         NormalizzaProfilo(profilo);
@@ -841,7 +828,9 @@ public static class SaveService
             return;
         }
 
-        if (dati.versioneSchema <= 0)
+        bool punteggioLegacyNonConfrontabile =
+            dati.versioneSchema < VersioneSchemaCorrente;
+        if (dati.versioneSchema < VersioneSchemaCorrente)
         {
             dati.versioneSchema = VersioneSchemaCorrente;
         }
@@ -917,22 +906,11 @@ public static class SaveService
                 (dati.recordDifficolta[i] =
                     new DatiRecordDifficolta());
             record.difficolta = i;
-            record.migliorPunteggio =
-                Mathf.Max(0, record.migliorPunteggio);
+            record.migliorPunteggio = punteggioLegacyNonConfrontabile
+                ? 0
+                : Mathf.Max(0, record.migliorPunteggio);
             record.massimoVolpi =
                 Mathf.Max(0, record.massimoVolpi);
-            record.migliorePercentualeGalline = Mathf.Clamp(
-                record.migliorePercentualeGalline,
-                0,
-                100
-            );
-            if (float.IsNaN(record.migliorTempoVittoria) ||
-                float.IsInfinity(record.migliorTempoVittoria))
-            {
-                record.migliorTempoVittoria = 0f;
-            }
-            record.migliorTempoVittoria =
-                Mathf.Max(0f, record.migliorTempoVittoria);
             record.massimaOndata =
                 Mathf.Max(0, record.massimaOndata);
             dati.miglioreOndataAssoluta = Mathf.Max(
@@ -951,7 +929,7 @@ public static class SaveService
             return;
         }
 
-        if (dati.versioneSchema <= 0)
+        if (dati.versioneSchema < VersioneSchemaCorrente)
         {
             dati.versioneSchema = VersioneSchemaCorrente;
         }
