@@ -110,6 +110,7 @@ public sealed class WaveRuntimeDiagnostics : MonoBehaviour
     public int NemiciSpawnati => nemiciSpawnati;
     public int MaialiniSpawnati => maialiniSpawnati;
     public RiepilogoDiagnosticaOndata UltimoRiepilogo { get; private set; }
+    public event System.Action<RiepilogoDiagnosticaOndata> RiepilogoCreato;
 
     void Awake()
     {
@@ -171,12 +172,6 @@ public sealed class WaveRuntimeDiagnostics : MonoBehaviour
         if (attiva == valore) return;
 
         attiva = valore;
-        if (!attiva)
-        {
-            ondaInCorso = false;
-            combattimentoIniziato = false;
-            faseSpawnTerminata = false;
-        }
 
         if (scriviLog)
         {
@@ -197,8 +192,6 @@ public sealed class WaveRuntimeDiagnostics : MonoBehaviour
         int nuoviMaialiniPrevisti
     )
     {
-        if (!attiva) return;
-
         indiceOndata = Mathf.Max(1, nuovoIndiceOndata);
         totaleOndate = Mathf.Max(indiceOndata, nuovoTotaleOndate);
         nomeOndata = string.IsNullOrWhiteSpace(nuovoNomeOndata)
@@ -224,7 +217,7 @@ public sealed class WaveRuntimeDiagnostics : MonoBehaviour
 
     public void AvviaCombattimento()
     {
-        if (!attiva || !ondaInCorso || combattimentoIniziato) return;
+        if (!ondaInCorso || combattimentoIniziato) return;
 
         tempoInizioCombattimento = Time.timeAsDouble;
         tempoFineSpawn = tempoInizioCombattimento;
@@ -233,19 +226,19 @@ public sealed class WaveRuntimeDiagnostics : MonoBehaviour
 
     public void RegistraSpawnNemico(bool riuscito)
     {
-        if (!attiva || !ondaInCorso) return;
+        if (!ondaInCorso) return;
 
         tentativiSpawnNemici++;
         if (riuscito)
         {
             nemiciSpawnati++;
         }
-        CampionaNemiciVivi();
+        if (attiva) CampionaNemiciVivi();
     }
 
     public void RegistraSpawnMaialino(bool riuscito)
     {
-        if (!attiva || !ondaInCorso) return;
+        if (!ondaInCorso) return;
 
         tentativiSpawnMaialini++;
         if (riuscito)
@@ -256,7 +249,7 @@ public sealed class WaveRuntimeDiagnostics : MonoBehaviour
 
     public void SegnaFineSpawn()
     {
-        if (!attiva || !ondaInCorso || faseSpawnTerminata) return;
+        if (!ondaInCorso || faseSpawnTerminata) return;
 
         tempoFineSpawn = Time.timeAsDouble;
         faseSpawnTerminata = true;
@@ -264,7 +257,7 @@ public sealed class WaveRuntimeDiagnostics : MonoBehaviour
 
     public int CampionaNemiciVivi()
     {
-        if (!attiva || !ondaInCorso) return nemiciVivi;
+        if (!ondaInCorso || !attiva) return nemiciVivi;
 
         EnemyAI[] nemici = FindObjectsByType<EnemyAI>(
             FindObjectsSortMode.None
@@ -278,7 +271,14 @@ public sealed class WaveRuntimeDiagnostics : MonoBehaviour
             }
         }
 
-        nemiciVivi = conteggio;
+        return CampionaNemiciVivi(conteggio);
+    }
+
+    public int CampionaNemiciVivi(int conteggio)
+    {
+        if (!ondaInCorso) return nemiciVivi;
+
+        nemiciVivi = Mathf.Max(0, conteggio);
         piccoNemiciVivi = Mathf.Max(piccoNemiciVivi, nemiciVivi);
         return nemiciVivi;
     }
@@ -287,7 +287,7 @@ public sealed class WaveRuntimeDiagnostics : MonoBehaviour
         EsitoDiagnosticaOndata esito
     )
     {
-        if (!attiva || !ondaInCorso)
+        if (!ondaInCorso)
         {
             return UltimoRiepilogo;
         }
@@ -297,7 +297,7 @@ public sealed class WaveRuntimeDiagnostics : MonoBehaviour
             esito = EsitoDiagnosticaOndata.Interrotta;
         }
 
-        CampionaNemiciVivi();
+        if (attiva) CampionaNemiciVivi();
         if (!faseSpawnTerminata)
         {
             SegnaFineSpawn();
@@ -331,7 +331,9 @@ public sealed class WaveRuntimeDiagnostics : MonoBehaviour
         combattimentoIniziato = false;
         faseSpawnTerminata = false;
 
-        if (scriviLog)
+        RiepilogoCreato?.Invoke(UltimoRiepilogo);
+
+        if (attiva && scriviLog)
         {
             Debug.Log(CreaTestoRiepilogo(UltimoRiepilogo), this);
         }

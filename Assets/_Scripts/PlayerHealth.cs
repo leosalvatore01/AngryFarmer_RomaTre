@@ -71,6 +71,7 @@ public class PlayerHealth : MonoBehaviour
 
     public event Action VitaCambiata;
     public event Action<int> DannoSubito;
+    public event Action<EventoDannoGiocatore> DannoSubitoDettagliato;
     public event Action<bool> InvulnerabilitaCambiata;
 
     void Awake()
@@ -116,7 +117,45 @@ public class PlayerHealth : MonoBehaviour
         ProvaSubireDanno(danno);
     }
 
+    public void SubisciDanno(
+        int danno,
+        TipoAttaccoNemico tipoAttacco,
+        TipoVolpe tipoVolpe
+    )
+    {
+        ProvaSubireDanno(danno, tipoAttacco, tipoVolpe);
+    }
+
     public bool ProvaSubireDanno(int danno)
+    {
+        return ProvaSubireDannoInterno(
+            danno,
+            TipoAttaccoNemico.Sconosciuto,
+            false,
+            TipoVolpe.Comune
+        );
+    }
+
+    public bool ProvaSubireDanno(
+        int danno,
+        TipoAttaccoNemico tipoAttacco,
+        TipoVolpe tipoVolpe
+    )
+    {
+        return ProvaSubireDannoInterno(
+            danno,
+            tipoAttacco,
+            true,
+            tipoVolpe
+        );
+    }
+
+    private bool ProvaSubireDannoInterno(
+        int danno,
+        TipoAttaccoNemico tipoAttacco,
+        bool haTipoVolpe,
+        TipoVolpe tipoVolpe
+    )
     {
         if (danno <= 0 || vitaCorrente <= 0 || Invulnerabile) return false;
 
@@ -142,6 +181,16 @@ public class PlayerHealth : MonoBehaviour
                 InvulnerabilitaCambiata?.Invoke(true);
             }
             DannoSubito?.Invoke(dannoEffettivo);
+            EventoDannoGiocatore evento = new EventoDannoGiocatore(
+                dannoEffettivo,
+                vitaCorrente,
+                vitaCorrente <= 0,
+                tipoAttacco,
+                haTipoVolpe,
+                tipoVolpe
+            );
+            DannoSubitoDettagliato?.Invoke(evento);
+            RunTelemetryController.Corrente?.RegistraDanno(evento);
             DamageNumberFeedback.MostraGiocatore(
                 transform.position,
                 dannoEffettivo

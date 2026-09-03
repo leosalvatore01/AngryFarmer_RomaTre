@@ -28,6 +28,7 @@ public class GameManager : MonoBehaviour
     private TMP_Text testoAccessoShopPermanente;
     private ShopInterOndata shopInterOndata;
     private ShopPermanentePrePartita shopPermanente;
+    private RunTelemetryController telemetria;
     private float durataPartita;
     private int volpiEliminate;
     private int proiettiliSparati;
@@ -40,6 +41,8 @@ public class GameManager : MonoBehaviour
     private Coroutine aperturaPreparazioneRoutine;
 
     public int monete = 0;
+    public int MoneteIniziali { get; private set; }
+    public int MoneteGuadagnateDurantePartita { get; private set; }
     public int MoneteRaccolte { get; private set; }
     public int MoneteSpese { get; private set; }
     public int UltimoBonusCompletamento { get; private set; }
@@ -54,6 +57,7 @@ public class GameManager : MonoBehaviour
         : 0f;
     public int OndateCompletate => ondateCompletate;
     public int PunteggioFinale => punteggioFinale;
+    public RunTelemetryController Telemetria => telemetria;
     public DifficoltaPartita DifficoltaCorrente { get; private set; }
     public bool DifficoltaConfermata { get; private set; }
     public bool PreparazioneInizialeCompletata { get; private set; }
@@ -86,6 +90,8 @@ public class GameManager : MonoBehaviour
                 GameBalanceConfig.Corrente.Shop.moneteIniziali
             );
             MoneteRaccolte = monete;
+            MoneteIniziali = monete;
+            MoneteGuadagnateDurantePartita = 0;
             MoneteSpese = 0;
             UltimoBonusCompletamento = 0;
             GettoniPermanentiGuadagnati = 0;
@@ -101,6 +107,7 @@ public class GameManager : MonoBehaviour
             DifficoltaCorrente = ProgressionePartita.DifficoltaCorrente;
             DifficoltaConfermata =
                 ProgressionePartita.ConsumaRiavvioImmediato();
+            telemetria = RunTelemetryController.CreaOTrova(this);
         }
         else
         {
@@ -126,6 +133,14 @@ public class GameManager : MonoBehaviour
         shopInterOndata = ShopInterOndata.CreaOTrova();
         shopPermanente = ShopPermanentePrePartita.CreaOTrova();
         SincronizzaBonusPermanentiPrimaPartita();
+
+        if (DifficoltaConfermata)
+        {
+            telemetria?.IniziaSessione(
+                DifficoltaCorrente,
+                MoneteIniziali
+            );
+        }
 
         if (!DifficoltaConfermata)
         {
@@ -928,6 +943,10 @@ public class GameManager : MonoBehaviour
         DifficoltaCorrente = difficolta;
         ProgressionePartita.ImpostaDifficolta(difficolta);
         DifficoltaConfermata = true;
+        telemetria?.IniziaSessione(
+            DifficoltaCorrente,
+            MoneteIniziali
+        );
         if (selettoreDifficolta != null)
         {
             selettoreDifficolta.SetActive(false);
@@ -997,6 +1016,7 @@ public class GameManager : MonoBehaviour
             AggiornaContatoreMonete();
             MoneteCambiate?.Invoke(monete);
         }
+        MoneteIniziali = monete;
         AggiornaAccessoShopPermanente();
     }
 
@@ -1109,6 +1129,7 @@ public class GameManager : MonoBehaviour
             gameOverPanel.transform.SetAsLastSibling();
         }
         ImpostaStatoPartita(StatoPartita.FinePartita);
+        telemetria?.ConcludiPartita(true);
     }
 
     public void Riprova()
@@ -1145,6 +1166,10 @@ public class GameManager : MonoBehaviour
 
         MoneteRaccolte = SommaSaturata(
             MoneteRaccolte,
+            quantitaAccreditata
+        );
+        MoneteGuadagnateDurantePartita = SommaSaturata(
+            MoneteGuadagnateDurantePartita,
             quantitaAccreditata
         );
         AggiornaContatoreMonete();

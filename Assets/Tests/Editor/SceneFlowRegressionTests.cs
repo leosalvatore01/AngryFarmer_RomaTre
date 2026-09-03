@@ -91,6 +91,26 @@ public sealed class SceneFlowRegressionTests
             Is.EqualTo(StatoPartita.FinePartita)
         );
 
+        string cartellaTelemetria = Path.Combine(
+            SaveService.RadicePlayModePerTestAttiva,
+            "Telemetry"
+        );
+        string[] runEsportate = Directory.GetFiles(
+            cartellaTelemetria,
+            "run_*.json"
+        );
+        Assert.That(runEsportate, Has.Length.EqualTo(1));
+        RunTelemetryData telemetria = JsonUtility.FromJson<RunTelemetryData>(
+            File.ReadAllText(runEsportate[0])
+        );
+        Assert.That(telemetria.conclusa, Is.True);
+        Assert.That(telemetria.morteContadino, Is.True);
+        Assert.That(telemetria.difficolta, Is.EqualTo("Normale"));
+        Assert.That(
+            File.Exists(Path.Combine(cartellaTelemetria, "partite.csv")),
+            Is.True
+        );
+
         manager.TornaAlMenuPrincipale();
         yield return AttendiScena(MenuInizialeController.NomeScenaMenu);
         yield return null;

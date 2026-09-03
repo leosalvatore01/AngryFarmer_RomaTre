@@ -415,7 +415,7 @@ public class EnemySpawner : MonoBehaviour
                 GameObject.FindGameObjectWithTag("Nemico") != null
             )
             {
-                diagnostica.CampionaNemiciVivi();
+                diagnostica.CampionaNemiciVivi(minacceAttive.Count);
                 if (PartitaTerminata())
                 {
                     diagnostica.TerminaOndata(
@@ -1062,6 +1062,7 @@ public class EnemySpawner : MonoBehaviour
     {
         if (nemico == null || !minacceAttive.Add(nemico)) return;
         nemico.NonPiuMinaccia += NemicoNonPiuMinaccia;
+        diagnostica?.CampionaNemiciVivi(minacceAttive.Count);
     }
 
     void NemicoNonPiuMinaccia(EnemyAI nemico)
@@ -1071,6 +1072,7 @@ public class EnemySpawner : MonoBehaviour
         {
             nemico.NonPiuMinaccia -= NemicoNonPiuMinaccia;
         }
+        diagnostica?.CampionaNemiciVivi(minacceAttive.Count);
         NotificaProgresso();
     }
 
@@ -1084,6 +1086,7 @@ public class EnemySpawner : MonoBehaviour
             }
         }
         minacceAttive.Clear();
+        diagnostica?.CampionaNemiciVivi(0);
     }
 
     ComposizioneVolpi ContaComposizioneAttiva()

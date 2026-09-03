@@ -253,6 +253,13 @@ public class PlayerUpgrades : MonoBehaviour
 
         Applica(tipo);
         PotenziamentoAcquistato?.Invoke(tipo);
+        RunTelemetryController.Corrente?.RegistraPowerUp(
+            tipo,
+            OttieniTitolo(tipo),
+            SorgentePowerUpTelemetry.Shop,
+            costo,
+            OttieniLivello(tipo)
+        );
         messaggio = "Acquistato!";
         return true;
     }
@@ -273,6 +280,13 @@ public class PlayerUpgrades : MonoBehaviour
 
         Applica(tipo);
         PotenziamentoAcquistato?.Invoke(tipo);
+        RunTelemetryController.Corrente?.RegistraPowerUp(
+            tipo,
+            OttieniTitolo(tipo),
+            SorgentePowerUpTelemetry.PreparazioneGratuita,
+            0,
+            OttieniLivello(tipo)
+        );
         messaggio = "Ottenuto gratis!";
         return true;
     }

@@ -327,7 +327,11 @@ internal sealed class FoxMudProjectile : MonoBehaviour
         if (salute == null) return;
 
         consumato = true;
-        salute.ProvaSubireDanno(danno);
+        salute.ProvaSubireDanno(
+            danno,
+            TipoAttaccoNemico.ProiettileFango,
+            TipoVolpe.Sputafango
+        );
         PlayerMovement movimento = salute.GetComponent<PlayerMovement>();
         if (movimento != null)
         {

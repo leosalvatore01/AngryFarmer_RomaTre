@@ -36,6 +36,10 @@ public class PowerUp : MonoBehaviour
             if (sparo != null)
             {
                 sparo.AttivaTriploSparo();
+                RunTelemetryController.Corrente?.RegistraDropTemporaneo(
+                    "Dente",
+                    "Triplo sparo"
+                );
             }
         }
         else if (type == 1)
@@ -45,6 +49,10 @@ public class PowerUp : MonoBehaviour
             if (movimento != null)
             {
                 movimento.AttivaBoostVelocita();
+                RunTelemetryController.Corrente?.RegistraDropTemporaneo(
+                    "Coda",
+                    "Velocità temporanea"
+                );
             }
         }
 

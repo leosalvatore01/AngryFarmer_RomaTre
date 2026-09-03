@@ -512,7 +512,11 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         else if (distanzaDalGiocatore <= distanzaAttacco &&
                  Time.time >= prossimoAttacco)
         {
-            playerHealth.SubisciDanno(danno);
+            playerHealth.SubisciDanno(
+                danno,
+                TipoAttaccoNemico.ContattoVolpe,
+                tipo
+            );
             prossimoAttacco = Time.time + IntervalloAttaccoEffettivo(
                 intervalloAttacco
             );
@@ -1159,7 +1163,11 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
                     distanza <= distanzaAttacco * 1.18f)
                 {
                     scattoAlfaHaColpito = true;
-                    playerHealth.ProvaSubireDanno(danno);
+                    playerHealth.ProvaSubireDanno(
+                        danno,
+                        TipoAttaccoNemico.ScattoAlfa,
+                        tipo
+                    );
                 }
                 if (timerStatoAlfa <= 0f)
                 {

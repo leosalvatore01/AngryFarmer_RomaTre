@@ -370,6 +370,7 @@ public class ShopInterOndata : MonoBehaviour
         List<TipoPotenziamento> precedenti =
             new List<TipoPotenziamento>(offerteCorrenti);
         numeroReroll++;
+        RunTelemetryController.Corrente?.RegistraReroll(costo);
         FarmAudioController.RiproduciAcquisto(0.82f);
         GeneraOfferte(precedenti);
         testoMessaggioBottega.text =
