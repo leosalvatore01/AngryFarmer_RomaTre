@@ -466,6 +466,7 @@ public sealed class WaveReadabilityController : MonoBehaviour
         return gestore != null &&
                (gestore.isGameOver ||
                 gestore.StatoCorrente == StatoPartita.Intervallo ||
+                gestore.StatoCorrente == StatoPartita.Transizione ||
                 gestore.StatoCorrente == StatoPartita.FinePartita);
     }
 

@@ -152,6 +152,9 @@ public sealed class WaveBalanceSettings
     [Range(1, 4)] public int sogliaUltimiNemici = 2;
     [Range(0f, 1f)] public float volumeSegnaleUltimiNemici = 0.26f;
 
+    [Header("Capitoli e shop")]
+    public WaveChapterSettings capitoli = new WaveChapterSettings();
+
     [Header("Sequenza di riferimento")]
     public Wave[] ondate = CreaOndateRiferimento();
 
@@ -425,7 +428,7 @@ public sealed class GameBalanceConfig : ScriptableObject
 
     [SerializeField]
     private string versioneRiferimento =
-        "Survival infinito - pulizia sistemi legacy - 2026-07-27";
+        "Survival infinito - ritmo a capitoli - 2026-09-03";
 
     [SerializeField] private PlayerBalanceSettings giocatore =
         new PlayerBalanceSettings();
@@ -513,6 +516,15 @@ public sealed class GameBalanceConfig : ScriptableObject
         {
             difficolta = new BilanciamentoDifficolta();
         }
+        if (ondate == null)
+        {
+            ondate = new WaveBalanceSettings();
+        }
+        if (ondate.capitoli == null)
+        {
+            ondate.capitoli = new WaveChapterSettings();
+        }
+        ondate.capitoli.Normalizza();
         difficolta.Normalizza();
 
         giocatore.intervalloSparoMinimo = Mathf.Max(

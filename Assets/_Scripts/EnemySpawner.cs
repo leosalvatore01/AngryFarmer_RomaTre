@@ -36,6 +36,12 @@ public readonly struct AnteprimaOndata
     public int VitaMaialino { get; }
     public int MoneteMaialino { get; }
     public int NumeroGruppi { get; }
+    public RitmoOndata Ritmo { get; }
+    public int NumeroCapitolo => Ritmo.NumeroCapitolo;
+    public int PosizioneNelCapitolo => Ritmo.PosizioneNelCapitolo;
+    public TipoIncontroOndata TipoIncontro => Ritmo.TipoIncontro;
+    public bool Elite => Ritmo.Elite;
+    public bool Boss => Ritmo.Boss;
     public bool Valida => Indice > 0 && Totale >= Indice;
 
     public AnteprimaOndata(
@@ -48,7 +54,8 @@ public readonly struct AnteprimaOndata
         int numeroMaialini,
         int vitaMaialino,
         int moneteMaialino,
-        int numeroGruppi
+        int numeroGruppi,
+        RitmoOndata ritmo
     )
     {
         Indice = indice;
@@ -61,6 +68,7 @@ public readonly struct AnteprimaOndata
         VitaMaialino = vitaMaialino;
         MoneteMaialino = moneteMaialino;
         NumeroGruppi = numeroGruppi;
+        Ritmo = ritmo;
     }
 }
 
@@ -142,6 +150,9 @@ public class EnemySpawner : MonoBehaviour
     private float intervalloControlloFineOndata = 0.2f;
     private float durataMinimaDistribuzioneMaialini = 1f;
     private float durataPreavvisoSpawn = 0.5f;
+    private float durataTransizioneBreve = 1.15f;
+    private WaveChapterSettings ritmoCapitoli =
+        new WaveChapterSettings();
     private int nemiciDaSpawnare;
     private int maialiniDaSpawnare;
     private int totaleNemiciOnda;
@@ -181,6 +192,8 @@ public class EnemySpawner : MonoBehaviour
     public ProgressoOndata ProgressoCorrente => CreaProgressoCorrente();
     public AnteprimaOndata AnteprimaCorrente =>
         OttieniAnteprima(currentWaveIndex);
+    public RitmoOndata RitmoCorrente =>
+        OttieniRitmoOndata(currentWaveIndex + 1);
 
     public event System.Action<ProgressoOndata> ProgressoCambiato;
 
@@ -466,17 +479,34 @@ public class EnemySpawner : MonoBehaviour
 
                 if (GameManager.instance != null)
                 {
-                    GameManager.instance.IniziaIntervallo(
-                        currentWaveIndex + 1,
-                        int.MaxValue,
-                        OttieniAnteprima(currentWaveIndex + 1)
-                    );
+                    int ondaCompletata = currentWaveIndex + 1;
+                    AnteprimaOndata prossimaOnda =
+                        OttieniAnteprima(currentWaveIndex + 1);
+                    RitmoOndata ritmoOndaCompletata =
+                        OttieniRitmoOndata(ondaCompletata);
 
-                    while (!PartitaTerminata() &&
-                           GameManager.instance.StatoCorrente ==
-                           StatoPartita.Intervallo)
+                    if (ritmoOndaCompletata.ApreShopDopo)
                     {
-                        yield return null;
+                        GameManager.instance.IniziaIntervallo(
+                            ondaCompletata,
+                            int.MaxValue,
+                            prossimaOnda
+                        );
+
+                        while (!PartitaTerminata() &&
+                               GameManager.instance.StatoCorrente ==
+                               StatoPartita.Intervallo)
+                        {
+                            yield return null;
+                        }
+                    }
+                    else
+                    {
+                        yield return TransizioneBreve(
+                            ondaCompletata,
+                            prossimaOnda,
+                            tokenOndata
+                        );
                     }
                 }
             }
@@ -811,6 +841,12 @@ public class EnemySpawner : MonoBehaviour
             0.15f,
             1f
         );
+        ritmoCapitoli = ritmo.capitoli ?? new WaveChapterSettings();
+        durataTransizioneBreve = Mathf.Clamp(
+            ritmoCapitoli.durataTransizioneBreve,
+            0.1f,
+            5f
+        );
 
         if (ritmo.ondate != null && ritmo.ondate.Length > 0)
         {
@@ -995,6 +1031,7 @@ public class EnemySpawner : MonoBehaviour
         );
         int vitaVolpi = CalcolaVitaOnda(indiceZeroBased);
         ComposizioneVolpi composizione = CalcolaComposizione(onda);
+        RitmoOndata ritmo = OttieniRitmoOndata(indiceZeroBased + 1);
 
         return new AnteprimaOndata(
             indiceZeroBased + 1,
@@ -1008,8 +1045,14 @@ public class EnemySpawner : MonoBehaviour
             Mathf.Max(0, onda.numeroMaialiniBonus),
             Mathf.Max(1, onda.vitaMaialinoBonus),
             Mathf.Max(0, onda.moneteMaialinoBonus),
-            numeroGruppi
+            numeroGruppi,
+            ritmo
         );
+    }
+
+    public RitmoOndata OttieniRitmoOndata(int numeroOnda)
+    {
+        return WaveChapterDirector.Calcola(numeroOnda, ritmoCapitoli);
     }
 
     public void RichiediAvvioRapido()
@@ -1196,10 +1239,81 @@ public class EnemySpawner : MonoBehaviour
 
     string CreaTestoBanner(AnteprimaOndata anteprima)
     {
+        string intestazione;
+        if (anteprima.Boss)
+        {
+            intestazione =
+                "BOSS  •  CAPITOLO " + anteprima.NumeroCapitolo;
+        }
+        else if (anteprima.Elite)
+        {
+            intestazione =
+                "ELITE  •  CAPITOLO " + anteprima.NumeroCapitolo;
+        }
+        else
+        {
+            intestazione =
+                "CAPITOLO " + anteprima.NumeroCapitolo +
+                "  •  " + anteprima.PosizioneNelCapitolo + "/" +
+                anteprima.Ritmo.OndePerCapitolo;
+        }
+
         return
-            "ONDATA " + anteprima.Indice +
+            intestazione + "  •  ONDATA " + anteprima.Indice +
             "\n" + anteprima.Nome.ToUpperInvariant() +
             "\n" + anteprima.Composizione.FormattaCompatta();
+    }
+
+    IEnumerator TransizioneBreve(
+        int ondaCompletata,
+        AnteprimaOndata prossimaOnda,
+        int tokenCorrente
+    )
+    {
+        GameManager gestore = GameManager.instance;
+        gestore?.IniziaTransizioneBreve();
+        MostraMessaggio(
+            CreaTestoTransizioneBreve(ondaCompletata, prossimaOnda)
+        );
+
+        float tempoRimasto = durataTransizioneBreve;
+        while (tempoRimasto > 0f && TokenValido(tokenCorrente))
+        {
+            tempoRimasto -= Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        NascondiMessaggio();
+        if (TokenValido(tokenCorrente))
+        {
+            gestore?.ConcludiTransizioneBreve();
+            avvioRapidoRichiesto = true;
+        }
+    }
+
+    string CreaTestoTransizioneBreve(
+        int ondaCompletata,
+        AnteprimaOndata prossimaOnda
+    )
+    {
+        RitmoOndata conclusa = OttieniRitmoOndata(ondaCompletata);
+        string titolo = conclusa.Boss
+            ? "BOSS SUPERATO"
+            : conclusa.ConcludeCapitolo
+                ? "CAPITOLO " + conclusa.NumeroCapitolo + " COMPLETATO"
+                : "ONDATA " + ondaCompletata + " SUPERATA";
+        if (!prossimaOnda.Valida) return titolo;
+
+        string prossima = prossimaOnda.Boss
+            ? "PROSSIMA: SFIDA BOSS"
+            : prossimaOnda.Elite
+                ? "PROSSIMA: INCONTRO ELITE"
+                : "PROSSIMA: ONDATA " + prossimaOnda.Indice;
+        return titolo +
+               "\n" + prossima +
+               "\nCAPITOLO " + prossimaOnda.NumeroCapitolo +
+               "  •  " + prossimaOnda.PosizioneNelCapitolo + "/" +
+               prossimaOnda.Ritmo.OndePerCapitolo;
     }
 
     IEnumerator AttendiConToken(float durata, int tokenCorrente)
@@ -1267,8 +1381,14 @@ public class EnemySpawner : MonoBehaviour
     {
         if (testoOndata != null)
         {
+            RitmoOndata ritmo = OttieniRitmoOndata(
+                currentWaveIndex + 1
+            );
             testoOndata.text =
-                "Ondata   " + (currentWaveIndex + 1);
+                "Onda " + (currentWaveIndex + 1) +
+                "  •  C" + ritmo.NumeroCapitolo +
+                "  " + ritmo.PosizioneNelCapitolo + "/" +
+                ritmo.OndePerCapitolo;
         }
     }
 

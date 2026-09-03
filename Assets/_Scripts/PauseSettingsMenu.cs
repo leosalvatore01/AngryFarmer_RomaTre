@@ -152,7 +152,8 @@ public sealed class PauseSettingsMenu : MonoBehaviour
         bool visibile =
             !ShopPermanentePrePartita.ApertoGlobale &&
             gestore != null &&
-            gestore.DifficoltaConfermata;
+            gestore.DifficoltaConfermata &&
+            gestore.StatoCorrente != StatoPartita.Transizione;
         if (pulsanteApri.gameObject.activeSelf != visibile)
         {
             pulsanteApri.gameObject.SetActive(visibile);
@@ -168,6 +169,11 @@ public sealed class PauseSettingsMenu : MonoBehaviour
         }
 
         GameManager gestore = GameManager.instance;
+        if (gestore != null &&
+            gestore.StatoCorrente == StatoPartita.Transizione)
+        {
+            return;
+        }
         if (!Aperto && gestore != null &&
             !gestore.DifficoltaConfermata)
         {
@@ -183,7 +189,8 @@ public sealed class PauseSettingsMenu : MonoBehaviour
 
         GameManager gestoreSelezione = GameManager.instance;
         if (gestoreSelezione != null &&
-            !gestoreSelezione.DifficoltaConfermata)
+            (!gestoreSelezione.DifficoltaConfermata ||
+             gestoreSelezione.StatoCorrente == StatoPartita.Transizione))
         {
             return;
         }

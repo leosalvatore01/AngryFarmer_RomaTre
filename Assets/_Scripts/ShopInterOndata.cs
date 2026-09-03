@@ -583,9 +583,17 @@ public class ShopInterOndata : MonoBehaviour
               "  |  " + anteprima.VitaMaialino + " VITA  |  +" +
               anteprima.MoneteMaialino + " MONETE CIASCUNO"
             : string.Empty;
+        string tipoIncontro = anteprima.Boss
+            ? "  |  SFIDA BOSS"
+            : anteprima.Elite
+                ? "  |  INCONTRO ELITE"
+                : string.Empty;
 
         return
-            "PROSSIMA ONDATA  " + anteprima.Indice + "  |  " +
+            "CAPITOLO " + anteprima.NumeroCapitolo + "  |  ONDATA " +
+            anteprima.PosizioneNelCapitolo + "/" +
+            anteprima.Ritmo.OndePerCapitolo + tipoIncontro +
+            "\nONDATA " + anteprima.Indice + "  |  " +
             anteprima.Nome.ToUpperInvariant() +
             "\n" + anteprima.NumeroVolpi + " VOLPI  |  " + gruppi +
             "  |  TIPI: " + anteprima.Composizione.FormattaCompatta() +

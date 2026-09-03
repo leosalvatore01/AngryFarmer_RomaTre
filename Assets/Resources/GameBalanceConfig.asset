@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71eb059f1b8bf85479410b9626b3361b, type: 3}
   m_Name: GameBalanceConfig
   m_EditorClassIdentifier: Assembly-CSharp::GameBalanceConfig
-  versioneRiferimento: Survival infinito - pulizia sistemi legacy - 2026-07-27
+  versioneRiferimento: Survival infinito - ritmo a capitoli - 2026-09-03
   giocatore:
     velocitaMovimento: 8
     accelerazione: 45
@@ -274,6 +274,11 @@ MonoBehaviour:
     durataPreavvisoSpawn: 0.5
     sogliaUltimiNemici: 2
     volumeSegnaleUltimiNemici: 0.26
+    capitoli:
+      ondePerCapitolo: 5
+      shopDopoOndeNelCapitolo: 0200000004000000
+      durataTransizioneBreve: 1.15
+      bossOgniOnde: 10
     ondate:
     - nomeOndata: Riscaldamento
       numeroNemici: 3

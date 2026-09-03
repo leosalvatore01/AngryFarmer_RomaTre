@@ -1,7 +1,9 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -72,7 +74,15 @@ public sealed class SceneFlowRegressionTests
         yield return AttendiScena(
             MenuInizialeController.NomeScenaGameplay
         );
-        yield return null;
+        yield return AttendiCondizione(
+            () => GameManager.instance != null &&
+                  UnityEngine.Object.FindFirstObjectByType<EnemySpawner>() !=
+                      null &&
+                  UnityEngine.Object.FindFirstObjectByType<ShopInterOndata>(
+                      FindObjectsInactive.Include
+                  ) != null,
+            "inizializzazione dei sistemi della scena"
+        );
 
         GameManager manager =
             UnityEngine.Object.FindFirstObjectByType<GameManager>();
@@ -126,6 +136,93 @@ public sealed class SceneFlowRegressionTests
             Is.Null
         );
 
+        yield return new ExitPlayMode();
+    }
+
+    [UnityTest]
+    public IEnumerator RitmoReale_CapitoloFermaLaRunSoloAgliShopPrevisti()
+    {
+        cartellaPlayMode = Path.Combine(
+            Path.GetTempPath(),
+            "AngryFarmerChapterTests_" + Guid.NewGuid().ToString("N")
+        );
+        Directory.CreateDirectory(cartellaPlayMode);
+        SaveService.PreparaRadicePlayModePerTest(cartellaPlayMode);
+
+        yield return new EnterPlayMode();
+
+        SceneManager.LoadScene(MenuInizialeController.NomeScenaMenu);
+        yield return AttendiScena(MenuInizialeController.NomeScenaMenu);
+        yield return null;
+
+        MenuInizialeController menu =
+            UnityEngine.Object.FindFirstObjectByType<
+                MenuInizialeController
+            >();
+        Assert.That(menu, Is.Not.Null);
+        menu.AvviaPartita(DifficoltaPartita.Normale);
+
+        yield return AttendiScena(
+            MenuInizialeController.NomeScenaGameplay
+        );
+        yield return AttendiCondizione(
+            () => GameManager.instance != null &&
+                  UnityEngine.Object.FindFirstObjectByType<EnemySpawner>() !=
+                      null &&
+                  UnityEngine.Object.FindFirstObjectByType<ShopInterOndata>(
+                      FindObjectsInactive.Include
+                  ) != null,
+            "inizializzazione dei sistemi del test capitoli"
+        );
+
+        GameManager manager = GameManager.instance;
+        EnemySpawner spawner =
+            UnityEngine.Object.FindFirstObjectByType<EnemySpawner>();
+        ShopInterOndata shop =
+            UnityEngine.Object.FindFirstObjectByType<ShopInterOndata>(
+                FindObjectsInactive.Include
+            );
+        Assert.That(manager, Is.Not.Null);
+        Assert.That(spawner, Is.Not.Null);
+        Assert.That(shop, Is.Not.Null);
+
+        yield return AttendiDifficoltaApplicata(spawner);
+
+        spawner.ondate = CreaOndateIstantanee(12);
+        ImpostaCampoPrivato(spawner, "durataBannerOndata", 0f);
+        ImpostaCampoPrivato(spawner, "durataTransizioneBreve", 0.1f);
+        ImpostaCampoPrivato(shop, "scelteGratuiteRimaste", 0);
+
+        List<StatoPartita> cambiStato = new List<StatoPartita>();
+        manager.StatoPartitaCambiato += cambiStato.Add;
+
+        manager.ContinuaConOndataSuccessiva();
+        yield return AttendiShopDopoOndata(manager, 2);
+        Assert.That(
+            cambiStato.Count(x => x == StatoPartita.Transizione),
+            Is.EqualTo(1)
+        );
+
+        manager.ContinuaConOndataSuccessiva();
+        yield return AttendiShopDopoOndata(manager, 4);
+        Assert.That(
+            cambiStato.Count(x => x == StatoPartita.Transizione),
+            Is.EqualTo(2)
+        );
+
+        manager.ContinuaConOndataSuccessiva();
+        yield return AttendiShopDopoOndata(manager, 7);
+        Assert.That(
+            cambiStato.Count(x => x == StatoPartita.Transizione),
+            Is.EqualTo(4),
+            "Dopo le ondate 5 e 6 la run deve ripartire da sola."
+        );
+        Assert.That(spawner.OttieniAnteprima(4).Elite, Is.True);
+        Assert.That(spawner.OttieniAnteprima(9).Boss, Is.True);
+
+        manager.StatoPartitaCambiato -= cambiStato.Add;
+        manager.GameOverGiocatore();
+        yield return null;
         yield return new ExitPlayMode();
     }
 
@@ -263,5 +360,108 @@ public sealed class SceneFlowRegressionTests
             Is.EqualTo(nomeScena),
             "Timeout durante il caricamento della scena " + nomeScena + "."
         );
+    }
+
+    private static IEnumerator AttendiCondizione(
+        Func<bool> condizione,
+        string descrizione
+    )
+    {
+        const float timeout = 10f;
+        float inizio = Time.realtimeSinceStartup;
+        while (!condizione() &&
+               Time.realtimeSinceStartup - inizio < timeout)
+        {
+            yield return null;
+        }
+
+        Assert.That(
+            condizione(),
+            Is.True,
+            "Timeout durante " + descrizione + "."
+        );
+    }
+
+    private static IEnumerator AttendiDifficoltaApplicata(
+        EnemySpawner spawner
+    )
+    {
+        const float timeout = 10f;
+        float inizio = Time.realtimeSinceStartup;
+        while (spawner != null &&
+               !spawner.DifficoltaApplicata &&
+               Time.realtimeSinceStartup - inizio < timeout)
+        {
+            yield return null;
+        }
+
+        Assert.That(spawner, Is.Not.Null);
+        Assert.That(
+            spawner.DifficoltaApplicata,
+            Is.True,
+            "Timeout durante l'applicazione della difficolta."
+        );
+    }
+
+    private static IEnumerator AttendiShopDopoOndata(
+        GameManager manager,
+        int ondaCompletata
+    )
+    {
+        const float timeout = 10f;
+        float inizio = Time.realtimeSinceStartup;
+        while (manager != null &&
+               (manager.OndateCompletate < ondaCompletata ||
+                manager.StatoCorrente != StatoPartita.Intervallo) &&
+               Time.realtimeSinceStartup - inizio < timeout)
+        {
+            yield return null;
+        }
+
+        Assert.That(manager, Is.Not.Null);
+        Assert.That(
+            manager.OndateCompletate,
+            Is.GreaterThanOrEqualTo(ondaCompletata),
+            "Timeout in attesa dell'ondata " + ondaCompletata + "."
+        );
+        Assert.That(
+            manager.StatoCorrente,
+            Is.EqualTo(StatoPartita.Intervallo),
+            "Lo shop non si e aperto dopo l'ondata " +
+            ondaCompletata + "."
+        );
+    }
+
+    private static Wave[] CreaOndateIstantanee(int quantita)
+    {
+        Wave[] risultato = new Wave[Mathf.Max(1, quantita)];
+        for (int i = 0; i < risultato.Length; i++)
+        {
+            risultato[i] = new Wave
+            {
+                nomeOndata = "Test " + (i + 1),
+                numeroNemici = 0,
+                sequenzaVolpi = Array.Empty<TipoVolpe>(),
+                intervalloTraNemici = 0.05f,
+                dimensioneMassimaGruppo = 1,
+                intervalloTraGruppi = 0.05f,
+                numeroMaialiniBonus = 0
+            };
+        }
+        return risultato;
+    }
+
+    private static void ImpostaCampoPrivato(
+        object destinazione,
+        string nomeCampo,
+        object valore
+    )
+    {
+        FieldInfo campo = destinazione.GetType().GetField(
+            nomeCampo,
+            BindingFlags.Instance | BindingFlags.NonPublic
+        );
+        Assert.That(campo, Is.Not.Null, "Campo non trovato: " + nomeCampo);
+        campo.SetValue(destinazione, valore);
     }
 }

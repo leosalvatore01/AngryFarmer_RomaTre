@@ -7,9 +7,10 @@ using TMPro;
 
 public enum StatoPartita
 {
-    Onda,
-    Intervallo,
-    FinePartita
+    Onda = 0,
+    Intervallo = 1,
+    FinePartita = 2,
+    Transizione = 3
 }
 
 public class GameManager : MonoBehaviour
@@ -74,7 +75,9 @@ public class GameManager : MonoBehaviour
         StatoCorrente == StatoPartita.Onda &&
         !PausaManualeAttiva;
     public bool PausaInterOndataAttiva =>
-        !isGameOver && StatoCorrente == StatoPartita.Intervallo;
+        !isGameOver &&
+        (StatoCorrente == StatoPartita.Intervallo ||
+         StatoCorrente == StatoPartita.Transizione);
 
     public event Action<int> MoneteCambiate;
     public event Action<StatoPartita> StatoPartitaCambiato;
@@ -1369,6 +1372,24 @@ public class GameManager : MonoBehaviour
             totaleOndate,
             prossimaOnda
         );
+    }
+
+    public void IniziaTransizioneBreve()
+    {
+        if (isGameOver) return;
+
+        shopInterOndata?.Nascondi();
+        ImpostaStatoPartita(StatoPartita.Transizione);
+    }
+
+    public void ConcludiTransizioneBreve()
+    {
+        if (isGameOver || StatoCorrente != StatoPartita.Transizione)
+        {
+            return;
+        }
+
+        ImpostaStatoPartita(StatoPartita.Onda);
     }
 
     public void ContinuaConOndataSuccessiva()

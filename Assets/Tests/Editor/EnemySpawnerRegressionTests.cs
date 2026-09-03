@@ -162,6 +162,142 @@ public sealed class EnemySpawnerRegressionTests
     }
 
     [Test]
+    public void RitmoCapitoli_ApreShopDopoSecondaEQuartaOnda()
+    {
+        WaveChapterSettings impostazioni =
+            GameBalanceConfig.Corrente.Ondate.capitoli;
+
+        for (int onda = 1; onda <= 100; onda++)
+        {
+            RitmoOndata ritmo = WaveChapterDirector.Calcola(
+                onda,
+                impostazioni
+            );
+            bool shopAtteso =
+                ritmo.PosizioneNelCapitolo == 2 ||
+                ritmo.PosizioneNelCapitolo == 4;
+
+            Assert.That(
+                ritmo.ApreShopDopo,
+                Is.EqualTo(shopAtteso),
+                "Cadenza shop errata dopo l'ondata " + onda + "."
+            );
+        }
+    }
+
+    [Test]
+    public void RitmoCapitoli_QuintaEliteEDecimaBoss()
+    {
+        WaveChapterSettings impostazioni =
+            GameBalanceConfig.Corrente.Ondate.capitoli;
+
+        for (int onda = 1; onda <= 50; onda++)
+        {
+            RitmoOndata ritmo = WaveChapterDirector.Calcola(
+                onda,
+                impostazioni
+            );
+            TipoIncontroOndata atteso = onda % 10 == 0
+                ? TipoIncontroOndata.Boss
+                : onda % 5 == 0
+                    ? TipoIncontroOndata.Elite
+                    : TipoIncontroOndata.Normale;
+
+            Assert.That(
+                ritmo.TipoIncontro,
+                Is.EqualTo(atteso),
+                "Tipo incontro errato all'ondata " + onda + "."
+            );
+        }
+    }
+
+    [TestCase(1, 1, 1)]
+    [TestCase(5, 1, 5)]
+    [TestCase(6, 2, 1)]
+    [TestCase(10, 2, 5)]
+    [TestCase(11, 3, 1)]
+    [TestCase(1000, 200, 5)]
+    public void RitmoCapitoli_CalcolaCapitoloEPosizioneSenzaFine(
+        int onda,
+        int capitoloAtteso,
+        int posizioneAttesa
+    )
+    {
+        RitmoOndata ritmo = WaveChapterDirector.Calcola(
+            onda,
+            GameBalanceConfig.Corrente.Ondate.capitoli
+        );
+
+        Assert.That(ritmo.NumeroCapitolo, Is.EqualTo(capitoloAtteso));
+        Assert.That(
+            ritmo.PosizioneNelCapitolo,
+            Is.EqualTo(posizioneAttesa)
+        );
+    }
+
+    [Test]
+    public void AnteprimaOndata_EsponeIlRitmoDelCapitolo()
+    {
+        EnemySpawner spawner = CreaSpawner();
+        spawner.ondate = GameBalanceConfig.Corrente.Ondate.ondate;
+
+        AnteprimaOndata elite = spawner.OttieniAnteprima(4);
+        AnteprimaOndata boss = spawner.OttieniAnteprima(9);
+        AnteprimaOndata avanzata = spawner.OttieniAnteprima(999);
+
+        Assert.That(elite.Elite, Is.True);
+        Assert.That(elite.NumeroCapitolo, Is.EqualTo(1));
+        Assert.That(boss.Boss, Is.True);
+        Assert.That(boss.NumeroCapitolo, Is.EqualTo(2));
+        Assert.That(avanzata.NumeroCapitolo, Is.EqualTo(200));
+        Assert.That(avanzata.PosizioneNelCapitolo, Is.EqualTo(5));
+    }
+
+    [Test]
+    public void TransizioneBreve_CongelaERiprendeIlGameplay()
+    {
+        GameManager precedente = GameManager.instance;
+        float scalaPrecedente = Time.timeScale;
+        GameObject oggettoManager = new GameObject("GameManager_RitmoTest");
+        oggettoManager.SetActive(false);
+        GameManager gestore = oggettoManager.AddComponent<GameManager>();
+
+        try
+        {
+            GameManager.instance = gestore;
+            ImpostaCampoPrivato(
+                gestore,
+                "<DifficoltaConfermata>k__BackingField",
+                true
+            );
+
+            gestore.IniziaTransizioneBreve();
+
+            Assert.That(
+                gestore.StatoCorrente,
+                Is.EqualTo(StatoPartita.Transizione)
+            );
+            Assert.That(gestore.GameplayAttivo, Is.False);
+            Assert.That(Time.timeScale, Is.Zero);
+
+            gestore.ConcludiTransizioneBreve();
+
+            Assert.That(
+                gestore.StatoCorrente,
+                Is.EqualTo(StatoPartita.Onda)
+            );
+            Assert.That(gestore.GameplayAttivo, Is.True);
+            Assert.That(Time.timeScale, Is.EqualTo(1f));
+        }
+        finally
+        {
+            GameManager.instance = precedente;
+            Time.timeScale = scalaPrecedente;
+            UnityEngine.Object.DestroyImmediate(oggettoManager);
+        }
+    }
+
+    [Test]
     public void AnelloSpawn_SegueLaPosizioneCorrenteDelContadino()
     {
         EnemySpawner spawner = CreaSpawner();
