@@ -588,11 +588,16 @@ public class ShopInterOndata : MonoBehaviour
             : anteprima.Elite
                 ? "  |  INCONTRO ELITE"
                 : string.Empty;
+        string minaccia = anteprima.BudgetMinaccia > 0
+            ? "  |  MINACCIA " + anteprima.MinacciaUsata + "/" +
+              anteprima.BudgetMinaccia + "  |  MAX " +
+              anteprima.LimiteNemiciContemporanei + " IN CAMPO"
+            : string.Empty;
 
         return
             "CAPITOLO " + anteprima.NumeroCapitolo + "  |  ONDATA " +
             anteprima.PosizioneNelCapitolo + "/" +
-            anteprima.Ritmo.OndePerCapitolo + tipoIncontro +
+            anteprima.Ritmo.OndePerCapitolo + tipoIncontro + minaccia +
             "\nONDATA " + anteprima.Indice + "  |  " +
             anteprima.Nome.ToUpperInvariant() +
             "\n" + anteprima.NumeroVolpi + " VOLPI  |  " + gruppi +

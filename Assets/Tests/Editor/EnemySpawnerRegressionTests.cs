@@ -137,8 +137,10 @@ public sealed class EnemySpawnerRegressionTests
             if (indice > 0)
             {
                 Assert.That(
-                    anteprima.NumeroVolpi,
-                    Is.GreaterThan(precedente.NumeroVolpi)
+                    anteprima.BudgetMinaccia,
+                    Is.GreaterThan(precedente.BudgetMinaccia),
+                    "La crescita deve dipendere dal budget complessivo, " +
+                    "non dal solo numero di volpi."
                 );
                 Assert.That(
                     anteprima.VitaVolpi,
@@ -301,7 +303,8 @@ public sealed class EnemySpawnerRegressionTests
     public void AnelloSpawn_SegueLaPosizioneCorrenteDelContadino()
     {
         EnemySpawner spawner = CreaSpawner();
-        spawner.spawnDistance = 10f;
+        ImpostaCampoPrivato(spawner, "distanzaSpawnMinima", 8f);
+        ImpostaCampoPrivato(spawner, "distanzaSpawnMassima", 12f);
 
         oggettoGiocatore = new GameObject("Contadino_Test");
         oggettoGiocatore.transform.position = new Vector3(3f, -2f, 0f);
@@ -318,7 +321,7 @@ public sealed class EnemySpawnerRegressionTests
 
         Assert.That(
             Vector2.Distance(primoCentro, primaPosizione),
-            Is.EqualTo(spawner.spawnDistance).Within(0.0001f)
+            Is.InRange(8f, 12f)
         );
 
         oggettoGiocatore.transform.position = new Vector3(-8f, 6f, 0f);
@@ -329,7 +332,7 @@ public sealed class EnemySpawnerRegressionTests
         Assert.That(spawner.CentroSpawnCorrente, Is.EqualTo(secondoCentro));
         Assert.That(
             Vector2.Distance(secondoCentro, secondaPosizione),
-            Is.EqualTo(spawner.spawnDistance).Within(0.0001f)
+            Is.InRange(8f, 12f)
         );
         Assert.That(
             Vector2.Distance(

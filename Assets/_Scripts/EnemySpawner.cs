@@ -21,6 +21,13 @@ public class Wave
     [Min(0)] public int numeroMaialiniBonus;
     [Min(1)] public int vitaMaialinoBonus = 1;
     [Min(0)] public int moneteMaialinoBonus = 3;
+
+    [System.NonSerialized] public ArchetipoOndata archetipo;
+    [System.NonSerialized] public int budgetMinaccia;
+    [System.NonSerialized] public int minacciaUsata;
+    [System.NonSerialized] public int limiteNemiciContemporanei;
+    [System.NonSerialized] public float distanzaSpawnMinima;
+    [System.NonSerialized] public float distanzaSpawnMassima;
 }
 
 public readonly struct AnteprimaOndata
@@ -37,6 +44,12 @@ public readonly struct AnteprimaOndata
     public int MoneteMaialino { get; }
     public int NumeroGruppi { get; }
     public RitmoOndata Ritmo { get; }
+    public ArchetipoOndata Archetipo { get; }
+    public int BudgetMinaccia { get; }
+    public int MinacciaUsata { get; }
+    public int LimiteNemiciContemporanei { get; }
+    public float DistanzaSpawnMinima { get; }
+    public float DistanzaSpawnMassima { get; }
     public int NumeroCapitolo => Ritmo.NumeroCapitolo;
     public int PosizioneNelCapitolo => Ritmo.PosizioneNelCapitolo;
     public TipoIncontroOndata TipoIncontro => Ritmo.TipoIncontro;
@@ -55,7 +68,13 @@ public readonly struct AnteprimaOndata
         int vitaMaialino,
         int moneteMaialino,
         int numeroGruppi,
-        RitmoOndata ritmo
+        RitmoOndata ritmo,
+        ArchetipoOndata archetipo,
+        int budgetMinaccia,
+        int minacciaUsata,
+        int limiteNemiciContemporanei,
+        float distanzaSpawnMinima,
+        float distanzaSpawnMassima
     )
     {
         Indice = indice;
@@ -69,6 +88,18 @@ public readonly struct AnteprimaOndata
         MoneteMaialino = moneteMaialino;
         NumeroGruppi = numeroGruppi;
         Ritmo = ritmo;
+        Archetipo = archetipo;
+        BudgetMinaccia = Mathf.Max(0, budgetMinaccia);
+        MinacciaUsata = Mathf.Max(0, minacciaUsata);
+        LimiteNemiciContemporanei = Mathf.Max(
+            1,
+            limiteNemiciContemporanei
+        );
+        DistanzaSpawnMinima = Mathf.Max(0f, distanzaSpawnMinima);
+        DistanzaSpawnMassima = Mathf.Max(
+            DistanzaSpawnMinima,
+            distanzaSpawnMassima
+        );
     }
 }
 
@@ -153,6 +184,14 @@ public class EnemySpawner : MonoBehaviour
     private float durataTransizioneBreve = 1.15f;
     private WaveChapterSettings ritmoCapitoli =
         new WaveChapterSettings();
+    private ThreatBudgetSettings regoleMinaccia =
+        new ThreatBudgetSettings();
+    private bool budgetMinacciaAttivo = true;
+    private float distanzaSpawnMinima = 8.5f;
+    private float distanzaSpawnMassima = 11.5f;
+    private readonly Dictionary<int, Wave> cacheOndateMinaccia =
+        new Dictionary<int, Wave>();
+    private Wave[] sorgenteCacheOndate;
     private int nemiciDaSpawnare;
     private int maialiniDaSpawnare;
     private int totaleNemiciOnda;
@@ -194,6 +233,14 @@ public class EnemySpawner : MonoBehaviour
         OttieniAnteprima(currentWaveIndex);
     public RitmoOndata RitmoCorrente =>
         OttieniRitmoOndata(currentWaveIndex + 1);
+    public int LimiteMinacceContemporaneeCorrente =>
+        Mathf.Max(
+            1,
+            OttieniOndata(currentWaveIndex)?.limiteNemiciContemporanei ?? 1
+        );
+    public bool BudgetMinacciaAttivo => budgetMinacciaAttivo;
+    public float DistanzaSpawnMinima => distanzaSpawnMinima;
+    public float DistanzaSpawnMassima => distanzaSpawnMassima;
 
     public event System.Action<ProgressoOndata> ProgressoCambiato;
 
@@ -325,6 +372,21 @@ public class EnemySpawner : MonoBehaviour
 
                 for (int membro = 0; membro < dimensioneGruppo; membro++)
                 {
+                    if (!TokenValido(tokenCorrente))
+                    {
+                        diagnostica.TerminaOndata(
+                            EsitoDiagnosticaOndata.Sconfitta
+                        );
+                        InterrompiStatoOnda();
+                        PulisciEntitaTraOndate();
+                        yield break;
+                    }
+
+                    yield return AttendiSlotMinacciaDisponibile(
+                        ondataCorrente.limiteNemiciContemporanei,
+                        tokenCorrente
+                    );
+
                     if (!TokenValido(tokenCorrente))
                     {
                         diagnostica.TerminaOndata(
@@ -527,27 +589,81 @@ public class EnemySpawner : MonoBehaviour
             return null;
         }
 
+        if (!budgetMinacciaAttivo)
+        {
+            return OttieniOndataSenzaBudget(indice);
+        }
+
+        if (!ReferenceEquals(sorgenteCacheOndate, ondate))
+        {
+            cacheOndateMinaccia.Clear();
+            sorgenteCacheOndate = ondate;
+        }
+        if (cacheOndateMinaccia.TryGetValue(indice, out Wave memorizzata))
+        {
+            return memorizzata;
+        }
+
+        int numero = indice == int.MaxValue ? int.MaxValue : indice + 1;
+        Wave modello = OttieniModelloOndata(indice);
+        RitmoOndata ritmo = OttieniRitmoOndata(numero);
+        float moltiplicatoreBudget = ProfiloDifficoltaCorrente != null
+            ? ProfiloDifficoltaCorrente.moltiplicatoreQuantita
+            : 1f;
+        PianoMinacciaOndata piano = WaveThreatDirector.CreaPiano(
+            numero,
+            regoleMinaccia,
+            ritmo,
+            moltiplicatoreBudget
+        );
+
+        float ritmoNemici = MoltiplicatoreIntervalloArchetipo(
+            piano.Archetipo
+        );
+        Wave generata = new Wave
+        {
+            nomeOndata = WaveThreatDirector.Nome(piano.Archetipo),
+            numeroNemici = piano.TotaleVolpi,
+            indiceSurvival = numero,
+            sequenzaVolpi = piano.Sequenza,
+            intervalloTraNemici = Mathf.Max(
+                0.18f,
+                modello.intervalloTraNemici * ritmoNemici
+            ),
+            dimensioneMassimaGruppo = DimensioneGruppoArchetipo(
+                modello.dimensioneMassimaGruppo,
+                piano.Archetipo
+            ),
+            intervalloTraGruppi = Mathf.Max(
+                0.45f,
+                modello.intervalloTraGruppi * ritmoNemici
+            ),
+            numeroMaialiniBonus = modello.numeroMaialiniBonus,
+            vitaMaialinoBonus = modello.vitaMaialinoBonus,
+            moneteMaialinoBonus = modello.moneteMaialinoBonus,
+            archetipo = piano.Archetipo,
+            budgetMinaccia = piano.BudgetTotale,
+            minacciaUsata = piano.BudgetUsato,
+            limiteNemiciContemporanei = piano.LimiteContemporaneo,
+            distanzaSpawnMinima = piano.DistanzaSpawnMinima,
+            distanzaSpawnMassima = piano.DistanzaSpawnMassima
+        };
+        cacheOndateMinaccia[indice] = generata;
+        return generata;
+    }
+
+    Wave OttieniModelloOndata(int indice)
+    {
         if (indice < ondate.Length) return ondate[indice];
 
         Wave baseFinale = ondate[ondate.Length - 1];
-        int numero = indice + 1;
-        int extra = indice - ondate.Length + 1;
-        int incrementiGruppo =
-            numero / 4 - ondate.Length / 4;
+        int numero = indice == int.MaxValue ? int.MaxValue : indice + 1;
+        int extra = Mathf.Max(1, indice - ondate.Length + 1);
+        int incrementiGruppo = numero / 4 - ondate.Length / 4;
         float accelerazione = Mathf.Pow(0.97f, extra);
-        int numeroNemici = Mathf.Max(
-            1,
-            baseFinale.numeroNemici + extra * 2
-        );
         return new Wave
         {
             nomeOndata = "Sopravvivenza " + numero,
-            numeroNemici = numeroNemici,
-            indiceSurvival = numero,
-            sequenzaVolpi = CreaSequenzaSurvival(
-                numero,
-                numeroNemici
-            ),
             intervalloTraNemici = Mathf.Max(
                 0.18f,
                 baseFinale.intervalloTraNemici * accelerazione
@@ -565,6 +681,64 @@ public class EnemySpawner : MonoBehaviour
             vitaMaialinoBonus = 5 + extra / 3,
             moneteMaialinoBonus = 7 + extra / 2
         };
+    }
+
+    Wave OttieniOndataSenzaBudget(int indice)
+    {
+        if (indice < ondate.Length) return ondate[indice];
+
+        Wave modello = OttieniModelloOndata(indice);
+        int numero = indice == int.MaxValue ? int.MaxValue : indice + 1;
+        long quantita = (long)Mathf.Max(
+            1,
+            ondate[ondate.Length - 1].numeroNemici
+        ) + (long)Mathf.Max(1, indice - ondate.Length + 1) * 2L;
+        int numeroNemici = (int)System.Math.Min(int.MaxValue, quantita);
+        modello.numeroNemici = numeroNemici;
+        modello.indiceSurvival = numero;
+        modello.sequenzaVolpi = CreaSequenzaSurvival(
+            numero,
+            numeroNemici
+        );
+        modello.limiteNemiciContemporanei = int.MaxValue;
+        modello.distanzaSpawnMinima = spawnDistance;
+        modello.distanzaSpawnMassima = spawnDistance;
+        return modello;
+    }
+
+    static float MoltiplicatoreIntervalloArchetipo(
+        ArchetipoOndata archetipo
+    )
+    {
+        switch (archetipo)
+        {
+            case ArchetipoOndata.Sciame: return 0.82f;
+            case ArchetipoOndata.Assedio: return 1.12f;
+            case ArchetipoOndata.Distanza: return 1.04f;
+            case ArchetipoOndata.Elite: return 1.08f;
+            case ArchetipoOndata.Boss: return 1.16f;
+            default: return 1f;
+        }
+    }
+
+    static int DimensioneGruppoArchetipo(
+        int dimensioneBase,
+        ArchetipoOndata archetipo
+    )
+    {
+        int baseValida = Mathf.Clamp(dimensioneBase, 1, 4);
+        switch (archetipo)
+        {
+            case ArchetipoOndata.Sciame:
+                return Mathf.Max(3, baseValida);
+            case ArchetipoOndata.Assedio:
+            case ArchetipoOndata.Distanza:
+            case ArchetipoOndata.Elite:
+            case ArchetipoOndata.Boss:
+                return Mathf.Min(2, baseValida);
+            default:
+                return baseValida;
+        }
     }
 
     public static TipoVolpe[] CreaSequenzaSurvival(
@@ -847,6 +1021,19 @@ public class EnemySpawner : MonoBehaviour
             0.1f,
             5f
         );
+        regoleMinaccia = ritmo.minaccia ?? new ThreatBudgetSettings();
+        budgetMinacciaAttivo = regoleMinaccia.attivo;
+        distanzaSpawnMinima = Mathf.Max(
+            0f,
+            regoleMinaccia.distanzaMinimaDalContadino
+        );
+        distanzaSpawnMassima = Mathf.Max(
+            distanzaSpawnMinima,
+            regoleMinaccia.distanzaMassimaDalContadino
+        );
+        spawnDistance = (distanzaSpawnMinima + distanzaSpawnMassima) * 0.5f;
+        cacheOndateMinaccia.Clear();
+        sorgenteCacheOndate = null;
 
         if (ritmo.ondate != null && ritmo.ondate.Length > 0)
         {
@@ -863,6 +1050,8 @@ public class EnemySpawner : MonoBehaviour
             difficolta
         );
         ondate = CreaOndatePerDifficolta(ondate, profiloDifficolta);
+        cacheOndateMinaccia.Clear();
+        sorgenteCacheOndate = null;
     }
 
     public static Wave[] CreaOndatePerDifficolta(
@@ -961,11 +1150,18 @@ public class EnemySpawner : MonoBehaviour
 
     int CalcolaVitaOnda(int indiceZeroBased)
     {
-        int vitaBase = Mathf.Max(
-            1,
-            vitaPrimaOndata +
-            Mathf.Max(0, indiceZeroBased) * vitaAggiuntivaPerOndata
-        );
+        int vitaBase = budgetMinacciaAttivo
+            ? WaveThreatDirector.CalcolaVitaBase(
+                indiceZeroBased + 1,
+                vitaPrimaOndata,
+                vitaAggiuntivaPerOndata,
+                regoleMinaccia
+            )
+            : Mathf.Max(
+                1,
+                vitaPrimaOndata +
+                Mathf.Max(0, indiceZeroBased) * vitaAggiuntivaPerOndata
+            );
         return ProfiloDifficoltaCorrente.ApplicaVita(vitaBase);
     }
 
@@ -1046,7 +1242,13 @@ public class EnemySpawner : MonoBehaviour
             Mathf.Max(1, onda.vitaMaialinoBonus),
             Mathf.Max(0, onda.moneteMaialinoBonus),
             numeroGruppi,
-            ritmo
+            ritmo,
+            onda.archetipo,
+            onda.budgetMinaccia,
+            onda.minacciaUsata,
+            onda.limiteNemiciContemporanei,
+            onda.distanzaSpawnMinima,
+            onda.distanzaSpawnMassima
         );
     }
 
@@ -1258,9 +1460,12 @@ public class EnemySpawner : MonoBehaviour
                 anteprima.Ritmo.OndePerCapitolo;
         }
 
+        string minaccia = anteprima.BudgetMinaccia > 0
+            ? "  •  MINACCIA " + anteprima.MinacciaUsata
+            : string.Empty;
         return
             intestazione + "  •  ONDATA " + anteprima.Indice +
-            "\n" + anteprima.Nome.ToUpperInvariant() +
+            "\n" + anteprima.Nome.ToUpperInvariant() + minaccia +
             "\n" + anteprima.Composizione.FormattaCompatta();
     }
 
@@ -1324,6 +1529,36 @@ public class EnemySpawner : MonoBehaviour
             tempoRimasto -= Time.deltaTime;
             yield return null;
         }
+    }
+
+    IEnumerator AttendiSlotMinacciaDisponibile(
+        int limiteConfigurato,
+        int tokenCorrente
+    )
+    {
+        int limite = limiteConfigurato > 0
+            ? limiteConfigurato
+            : int.MaxValue;
+        while (TokenValido(tokenCorrente) &&
+               !SlotMinacciaDisponibile(minacceAttive.Count, limite))
+        {
+            diagnostica?.CampionaNemiciVivi(minacceAttive.Count);
+            yield return AttendiConToken(
+                intervalloControlloFineOndata,
+                tokenCorrente
+            );
+        }
+    }
+
+    public static bool SlotMinacciaDisponibile(
+        int minacceAttive,
+        int limiteConfigurato
+    )
+    {
+        int limite = limiteConfigurato > 0
+            ? limiteConfigurato
+            : int.MaxValue;
+        return Mathf.Max(0, minacceAttive) < limite;
     }
 
     bool TokenValido(int tokenCorrente)
@@ -1606,7 +1841,40 @@ public class EnemySpawner : MonoBehaviour
     /// </summary>
     public Vector2 CalcolaPosizioneSpawnVolpe(Vector2 direzione)
     {
-        return CalcolaPosizioneSpawn(direzione, spawnDistance);
+        Wave onda = OttieniOndata(currentWaveIndex);
+        float minima = onda != null && onda.distanzaSpawnMassima > 0f
+            ? onda.distanzaSpawnMinima
+            : distanzaSpawnMinima;
+        float massima = onda != null && onda.distanzaSpawnMassima > 0f
+            ? onda.distanzaSpawnMassima
+            : distanzaSpawnMassima;
+        float distanza = CalcolaDistanzaDeterministica(
+            direzione,
+            minima,
+            massima,
+            currentWaveIndex + 1
+        );
+        return CalcolaPosizioneSpawn(direzione, distanza);
+    }
+
+    public static float CalcolaDistanzaDeterministica(
+        Vector2 direzione,
+        float distanzaMinima,
+        float distanzaMassima,
+        int numeroOndata
+    )
+    {
+        Vector2 normalizzata = direzione.sqrMagnitude > 0.001f
+            ? direzione.normalized
+            : Vector2.right;
+        float minima = Mathf.Max(0f, distanzaMinima);
+        float massima = Mathf.Max(minima, distanzaMassima);
+        float seme = normalizzata.x * 12.9898f +
+                     normalizzata.y * 78.233f +
+                     Mathf.Max(1, numeroOndata) * 37.719f;
+        float variazione = Mathf.Abs(Mathf.Sin(seme) * 43758.5453f);
+        variazione -= Mathf.Floor(variazione);
+        return Mathf.Lerp(minima, massima, variazione);
     }
 
     private Vector2 CalcolaPosizioneSpawn(

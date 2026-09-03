@@ -188,6 +188,7 @@ public sealed class SceneFlowRegressionTests
 
         yield return AttendiDifficoltaApplicata(spawner);
 
+        ImpostaCampoPrivato(spawner, "budgetMinacciaAttivo", false);
         spawner.ondate = CreaOndateIstantanee(12);
         ImpostaCampoPrivato(spawner, "durataBannerOndata", 0f);
         ImpostaCampoPrivato(spawner, "durataTransizioneBreve", 0.1f);

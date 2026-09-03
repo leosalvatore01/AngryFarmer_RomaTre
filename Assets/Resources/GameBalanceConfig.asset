@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71eb059f1b8bf85479410b9626b3361b, type: 3}
   m_Name: GameBalanceConfig
   m_EditorClassIdentifier: Assembly-CSharp::GameBalanceConfig
-  versioneRiferimento: Survival infinito - ritmo a capitoli - 2026-09-03
+  versioneRiferimento: Survival infinito - budget di minaccia - 2026-09-03
   giocatore:
     velocitaMovimento: 8
     accelerazione: 45
@@ -279,6 +279,34 @@ MonoBehaviour:
       shopDopoOndeNelCapitolo: 0200000004000000
       durataTransizioneBreve: 1.15
       bossOgniOnde: 10
+    minaccia:
+      attivo: 1
+      budgetPrimaOndata: 3
+      incrementoBudgetPerOnda: 2
+      ondeCrescitaLineare: 20
+      incrementoBudgetAvanzato: 2
+      bonusBudgetElite: 4
+      bonusBudgetBoss: 10
+      limiteVolpiPerOndata: 120
+      limiteContemporaneoBase: 6
+      capitoliPerIncrementoLimite: 2
+      limiteContemporaneoMassimo: 18
+      limiteAlfaPerOndata: 2
+      limiteSupportiDistanza: 4
+      limiteScavatrici: 3
+      costi:
+        comune: 1
+        agile: 2
+        robusta: 3
+        schivatrice: 3
+        alfa: 6
+        ululatrice: 5
+        sputafango: 5
+        scavatrice: 5
+      distanzaMinimaDalContadino: 8.5
+      distanzaMassimaDalContadino: 11.5
+      ondeCrescitaVitaLineare: 12
+      crescitaVitaAvanzata: 0.65
     ondate:
     - nomeOndata: Riscaldamento
       numeroNemici: 3

@@ -155,6 +155,9 @@ public sealed class WaveBalanceSettings
     [Header("Capitoli e shop")]
     public WaveChapterSettings capitoli = new WaveChapterSettings();
 
+    [Header("Budget di minaccia")]
+    public ThreatBudgetSettings minaccia = new ThreatBudgetSettings();
+
     [Header("Sequenza di riferimento")]
     public Wave[] ondate = CreaOndateRiferimento();
 
@@ -524,7 +527,12 @@ public sealed class GameBalanceConfig : ScriptableObject
         {
             ondate.capitoli = new WaveChapterSettings();
         }
+        if (ondate.minaccia == null)
+        {
+            ondate.minaccia = new ThreatBudgetSettings();
+        }
         ondate.capitoli.Normalizza();
+        ondate.minaccia.Normalizza();
         difficolta.Normalizza();
 
         giocatore.intervalloSparoMinimo = Mathf.Max(
