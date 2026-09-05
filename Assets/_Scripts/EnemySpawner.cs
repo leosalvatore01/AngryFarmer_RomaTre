@@ -359,6 +359,7 @@ public class EnemySpawner : MonoBehaviour
             }
 
             int indiceSpawn = 0;
+            bool ruoloSpecialeAssegnato = false;
             for (int gruppo = 0; gruppo < totaleGruppi; gruppo++)
             {
                 gruppoCorrente = gruppo + 1;
@@ -442,17 +443,28 @@ public class EnemySpawner : MonoBehaviour
 
                     bool riproduciVerso =
                         tipoSpawn != TipoVolpe.Comune || membro == 0;
+                    RuoloIncontroSpeciale ruoloSpeciale =
+                        SpecialEncounterDirector.ScegliRuolo(
+                            anteprima.TipoIncontro,
+                            tipoSpawn,
+                            ruoloSpecialeAssegnato
+                        );
                     EnemyAI nemico = SpawnEnemy(
                         posizioneSpawn,
                         tipoSpawn,
                         indiceSpawn,
-                        riproduciVerso
+                        riproduciVerso,
+                        ruoloSpeciale
                     );
                     nemiciDaSpawnare = Mathf.Max(0, nemiciDaSpawnare - 1);
                     composizioneDaSpawnare =
                         composizioneDaSpawnare.Rimuovi(tipoSpawn);
                     if (nemico != null)
                     {
+                        if (ruoloSpeciale != RuoloIncontroSpeciale.Nessuno)
+                        {
+                            ruoloSpecialeAssegnato = true;
+                        }
                         RegistraMinaccia(nemico);
                     }
                     diagnostica.RegistraSpawnNemico(nemico != null);
@@ -1747,7 +1759,9 @@ public class EnemySpawner : MonoBehaviour
         Vector2 spawnPos,
         TipoVolpe tipo,
         int indiceSpawn,
-        bool riproduciVerso
+        bool riproduciVerso,
+        RuoloIncontroSpeciale ruoloSpeciale =
+            RuoloIncontroSpeciale.Nessuno
     )
     {
         if (foxPrefab == null) return null;
@@ -1773,6 +1787,21 @@ public class EnemySpawner : MonoBehaviour
             indiceSpawn,
             riproduciVerso
         );
+        switch (ruoloSpeciale)
+        {
+            case RuoloIncontroSpeciale.Elite:
+                EliteFoxController.Configura(
+                    nemico,
+                    currentWaveIndex + 1
+                );
+                break;
+            case RuoloIncontroSpeciale.Boss:
+                BossFoxController.Configura(
+                    nemico,
+                    currentWaveIndex + 1
+                );
+                break;
+        }
         return nemico;
     }
 

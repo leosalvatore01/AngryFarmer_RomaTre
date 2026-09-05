@@ -138,6 +138,8 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     private int vitaCorrente;
     private bool morto;
     private bool neutralizzazioneSegnalata;
+    private bool controlloEsterno;
+    private int dropGarantiti;
     private Coroutine flashDannoRoutine;
 
     private Transform barraVita;
@@ -169,6 +171,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     public TipoVolpe Tipo => tipo;
     public string NomeTipo => FoxVariantStyle.Nome(tipo);
     public Transform BersaglioCorrente => target;
+    public bool ControlloEsterno => controlloEsterno;
     public bool StaPreparandoAttaccoAlfa =>
         statoAlfa == StatoAttaccoAlfa.Preparazione;
     public bool StaScattandoAlfa =>
@@ -370,6 +373,13 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
             }
         }
 
+        if (controlloEsterno)
+        {
+            velocitaAttuale = Vector2.zero;
+            velocitaDesiderata = Vector2.zero;
+            return;
+        }
+
         CalcolaMovimentoEAttacco();
 
         bool staCamminando = velocitaAttuale.sqrMagnitude > 0.01f;
@@ -392,6 +402,15 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
             velocitaAttuale = Vector2.zero;
             velocitaDesiderata = Vector2.zero;
             corpo.linearVelocity = Vector2.zero;
+            return;
+        }
+
+        if (controlloEsterno)
+        {
+            corpo.linearVelocity = Vector2.zero;
+            velocitaAttuale = Vector2.zero;
+            velocitaDesiderata = Vector2.zero;
+            velocitaSpinta = Vector2.zero;
             return;
         }
 
@@ -1484,6 +1503,50 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         AggiornaBarraVita();
     }
 
+    /// <summary>
+    /// Cede movimento e attacchi a un incontro speciale, conservando vita,
+    /// danni, ricompense e registrazione nel sistema delle ondate.
+    /// </summary>
+    public void ImpostaControlloEsterno(bool attivo)
+    {
+        controlloEsterno = attivo;
+        if (!attivo) return;
+
+        InterrompiAbilitaSpeciali();
+        velocitaAttuale = Vector2.zero;
+        velocitaDesiderata = Vector2.zero;
+        velocitaSpinta = Vector2.zero;
+        staInseguendo = false;
+        if (corpo != null) corpo.linearVelocity = Vector2.zero;
+    }
+
+    public void ImpostaGraficaDedicata(Sprite sprite)
+    {
+        if (sprite == null || spriteRendererVisibile == null) return;
+
+        spriteIdle = sprite;
+        frameCorsa = new[] { sprite };
+        frameMorte = new Sprite[0];
+        spriteRendererVisibile.sprite = sprite;
+        spriteRendererVisibile.color = Color.white;
+        coloreBase = Color.white;
+        timerAnimazione = 0f;
+    }
+
+    public void NascondiBarraVitaLocale()
+    {
+        if (barraVita != null) barraVita.gameObject.SetActive(false);
+    }
+
+    public void ConfiguraRicompensaSpeciale(
+        int monete,
+        int numeroDropGarantiti
+    )
+    {
+        monetePerEliminazione = Mathf.Max(0, monete);
+        dropGarantiti = Mathf.Max(0, numeroDropGarantiti);
+    }
+
     public void SubisciDanno(int quantita)
     {
         ProvaSubireDanno(quantita);
@@ -1804,16 +1867,38 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
             GameManager.instance.RegistraVolpeEliminata(tipo);
             GameManager.instance.AggiungiMonete(monetePerEliminazione);
         }
-        if (Random.Range(0f, 100f) < dropChance)
+        if (dropGarantiti > 0)
         {
-            if (Random.value > 1f - probabilitaDenteSulDrop &&
-                dentePrefab != null)
-                Instantiate(dentePrefab, transform.position, Quaternion.identity);
-            else if (codaPrefab != null)
-                Instantiate(codaPrefab, transform.position, Quaternion.identity);
+            for (int i = 0; i < dropGarantiti; i++)
+            {
+                CreaDrop(i % 2 == 0);
+            }
+        }
+        else if (Random.Range(0f, 100f) < dropChance)
+        {
+            CreaDrop(Random.value > 1f - probabilitaDenteSulDrop);
         }
 
         StartCoroutine(AnimaMorte());
+    }
+
+    private void CreaDrop(bool preferisciDente)
+    {
+        GameObject prefab = preferisciDente ? dentePrefab : codaPrefab;
+        if (prefab == null)
+        {
+            prefab = preferisciDente ? codaPrefab : dentePrefab;
+        }
+        if (prefab == null) return;
+
+        Vector2 scarto = dropGarantiti > 1
+            ? Random.insideUnitCircle * 0.28f
+            : Vector2.zero;
+        Instantiate(
+            prefab,
+            (Vector2)transform.position + scarto,
+            Quaternion.identity
+        );
     }
 
     IEnumerator AnimaMorte()
@@ -1917,6 +2002,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         moltiplicatoreRallentamentoBuild = 1f;
         tempoRallentamentoTerreno = 0f;
         moltiplicatoreRallentamentoTerreno = 1f;
+        controlloEsterno = false;
 
         if (spriteRendererVisibile != null)
         {

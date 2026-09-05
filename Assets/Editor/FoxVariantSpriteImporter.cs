@@ -8,6 +8,7 @@ using UnityEngine;
 public sealed class FoxVariantSpriteImporter : AssetPostprocessor
 {
     private const string CartellaVolpi = "Assets/Resources/Foxes/";
+    private const string CartellaBoss = "Assets/Resources/Foxes/Boss/";
 
     private void OnPreprocessTexture()
     {
@@ -19,7 +20,12 @@ public sealed class FoxVariantSpriteImporter : AssetPostprocessor
         TextureImporter importer = (TextureImporter)assetImporter;
         importer.textureType = TextureImporterType.Sprite;
         importer.spriteImportMode = SpriteImportMode.Single;
-        importer.spritePixelsPerUnit = 256f;
+        // Il boss nasce su una tela piu grande per conservare il dettaglio,
+        // ma in gioco deve occupare circa tre volte una volpe, non lo schermo.
+        importer.spritePixelsPerUnit = assetPath.StartsWith(
+            CartellaBoss,
+            System.StringComparison.Ordinal
+        ) ? 512f : 256f;
         importer.mipmapEnabled = false;
         importer.filterMode = FilterMode.Point;
         importer.wrapMode = TextureWrapMode.Clamp;

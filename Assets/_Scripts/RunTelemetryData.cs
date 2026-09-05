@@ -6,7 +6,10 @@ public enum TipoAttaccoNemico
     Sconosciuto = 0,
     ContattoVolpe = 1,
     ScattoAlfa = 2,
-    ProiettileFango = 3
+    ProiettileFango = 3,
+    CaricaBoss = 4,
+    SchiantoBoss = 5,
+    RafficaBoss = 6
 }
 
 public enum SorgentePowerUpTelemetry

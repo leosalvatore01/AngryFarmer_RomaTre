@@ -138,6 +138,113 @@ public sealed class ShopBalanceSettings
 }
 
 [Serializable]
+public sealed class SpecialEncounterBalanceSettings
+{
+    [Header("Volpe elite")]
+    [Min(1f)] public float moltiplicatoreVitaElite = 1.85f;
+    [Min(1f)] public float moltiplicatoreScalaElite = 1.16f;
+    [Min(0)] public int moneteEliteBase = 8;
+    [Min(0)] public int moneteElitePerCapitolo = 2;
+    [Range(1, 4)] public int dropGarantitiElite = 1;
+
+    [Header("Il Re del Branco")]
+    [Min(1f)] public float moltiplicatoreVitaBoss = 5.5f;
+    [Min(0f)] public float crescitaVitaPerApparizione = 0.35f;
+    [Min(1f)] public float moltiplicatoreScalaBoss = 1.12f;
+    [Min(0)] public int moneteBossBase = 35;
+    [Min(0)] public int moneteBossPerApparizione = 15;
+    [Range(1, 8)] public int dropGarantitiBoss = 3;
+    [Range(0.2f, 0.8f)] public float sogliaSecondaFase = 0.5f;
+
+    [Header("Movimento e ritmo boss")]
+    [Min(0f)] public float velocitaInseguimento = 1.55f;
+    [Min(1f)] public float velocitaSecondaFase = 1.3f;
+    [Min(0.25f)] public float intervalloAttacchi = 2.15f;
+    [Range(0.35f, 1f)] public float intervalloSecondaFase = 0.72f;
+    [Range(0.25f, 2f)] public float durataTransizioneFase = 1.15f;
+
+    [Header("Attacchi telegrafati")]
+    [Range(0.25f, 2f)] public float durataPreavvisoCarica = 0.8f;
+    [Min(1f)] public float velocitaCarica = 10.5f;
+    [Range(0.15f, 1.5f)] public float durataCarica = 0.52f;
+    [Range(0.25f, 2f)] public float durataPreavvisoSchianto = 0.9f;
+    [Min(0.5f)] public float raggioSchianto = 2.45f;
+    [Range(0.25f, 2f)] public float durataPreavvisoRaffica = 0.75f;
+    [Min(1f)] public float velocitaProiettili = 6.6f;
+    [Range(3, 11)] public int proiettiliPrimaFase = 5;
+    [Range(3, 13)] public int proiettiliSecondaFase = 7;
+    [Range(5f, 90f)] public float aperturaRaffica = 52f;
+    [Min(1)] public int dannoPrimaFase = 1;
+    [Min(1)] public int dannoSecondaFase = 2;
+
+    public void Normalizza()
+    {
+        moltiplicatoreVitaElite = Mathf.Max(1f, moltiplicatoreVitaElite);
+        moltiplicatoreScalaElite = Mathf.Max(1f, moltiplicatoreScalaElite);
+        moneteEliteBase = Mathf.Max(0, moneteEliteBase);
+        moneteElitePerCapitolo = Mathf.Max(0, moneteElitePerCapitolo);
+        dropGarantitiElite = Mathf.Clamp(dropGarantitiElite, 1, 4);
+
+        moltiplicatoreVitaBoss = Mathf.Max(1f, moltiplicatoreVitaBoss);
+        crescitaVitaPerApparizione = Mathf.Max(
+            0f,
+            crescitaVitaPerApparizione
+        );
+        moltiplicatoreScalaBoss = Mathf.Max(1f, moltiplicatoreScalaBoss);
+        moneteBossBase = Mathf.Max(0, moneteBossBase);
+        moneteBossPerApparizione = Mathf.Max(
+            0,
+            moneteBossPerApparizione
+        );
+        dropGarantitiBoss = Mathf.Clamp(dropGarantitiBoss, 1, 8);
+        sogliaSecondaFase = Mathf.Clamp(sogliaSecondaFase, 0.2f, 0.8f);
+
+        velocitaInseguimento = Mathf.Max(0f, velocitaInseguimento);
+        velocitaSecondaFase = Mathf.Max(1f, velocitaSecondaFase);
+        intervalloAttacchi = Mathf.Max(0.25f, intervalloAttacchi);
+        intervalloSecondaFase = Mathf.Clamp(
+            intervalloSecondaFase,
+            0.35f,
+            1f
+        );
+        durataTransizioneFase = Mathf.Clamp(
+            durataTransizioneFase,
+            0.25f,
+            2f
+        );
+
+        durataPreavvisoCarica = Mathf.Clamp(
+            durataPreavvisoCarica,
+            0.25f,
+            2f
+        );
+        velocitaCarica = Mathf.Max(1f, velocitaCarica);
+        durataCarica = Mathf.Clamp(durataCarica, 0.15f, 1.5f);
+        durataPreavvisoSchianto = Mathf.Clamp(
+            durataPreavvisoSchianto,
+            0.25f,
+            2f
+        );
+        raggioSchianto = Mathf.Max(0.5f, raggioSchianto);
+        durataPreavvisoRaffica = Mathf.Clamp(
+            durataPreavvisoRaffica,
+            0.25f,
+            2f
+        );
+        velocitaProiettili = Mathf.Max(1f, velocitaProiettili);
+        proiettiliPrimaFase = Mathf.Clamp(proiettiliPrimaFase, 3, 11);
+        proiettiliSecondaFase = Mathf.Clamp(
+            proiettiliSecondaFase,
+            3,
+            13
+        );
+        aperturaRaffica = Mathf.Clamp(aperturaRaffica, 5f, 90f);
+        dannoPrimaFase = Mathf.Max(1, dannoPrimaFase);
+        dannoSecondaFase = Mathf.Max(1, dannoSecondaFase);
+    }
+}
+
+[Serializable]
 public sealed class WaveBalanceSettings
 {
     [Header("Spawn e ritmo")]
@@ -157,6 +264,14 @@ public sealed class WaveBalanceSettings
 
     [Header("Budget di minaccia")]
     public ThreatBudgetSettings minaccia = new ThreatBudgetSettings();
+
+    [Header("Incontri elite e boss")]
+    public SpecialEncounterBalanceSettings incontriSpeciali =
+        new SpecialEncounterBalanceSettings();
+
+    public SpecialEncounterBalanceSettings IncontriSpeciali =>
+        incontriSpeciali ??
+        (incontriSpeciali = new SpecialEncounterBalanceSettings());
 
     [Header("Sequenza di riferimento")]
     public Wave[] ondate = CreaOndateRiferimento();
@@ -531,8 +646,14 @@ public sealed class GameBalanceConfig : ScriptableObject
         {
             ondate.minaccia = new ThreatBudgetSettings();
         }
+        if (ondate.incontriSpeciali == null)
+        {
+            ondate.incontriSpeciali =
+                new SpecialEncounterBalanceSettings();
+        }
         ondate.capitoli.Normalizza();
         ondate.minaccia.Normalizza();
+        ondate.incontriSpeciali.Normalizza();
         difficolta.Normalizza();
 
         giocatore.intervalloSparoMinimo = Mathf.Max(

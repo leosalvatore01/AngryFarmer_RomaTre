@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71eb059f1b8bf85479410b9626b3361b, type: 3}
   m_Name: GameBalanceConfig
   m_EditorClassIdentifier: Assembly-CSharp::GameBalanceConfig
-  versioneRiferimento: Survival infinito - budget di minaccia - 2026-09-03
+  versioneRiferimento: Survival infinito - elite e boss - 2026-09-05
   giocatore:
     velocitaMovimento: 8
     accelerazione: 45
@@ -307,6 +307,36 @@ MonoBehaviour:
       distanzaMassimaDalContadino: 11.5
       ondeCrescitaVitaLineare: 12
       crescitaVitaAvanzata: 0.65
+    incontriSpeciali:
+      moltiplicatoreVitaElite: 1.85
+      moltiplicatoreScalaElite: 1.16
+      moneteEliteBase: 8
+      moneteElitePerCapitolo: 2
+      dropGarantitiElite: 1
+      moltiplicatoreVitaBoss: 5.5
+      crescitaVitaPerApparizione: 0.35
+      moltiplicatoreScalaBoss: 1.12
+      moneteBossBase: 35
+      moneteBossPerApparizione: 15
+      dropGarantitiBoss: 3
+      sogliaSecondaFase: 0.5
+      velocitaInseguimento: 1.55
+      velocitaSecondaFase: 1.3
+      intervalloAttacchi: 2.15
+      intervalloSecondaFase: 0.72
+      durataTransizioneFase: 1.15
+      durataPreavvisoCarica: 0.8
+      velocitaCarica: 10.5
+      durataCarica: 0.52
+      durataPreavvisoSchianto: 0.9
+      raggioSchianto: 2.45
+      durataPreavvisoRaffica: 0.75
+      velocitaProiettili: 6.6
+      proiettiliPrimaFase: 5
+      proiettiliSecondaFase: 7
+      aperturaRaffica: 52
+      dannoPrimaFase: 1
+      dannoSecondaFase: 2
     ondate:
     - nomeOndata: Riscaldamento
       numeroNemici: 3
