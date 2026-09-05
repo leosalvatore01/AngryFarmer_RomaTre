@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71eb059f1b8bf85479410b9626b3361b, type: 3}
   m_Name: GameBalanceConfig
   m_EditorClassIdentifier: Assembly-CSharp::GameBalanceConfig
-  versioneRiferimento: Survival infinito - elite e boss - 2026-09-05
+  versioneRiferimento: Survival infinito - archetipi build - 2026-09-05
   giocatore:
     velocitaMovimento: 8
     accelerazione: 45
@@ -183,6 +183,10 @@ MonoBehaviour:
     costoRerollBase: 1
     incrementoCostoReroll: 1
     bonusCompletamentoOnda: 1
+    pesoArchetipoPercorsoPrincipale: 1.9
+    pesoArchetipoPercorsoSecondario: 1.3
+    pesoArchetipoSinergia: 1.5
+    pesoPercorsoEmergente: 1.2
     costiMovimento: 030000000500000008000000
     costiResistenza: 04000000070000000a000000
     costiSalute: 04000000070000000a000000

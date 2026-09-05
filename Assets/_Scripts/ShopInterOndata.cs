@@ -9,13 +9,6 @@ using UnityEngine.UI;
 public class ShopInterOndata : MonoBehaviour
 {
     private const int NumeroScelteIniziali = 2;
-    private static readonly TipoPotenziamento[] OfferteSpecializzazione =
-    {
-        TipoPotenziamento.Cadenza,
-        TipoPotenziamento.PatataGigante,
-        TipoPotenziamento.Critico,
-        TipoPotenziamento.Rallentamento
-    };
     private static readonly TipoPotenziamento[] OfferteSupporto =
     {
         TipoPotenziamento.Movimento,
@@ -113,6 +106,7 @@ public class ShopInterOndata : MonoBehaviour
     private bool transizioneSceltaIniziale;
     private int scelteGratuiteRimaste;
     private PercorsoBuild? percorsoPreferito;
+    private ArchetipoBuild? archetipoPreferito;
 
     public IReadOnlyList<TipoPotenziamento> OfferteCorrenti =>
         offerteCorrenti;
@@ -121,6 +115,11 @@ public class ShopInterOndata : MonoBehaviour
     public bool PreparazioneInizialeAttiva => preparazioneIniziale;
     public int ScelteGratuiteRimaste => scelteGratuiteRimaste;
     public PercorsoBuild? PercorsoPreferito => percorsoPreferito;
+    public ArchetipoBuild? ArchetipoPreferito => archetipoPreferito;
+    private bool FaseSceltaArchetipo =>
+        preparazioneIniziale &&
+        scelteGratuiteRimaste == NumeroScelteIniziali &&
+        !transizioneSceltaIniziale;
     public int CostoRerollCorrente
     {
         get
@@ -261,17 +260,19 @@ public class ShopInterOndata : MonoBehaviour
         transizioneSceltaIniziale = false;
         scelteGratuiteRimaste = NumeroScelteIniziali;
         percorsoPreferito = null;
+        archetipoPreferito = null;
         ondaCompletataCorrente = 0;
         anteprimaCorrente = primaOnda;
         numeroReroll = 0;
         acquistiIntervallo = 0;
-        ImpostaOfferte(OfferteSpecializzazione);
+        ImpostaOfferte(CatalogoArchetipiBuild.PotenziamentiIniziali);
 
         if (titoloBottega != null)
-            titoloBottega.text = "PREPARAZIONE INIZIALE";
+            titoloBottega.text = "SCEGLI IL TUO ARCHETIPO";
         testoAnteprimaBottega.text = FormattaAnteprima(primaOnda);
         testoMessaggioBottega.text =
-            "Scegli gratuitamente la specializzazione della tua build.";
+            "Scegli uno stile iniziale: orienta lo shop, ma non blocca " +
+            "nessun power-up.";
         pannelloRiepilogo.SetActive(false);
         pannelloBottega.SetActive(true);
         gameObject.SetActive(true);
@@ -374,7 +375,8 @@ public class ShopInterOndata : MonoBehaviour
         FarmAudioController.RiproduciAcquisto(0.82f);
         GeneraOfferte(precedenti);
         testoMessaggioBottega.text =
-            "Offerte aggiornate: lo slot del tuo percorso resta garantito. " +
+            "Offerte aggiornate: il tuo archetipo influenza le probabilita, " +
+            "ma tutte le build restano disponibili. " +
             "Il prossimo reroll costa " +
             CostoRerollCorrente + " monete.";
         AggiornaInterfaccia();
@@ -465,7 +467,8 @@ public class ShopInterOndata : MonoBehaviour
             Mathf.Clamp(config.numeroOfferte, 3, 4),
             precedenti,
             percorsoPreferito,
-            true
+            true,
+            archetipoPreferito
         );
         offerteCorrenti.AddRange(nuove);
 
@@ -502,12 +505,15 @@ public class ShopInterOndata : MonoBehaviour
     {
         if (scelteGratuiteRimaste == NumeroScelteIniziali)
         {
-            DefinizionePotenziamentoBuild definizione =
-                CatalogoPotenziamentiBuild.Ottieni(tipo);
-            if (definizione != null &&
-                definizione.Percorso != PercorsoBuild.Utilita)
+            DefinizioneArchetipoBuild definizione =
+                CatalogoArchetipiBuild.TrovaDaPotenziamento(tipo);
+            if (definizione != null)
             {
-                percorsoPreferito = definizione.Percorso;
+                archetipoPreferito = definizione.Tipo;
+                percorsoPreferito = definizione.PercorsoPrincipale;
+                potenziamenti?.ProvaImpostaArchetipoIniziale(
+                    definizione.Tipo
+                );
             }
         }
 
@@ -516,7 +522,12 @@ public class ShopInterOndata : MonoBehaviour
         {
             transizioneSceltaIniziale = true;
             testoMessaggioBottega.text =
-                "Ora scegli gratuitamente un supporto per il contadino.";
+                "Archetipo " +
+                (archetipoPreferito.HasValue
+                    ? CatalogoArchetipiBuild
+                        .Ottieni(archetipoPreferito.Value).Nome
+                    : "SCELTO") +
+                ": ora aggiungi gratuitamente un supporto.";
             StartCoroutine(MostraSupportiNelFrameSuccessivo());
         }
         else
@@ -543,6 +554,14 @@ public class ShopInterOndata : MonoBehaviour
     void AggiornaPercorsoPreferitoDaBuild()
     {
         if (potenziamenti == null) return;
+
+        if (potenziamenti.HaArchetipoIniziale)
+        {
+            archetipoPreferito = potenziamenti.ArchetipoIniziale;
+            percorsoPreferito = potenziamenti
+                .DefinizioneArchetipoIniziale.PercorsoPrincipale;
+            return;
+        }
 
         PercorsoBuild[] percorsi =
         {
@@ -633,9 +652,11 @@ public class ShopInterOndata : MonoBehaviour
 
         if (titoloBottega != null)
         {
-            titoloBottega.text = preparazioneIniziale
-                ? "PREPARAZIONE INIZIALE"
-                : "BOTTEGA DELLE BUILD";
+            titoloBottega.text = FaseSceltaArchetipo
+                ? "SCEGLI IL TUO ARCHETIPO"
+                : preparazioneIniziale
+                    ? "SCEGLI UN SUPPORTO GRATIS"
+                    : "BOTTEGA DELLE BUILD";
         }
         if (testoMoneteRiepilogo != null)
         {
@@ -643,9 +664,11 @@ public class ShopInterOndata : MonoBehaviour
         }
         if (testoMoneteBottega != null)
         {
-            testoMoneteBottega.text = preparazioneIniziale
-                ? "SCELTE GRATIS  " + scelteGratuiteRimaste
-                : testoMonete;
+            testoMoneteBottega.text = FaseSceltaArchetipo
+                ? "4 STILI  •  NESSUN POWER-UP BLOCCATO"
+                : preparazioneIniziale
+                    ? "SUPPORTO GRATIS  •  1 SCELTA"
+                    : testoMonete;
         }
         if (iconaMoneteBottega != null)
             iconaMoneteBottega.enabled = !preparazioneIniziale;
@@ -759,10 +782,14 @@ public class ShopInterOndata : MonoBehaviour
             return;
         }
 
+        DefinizioneArchetipoBuild archetipo = FaseSceltaArchetipo
+            ? CatalogoArchetipiBuild.TrovaDaPotenziamento(carta.tipo)
+            : null;
+        PercorsoBuild percorsoVisualizzato = archetipo != null
+            ? archetipo.PercorsoPrincipale
+            : definizione.Percorso;
         Color colorePercorso =
-            CatalogoPotenziamentiBuild.ColorePercorso(
-                definizione.Percorso
-            );
+            CatalogoPotenziamentiBuild.ColorePercorso(percorsoVisualizzato);
         Color coloreRarita =
             CatalogoPotenziamentiBuild.ColoreRarita(definizione.Rarita);
         carta.fasciaPercorso.color = colorePercorso;
@@ -772,29 +799,54 @@ public class ShopInterOndata : MonoBehaviour
             coloreRarita.b,
             0.86f
         );
-        carta.testoPercorso.text =
-            CatalogoPotenziamentiBuild.NomePercorso(
-                definizione.Percorso
-            ) +
-            "  •  " +
-            CatalogoPotenziamentiBuild.NomeCategoria(
-                definizione.Categoria
-            ) +
-            "  •  " +
-            CatalogoPotenziamentiBuild.NomeRarita(definizione.Rarita);
         carta.testoPercorso.color = TestoMeta;
-        carta.testoTitolo.text = potenziamenti.OttieniTitolo(carta.tipo);
-        carta.testoDescrizione.text =
-            potenziamenti.OttieniDescrizione(carta.tipo);
-        carta.testoConfronto.text =
-            potenziamenti.OttieniBonusProssimoLivello(carta.tipo);
-        carta.testoStato.text = potenziamenti.OttieniStato(carta.tipo);
-        if (carta.iconaPotenziamento != null)
+        if (archetipo != null)
         {
-            carta.iconaPotenziamento.sprite =
-                PowerUpIconCatalog.OttieniSprite(carta.tipo);
-            carta.iconaPotenziamento.enabled =
-                carta.iconaPotenziamento.sprite != null;
+            carta.testoPercorso.text =
+                "ARCHETIPO  •  " +
+                CatalogoPotenziamentiBuild.NomePercorso(
+                    archetipo.PercorsoPrincipale
+                );
+            carta.testoTitolo.text = archetipo.Nome;
+            carta.testoDescrizione.text =
+                "STILE: " + archetipo.StileGioco;
+            carta.testoConfronto.text =
+                "SINERGIE: " + archetipo.EtichettaSinergie;
+            carta.testoStato.text =
+                "BONUS INIZIALE: " + archetipo.BonusIniziale;
+            if (carta.iconaPotenziamento != null)
+            {
+                carta.iconaPotenziamento.sprite =
+                    FarmPixelUI.OttieniIcona(archetipo.Icona);
+                carta.iconaPotenziamento.enabled =
+                    carta.iconaPotenziamento.sprite != null;
+            }
+        }
+        else
+        {
+            carta.testoPercorso.text =
+                CatalogoPotenziamentiBuild.NomePercorso(
+                    definizione.Percorso
+                ) +
+                "  •  " +
+                CatalogoPotenziamentiBuild.NomeCategoria(
+                    definizione.Categoria
+                ) +
+                "  •  " +
+                CatalogoPotenziamentiBuild.NomeRarita(definizione.Rarita);
+            carta.testoTitolo.text = potenziamenti.OttieniTitolo(carta.tipo);
+            carta.testoDescrizione.text =
+                potenziamenti.OttieniDescrizione(carta.tipo);
+            carta.testoConfronto.text =
+                potenziamenti.OttieniBonusProssimoLivello(carta.tipo);
+            carta.testoStato.text = potenziamenti.OttieniStato(carta.tipo);
+            if (carta.iconaPotenziamento != null)
+            {
+                carta.iconaPotenziamento.sprite =
+                    PowerUpIconCatalog.OttieniSprite(carta.tipo);
+                carta.iconaPotenziamento.enabled =
+                    carta.iconaPotenziamento.sprite != null;
+            }
         }
 
         bool disponibile = potenziamenti.PuoAcquistare(carta.tipo);
@@ -833,7 +885,9 @@ public class ShopInterOndata : MonoBehaviour
         }
         else if (preparazioneIniziale)
         {
-            carta.testoPulsante.text = "GRATIS";
+            carta.testoPulsante.text = FaseSceltaArchetipo
+                ? "SCEGLI"
+                : "GRATIS";
             carta.testoPulsante.color = TestoPulsante;
             carta.pulsante.interactable = true;
             carta.iconaCosto.enabled = false;

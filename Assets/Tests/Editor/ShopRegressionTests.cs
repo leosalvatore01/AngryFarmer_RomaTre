@@ -145,6 +145,39 @@ public sealed class ShopRegressionTests
         }
     }
 
+    [Test]
+    public void PreparazioneIniziale_MostraArchetipiConIconeDedicate()
+    {
+        ShopInterOndata shop = CreaShop();
+
+        shop.MostraPreparazioneIniziale(default);
+
+        Transform bottega = shop.transform.Find("BottegaBuild");
+        Assert.That(bottega, Is.Not.Null);
+        TMP_Text titoloSchermata = bottega.Find("Titolo")
+            .GetComponent<TMP_Text>();
+        Assert.That(titoloSchermata.text, Is.EqualTo("SCEGLI IL TUO ARCHETIPO"));
+
+        for (int i = 0; i < CatalogoArchetipiBuild.Tutte.Count; i++)
+        {
+            DefinizioneArchetipoBuild archetipo =
+                CatalogoArchetipiBuild.Tutte[i];
+            Transform carta = bottega.Find("Offerta_" + (i + 1));
+            Assert.That(carta, Is.Not.Null);
+            Assert.That(
+                carta.Find("Titolo").GetComponent<TMP_Text>().text,
+                Is.EqualTo(archetipo.Nome)
+            );
+            Image icona = carta.Find("IconaPotenziamento")
+                .GetComponent<Image>();
+            Assert.That(icona.enabled, Is.True);
+            Assert.That(icona.sprite, Is.Not.Null);
+            TMP_Text testoPulsante = carta.Find("Acquista")
+                .GetComponentInChildren<TMP_Text>(true);
+            Assert.That(testoPulsante.text, Is.EqualTo("SCEGLI"));
+        }
+    }
+
     private ShopInterOndata CreaShop()
     {
         GameObject radice = CreaOggetto(

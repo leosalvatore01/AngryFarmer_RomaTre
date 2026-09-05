@@ -81,6 +81,12 @@ public sealed class ShopBalanceSettings
     [Min(0)] public int incrementoCostoReroll = 1;
     [Min(0)] public int bonusCompletamentoOnda = 1;
 
+    [Header("Pesi archetipi iniziali")]
+    [Range(1f, 3f)] public float pesoArchetipoPercorsoPrincipale = 1.9f;
+    [Range(1f, 2.5f)] public float pesoArchetipoPercorsoSecondario = 1.3f;
+    [Range(1f, 3f)] public float pesoArchetipoSinergia = 1.5f;
+    [Range(1f, 2f)] public float pesoPercorsoEmergente = 1.2f;
+
     [Header("Prezzi per livello")]
     public int[] costiMovimento = { 3, 5, 8 };
     public int[] costiResistenza = { 4, 7, 10 };
@@ -701,6 +707,26 @@ public sealed class GameBalanceConfig : ScriptableObject
         shop.bonusCompletamentoOnda = Mathf.Max(
             0,
             shop.bonusCompletamentoOnda
+        );
+        shop.pesoArchetipoPercorsoPrincipale = Mathf.Clamp(
+            shop.pesoArchetipoPercorsoPrincipale,
+            1f,
+            3f
+        );
+        shop.pesoArchetipoPercorsoSecondario = Mathf.Clamp(
+            shop.pesoArchetipoPercorsoSecondario,
+            1f,
+            2.5f
+        );
+        shop.pesoArchetipoSinergia = Mathf.Clamp(
+            shop.pesoArchetipoSinergia,
+            1f,
+            3f
+        );
+        shop.pesoPercorsoEmergente = Mathf.Clamp(
+            shop.pesoPercorsoEmergente,
+            1f,
+            2f
         );
         shop.colpiPerRafficaRaccolto = Mathf.Max(
             2,

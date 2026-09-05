@@ -52,11 +52,21 @@ public class PlayerUpgrades : MonoBehaviour
     private int livelloRimbalzo;
     private int livelloRallentamento;
     private int livelloSpinta;
+    private bool archetipoInizialeScelto;
+    private ArchetipoBuild archetipoIniziale;
 
     private ShopBalanceSettings Configurazione =>
         GameBalanceConfig.Corrente.Shop;
 
     public event Action<TipoPotenziamento> PotenziamentoAcquistato;
+    public event Action<ArchetipoBuild> ArchetipoInizialeCambiato;
+
+    public bool HaArchetipoIniziale => archetipoInizialeScelto;
+    public ArchetipoBuild ArchetipoIniziale => archetipoIniziale;
+    public DefinizioneArchetipoBuild DefinizioneArchetipoIniziale =>
+        archetipoInizialeScelto
+            ? CatalogoArchetipiBuild.Ottieni(archetipoIniziale)
+            : null;
 
     public int LimiteColpiAggiuntiviFisici =>
         MassimoColpiAggiuntiviFisici;
@@ -288,6 +298,19 @@ public class PlayerUpgrades : MonoBehaviour
             OttieniLivello(tipo)
         );
         messaggio = "Ottenuto gratis!";
+        return true;
+    }
+
+    public bool ProvaImpostaArchetipoIniziale(ArchetipoBuild archetipo)
+    {
+        if (archetipoInizialeScelto)
+        {
+            return archetipoIniziale == archetipo;
+        }
+
+        archetipoIniziale = archetipo;
+        archetipoInizialeScelto = true;
+        ArchetipoInizialeCambiato?.Invoke(archetipo);
         return true;
     }
 
@@ -823,6 +846,12 @@ public class PlayerUpgrades : MonoBehaviour
     public string DescriviBuildCompatta()
     {
         StringBuilder testo = new StringBuilder();
+        if (archetipoInizialeScelto)
+        {
+            testo.Append(
+                CatalogoArchetipiBuild.Ottieni(archetipoIniziale).Nome
+            );
+        }
         AggiungiPercorso(testo, PercorsoBuild.Raffica);
         AggiungiPercorso(testo, PercorsoBuild.Artiglieria);
         AggiungiPercorso(testo, PercorsoBuild.Perforazione);

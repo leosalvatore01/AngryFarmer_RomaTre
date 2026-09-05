@@ -29,7 +29,11 @@ public enum FarmPixelIcon
     BoostVelocita,
     Volpe,
     Obiettivo,
-    GettonePermanente
+    GettonePermanente,
+    ArchetipoTiratore,
+    ArchetipoArtigliere,
+    ArchetipoCritico,
+    ArchetipoControllore
 }
 
 /// <summary>
@@ -487,6 +491,18 @@ public static class FarmPixelUI
             case FarmPixelIcon.Obiettivo:
                 DisegnaObiettivo(pixel);
                 break;
+            case FarmPixelIcon.ArchetipoTiratore:
+                DisegnaArchetipoTiratore(pixel);
+                break;
+            case FarmPixelIcon.ArchetipoArtigliere:
+                DisegnaArchetipoArtigliere(pixel);
+                break;
+            case FarmPixelIcon.ArchetipoCritico:
+                DisegnaArchetipoCritico(pixel);
+                break;
+            case FarmPixelIcon.ArchetipoControllore:
+                DisegnaArchetipoControllore(pixel);
+                break;
         }
 
         return CreaSprite(
@@ -898,6 +914,88 @@ public static class FarmPixelUI
         Linea(pixel, 15, 18, 12, 12, giallo, 1);
         Linea(pixel, 12, 12, 16, 12, giallo, 1);
         Linea(pixel, 16, 12, 13, 3, giallo, 1);
+    }
+
+    private static void DisegnaArchetipoTiratore(Color32[] pixel)
+    {
+        Color32 metallo = new Color32(91, 119, 126, 255);
+        Color32 oro = new Color32(247, 190, 51, 255);
+        Color32 legno = new Color32(147, 77, 34, 255);
+
+        // Fucile leggero con tre colpi in uscita.
+        Linea(pixel, 3, 7, 15, 12, Contorno, 4);
+        Linea(pixel, 4, 8, 15, 12, metallo, 2);
+        Rettangolo(pixel, 2, 5, 7, 9, Contorno);
+        Rettangolo(pixel, 3, 6, 7, 8, legno);
+        Linea(pixel, 8, 7, 6, 3, Contorno, 3);
+        Linea(pixel, 8, 7, 6, 3, legno, 1);
+        DisegnaPatataPiccola(pixel, 17, 14, oro);
+        Linea(pixel, 15, 9, 18, 9, oro, 1);
+        Linea(pixel, 14, 6, 18, 6, oro, 1);
+    }
+
+    private static void DisegnaArchetipoArtigliere(Color32[] pixel)
+    {
+        Color32 ferro = new Color32(74, 88, 91, 255);
+        Color32 luce = new Color32(165, 184, 174, 255);
+        Color32 fuoco = new Color32(238, 89, 36, 255);
+
+        // Piccolo cannone da campo, leggibile anche a 20 pixel.
+        Rettangolo(pixel, 3, 8, 14, 13, Contorno);
+        Rettangolo(pixel, 4, 9, 13, 12, ferro);
+        Linea(pixel, 12, 12, 18, 16, Contorno, 4);
+        Linea(pixel, 13, 12, 18, 16, luce, 2);
+        DisegnaPatataPiccola(pixel, 6, 5, new Color32(164, 97, 42, 255));
+        DisegnaPatataPiccola(pixel, 13, 5, new Color32(164, 97, 42, 255));
+        Rettangolo(pixel, 16, 16, 19, 18, fuoco);
+        Imposta(pixel, DimensioneIcona, DimensioneIcona, 18, 19,
+            new Color32(255, 207, 65, 255));
+    }
+
+    private static void DisegnaArchetipoCritico(Color32[] pixel)
+    {
+        DisegnaCritico(pixel);
+        Color32 azzurro = new Color32(104, 211, 224, 255);
+
+        // Mirino spezzato e scintilla: precisione, non solo danno.
+        Linea(pixel, 1, 16, 6, 16, Contorno, 2);
+        Linea(pixel, 16, 1, 16, 6, Contorno, 2);
+        Linea(pixel, 2, 17, 6, 17, azzurro, 1);
+        Linea(pixel, 17, 2, 17, 6, azzurro, 1);
+        Rettangolo(pixel, 15, 15, 18, 18,
+            new Color32(255, 222, 79, 255));
+        Imposta(pixel, DimensioneIcona, DimensioneIcona, 16, 16, Crema);
+    }
+
+    private static void DisegnaArchetipoControllore(Color32[] pixel)
+    {
+        Color32 verde = new Color32(78, 181, 111, 255);
+        Color32 ghiaccio = new Color32(133, 221, 224, 255);
+
+        // Trappola circolare con quattro raggi di contenimento.
+        for (int y = 2; y <= 17; y++)
+        {
+            for (int x = 2; x <= 17; x++)
+            {
+                float distanza = Quadrato(x - 9.5f) +
+                                  Quadrato(y - 9.5f);
+                if (distanza <= 60f && distanza >= 38f)
+                {
+                    Imposta(pixel, DimensioneIcona, DimensioneIcona,
+                        x, y, Contorno);
+                }
+                else if (distanza < 38f && distanza >= 28f)
+                {
+                    Imposta(pixel, DimensioneIcona, DimensioneIcona,
+                        x, y, verde);
+                }
+            }
+        }
+        Linea(pixel, 10, 3, 10, 16, ghiaccio, 1);
+        Linea(pixel, 3, 10, 16, 10, ghiaccio, 1);
+        Linea(pixel, 5, 5, 15, 15, verde, 1);
+        Linea(pixel, 5, 15, 15, 5, verde, 1);
+        Rettangolo(pixel, 8, 8, 11, 11, Crema);
     }
 
     private static void DisegnaPatataPiccola(
