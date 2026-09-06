@@ -193,7 +193,8 @@ public class ShopInterOndata : MonoBehaviour
             return;
         }
 
-        if (Input.GetKeyDown(KeyCode.Space))
+        FarmerInputController input = FarmerInputController.CreaOTrova();
+        if (input.ConfermaPremutaQuestoFrame)
         {
             AvviaOndataSuccessiva();
         }

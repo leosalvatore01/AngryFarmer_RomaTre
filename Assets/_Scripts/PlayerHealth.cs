@@ -39,8 +39,7 @@ public class PlayerHealth : MonoBehaviour
     );
     public int VitaMassima => VitaMassimaFinale;
     public bool VitaPiena => vitaCorrente >= VitaMassimaFinale;
-    public bool Invulnerabile =>
-        durataInvulnerabilita > 0f && Time.time < invulnerabileFinoA;
+    public bool Invulnerabile => Time.time < invulnerabileFinoA;
     public float TempoInvulnerabilitaRimasto => Invulnerabile
         ? Mathf.Max(0f, invulnerabileFinoA - Time.time)
         : 0f;
@@ -173,13 +172,8 @@ public class PlayerHealth : MonoBehaviour
         VitaCambiata?.Invoke();
         if (dannoEffettivo > 0)
         {
-            if (durataInvulnerabilita > 0f && vitaCorrente > 0)
-            {
-                invulnerabileFinoA = Time.time + durataInvulnerabilita;
-                invulnerabilitaSegnalata = true;
-                feedbackInvulnerabilita?.Avvia(durataInvulnerabilita);
-                InvulnerabilitaCambiata?.Invoke(true);
-            }
+            if (vitaCorrente > 0)
+                AttivaInvulnerabilitaTemporanea(durataInvulnerabilita);
             DannoSubito?.Invoke(dannoEffettivo);
             EventoDannoGiocatore evento = new EventoDannoGiocatore(
                 dannoEffettivo,
@@ -203,6 +197,29 @@ public class PlayerHealth : MonoBehaviour
             GameManager.instance.GameOverGiocatore();
         }
         return dannoEffettivo > 0;
+    }
+
+    public void AttivaInvulnerabilitaTemporanea(float durata)
+    {
+        float durataValida = Mathf.Max(0f, durata);
+        if (durataValida <= 0f) return;
+
+        bool eraInvulnerabile = Invulnerabile;
+        float nuovaScadenza = Time.time + durataValida;
+        if (nuovaScadenza <= invulnerabileFinoA) return;
+
+        invulnerabileFinoA = nuovaScadenza;
+        invulnerabilitaSegnalata = true;
+        if (feedbackInvulnerabilita == null)
+        {
+            feedbackInvulnerabilita =
+                PlayerInvulnerabilityFeedback.AggiungiOTrova(gameObject);
+        }
+        feedbackInvulnerabilita?.Avvia(TempoInvulnerabilitaRimasto);
+        if (!eraInvulnerabile)
+        {
+            InvulnerabilitaCambiata?.Invoke(true);
+        }
     }
 
     public void Cura(int quantita)

@@ -41,6 +41,7 @@ public sealed class PauseSettingsMenu : MonoBehaviour
     private Toggle toggleNumeriDanno;
     private TMP_FontAsset fontInterfaccia;
     private GameOptionsController opzioni;
+    private FarmerInputController input;
     private bool costruito;
 
     public static PauseSettingsMenu Instance { get; private set; }
@@ -90,6 +91,7 @@ public sealed class PauseSettingsMenu : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         opzioni = GameOptionsController.CreaOTrova();
+        input = FarmerInputController.CreaOTrova();
         CostruisciInterfaccia();
         opzioni.ImpostazioniCambiate += AggiornaControlli;
         AggiornaControlli();
@@ -131,7 +133,10 @@ public sealed class PauseSettingsMenu : MonoBehaviour
         {
             return;
         }
-        if (Input.GetKeyDown(KeyCode.Escape))
+        if (input == null) input = FarmerInputController.CreaOTrova();
+        if (input != null &&
+            (input.PausaPremutaQuestoFrame ||
+             (Aperto && input.AnnullaPremutaQuestoFrame)))
         {
             if (GameManager.instance == null)
             {

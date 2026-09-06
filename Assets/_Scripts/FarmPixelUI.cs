@@ -27,6 +27,7 @@ public enum FarmPixelIcon
     Spinta,
     TriploSparo,
     BoostVelocita,
+    Schivata,
     Volpe,
     Obiettivo,
     GettonePermanente,
@@ -489,6 +490,9 @@ public static class FarmPixelUI
             case FarmPixelIcon.BoostVelocita:
                 DisegnaBoostVelocita(pixel);
                 break;
+            case FarmPixelIcon.Schivata:
+                DisegnaSchivata(pixel);
+                break;
             case FarmPixelIcon.Volpe:
                 DisegnaVolpe(pixel);
                 break;
@@ -930,6 +934,22 @@ public static class FarmPixelUI
         Linea(pixel, 15, 18, 12, 12, giallo, 1);
         Linea(pixel, 12, 12, 16, 12, giallo, 1);
         Linea(pixel, 16, 12, 13, 3, giallo, 1);
+    }
+
+    private static void DisegnaSchivata(Color32[] pixel)
+    {
+        Color32 azzurro = new Color32(76, 222, 235, 255);
+        Color32 luce = new Color32(201, 252, 240, 255);
+        Linea(pixel, 2, 5, 10, 5, Contorno, 3);
+        Linea(pixel, 0, 10, 10, 10, Contorno, 3);
+        Linea(pixel, 4, 15, 10, 15, Contorno, 3);
+        Linea(pixel, 3, 5, 10, 5, azzurro, 1);
+        Linea(pixel, 1, 10, 10, 10, azzurro, 1);
+        Linea(pixel, 5, 15, 10, 15, azzurro, 1);
+        Linea(pixel, 9, 3, 18, 10, Contorno, 3);
+        Linea(pixel, 9, 17, 18, 10, Contorno, 3);
+        Linea(pixel, 10, 4, 17, 10, luce, 1);
+        Linea(pixel, 10, 16, 17, 10, luce, 1);
     }
 
     private static void DisegnaArchetipoTiratore(Color32[] pixel)

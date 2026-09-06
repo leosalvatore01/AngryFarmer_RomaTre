@@ -16,6 +16,9 @@ public sealed class CombatFeedbackController : MonoBehaviour
     private AudioClip[] clipImpatto;
     private PixelImpactBurst[] poolBurst;
     private GameOptionsController opzioniGioco;
+    private FarmerInputController input;
+    private Transform giocatoreMirino;
+    private PlayerShooting sparoGiocatore;
     private readonly System.Random casualitaCosmetica =
         new System.Random(1847);
 
@@ -90,6 +93,7 @@ public sealed class CombatFeedbackController : MonoBehaviour
         AudioAbilitato = impostazioni.audioAttivo;
         VfxAbilitati = impostazioni.effettiVisiviAttivi;
         VibrazioneAbilitata = impostazioni.vibrazioneCameraAttiva;
+        input = FarmerInputController.CreaOTrova();
 
         CreaMirino();
         CreaAudioProcedurale();
@@ -100,7 +104,8 @@ public sealed class CombatFeedbackController : MonoBehaviour
     {
         CollegaOpzioniSeNecessario();
 
-        if (Input.GetKeyDown(KeyCode.F4))
+        if (input == null) input = FarmerInputController.CreaOTrova();
+        if (input != null && input.DebugFeedbackPremutoQuestoFrame)
         {
             ImpostaVibrazione(!VibrazioneAbilitata);
             Debug.Log(
@@ -293,7 +298,15 @@ public sealed class CombatFeedbackController : MonoBehaviour
     {
         if (immagineMirino == null) return;
 
-        Vector3 posizioneMouse = Input.mousePosition;
+        if (input == null) input = FarmerInputController.CreaOTrova();
+        Vector3 posizioneMouse = input != null
+            ? input.PosizionePuntatoreSchermo
+            : Vector3.zero;
+        if (input != null &&
+            input.SchemaCorrente == SchemaInputContadino.Gamepad)
+        {
+            ProvaOttieniPosizioneMirinoGamepad(ref posizioneMouse);
+        }
         bool dentroFinestra =
             posizioneMouse.x >= 0f && posizioneMouse.y >= 0f &&
             posizioneMouse.x <= Screen.width &&
@@ -318,6 +331,32 @@ public sealed class CombatFeedbackController : MonoBehaviour
         }
 
         ImpostaVisibilitaCursoreSistema(!visibile);
+    }
+
+    private void ProvaOttieniPosizioneMirinoGamepad(
+        ref Vector3 posizioneSchermo
+    )
+    {
+        if (giocatoreMirino == null || sparoGiocatore == null)
+        {
+            GameObject giocatore = GameObject.FindGameObjectWithTag("Player");
+            giocatoreMirino = giocatore != null
+                ? giocatore.transform
+                : null;
+            sparoGiocatore = giocatore != null
+                ? giocatore.GetComponent<PlayerShooting>()
+                : null;
+        }
+        Camera camera = Camera.main;
+        if (camera == null || giocatoreMirino == null ||
+            sparoGiocatore == null || !sparoGiocatore.HaDirezioneMira)
+        {
+            return;
+        }
+
+        Vector3 posizioneMondo = giocatoreMirino.position +
+            (Vector3)(sparoGiocatore.DirezioneMira * 2.4f);
+        posizioneSchermo = camera.WorldToScreenPoint(posizioneMondo);
     }
 
     private static bool MirinoSopraBersaglio(Vector3 posizioneSchermo)

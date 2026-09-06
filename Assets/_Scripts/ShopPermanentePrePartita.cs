@@ -180,7 +180,8 @@ public sealed class ShopPermanentePrePartita : MonoBehaviour
             return;
         }
 
-        if (Input.GetKeyDown(KeyCode.Escape))
+        FarmerInputController input = FarmerInputController.CreaOTrova();
+        if (input.AnnullaPremutaQuestoFrame)
         {
             frameInputModaleConsumata = Time.frameCount;
             Nascondi();

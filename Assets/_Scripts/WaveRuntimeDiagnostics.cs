@@ -115,12 +115,18 @@ public sealed class WaveRuntimeDiagnostics : MonoBehaviour
     void Awake()
     {
         attiva = attivaAllAvvio;
+        if (Application.isPlaying)
+        {
+            FarmerInputController.CreaOTrova()
+                .ConfiguraTastoDebugOndata(tastoToggle);
+        }
     }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     void Update()
     {
-        if (Input.GetKeyDown(tastoToggle))
+        FarmerInputController input = FarmerInputController.CreaOTrova();
+        if (input.DebugOndataPremutoQuestoFrame)
         {
             ImpostaAttiva(!attiva);
         }
@@ -164,6 +170,11 @@ public sealed class WaveRuntimeDiagnostics : MonoBehaviour
         mostraOverlay = overlayVisibile;
         scriviLog = logAbilitato;
         tastoToggle = tasto;
+        if (Application.isPlaying)
+        {
+            FarmerInputController.CreaOTrova()
+                .ConfiguraTastoDebugOndata(tastoToggle);
+        }
         ImpostaAttiva(attivaDiagnostica);
     }
 

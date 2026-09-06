@@ -112,6 +112,7 @@ public class PlayerShooting : MonoBehaviour
     private float tempoFineTriploSparo;
     private Coroutine triploSparoRoutine;
     private Camera cameraPrincipale;
+    private FarmerInputController input;
     private PlayerVisualController controllerVisivo;
     private PlayerUpgrades potenziamenti;
     private System.Random casualitaBuild;
@@ -174,11 +175,16 @@ public class PlayerShooting : MonoBehaviour
         casualitaBuild = new System.Random(
             unchecked(Environment.TickCount ^ GetInstanceID() * 397)
         );
+        input = Application.isPlaying
+            ? FarmerInputController.CreaOTrova()
+            : FarmerInputController.Instance;
     }
 
     void OnEnable()
     {
-        attendiRilascioMouse = Input.GetMouseButton(0);
+        if (input == null && Application.isPlaying)
+            input = FarmerInputController.CreaOTrova();
+        attendiRilascioMouse = input != null && input.FuocoPremuto;
     }
 
     void OnDisable()
@@ -192,18 +198,19 @@ public class PlayerShooting : MonoBehaviour
 
     void Update()
     {
+        if (input == null) input = FarmerInputController.CreaOTrova();
         bool miraValida = AggiornaDirezioneMira();
 
         if (GameManager.instance != null &&
             !GameManager.instance.GameplayAttivo)
         {
-            attendiRilascioMouse = Input.GetMouseButton(0);
+            attendiRilascioMouse = input != null && input.FuocoPremuto;
             return;
         }
 
         if (attendiRilascioMouse)
         {
-            if (!Input.GetMouseButton(0))
+            if (input == null || !input.FuocoPremuto)
             {
                 attendiRilascioMouse = false;
             }
@@ -211,7 +218,7 @@ public class PlayerShooting : MonoBehaviour
         }
 
         if (miraValida &&
-            Input.GetMouseButton(0) &&
+            input != null && input.FuocoPremuto &&
             Time.time >= nextFire)
         {
             if (Shoot(DirezioneMira))
@@ -241,24 +248,19 @@ public class PlayerShooting : MonoBehaviour
             return false;
         }
 
-        Vector3 posizioneSchermo = Input.mousePosition;
-        posizioneSchermo.z = Mathf.Abs(
-            transform.position.z - cameraPrincipale.transform.position.z
-        );
-
-        Vector3 posizioneMondo =
-            cameraPrincipale.ScreenToWorldPoint(posizioneSchermo);
-        Vector2 scarto =
-            (Vector2)posizioneMondo - (Vector2)transform.position;
-
-        float distanzaMinima = Mathf.Max(0f, distanzaMinimaMira);
-        if (scarto.sqrMagnitude < distanzaMinima * distanzaMinima)
+        if (input == null) input = FarmerInputController.CreaOTrova();
+        if (input == null || !input.ProvaOttieniDirezioneMira(
+            cameraPrincipale,
+            transform.position,
+            distanzaMinimaMira,
+            out Vector2 direzione
+        ))
         {
             HaDirezioneMira = false;
             return false;
         }
 
-        DirezioneMira = scarto.normalized;
+        DirezioneMira = direzione;
         HaDirezioneMira = true;
         return true;
     }

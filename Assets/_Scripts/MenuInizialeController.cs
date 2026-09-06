@@ -105,6 +105,7 @@ public sealed class MenuInizialeController : MonoBehaviour
 
     private void Update()
     {
+        FarmerInputController input = FarmerInputController.CreaOTrova();
         if (caricamentoInCorso ||
             ShopPermanentePrePartita.ApertoGlobale ||
             (PauseSettingsMenu.Instance != null &&
@@ -115,22 +116,19 @@ public sealed class MenuInizialeController : MonoBehaviour
 
         if (SelettoreDifficoltaAperto)
         {
-            if (Input.GetKeyDown(KeyCode.Alpha1) ||
-                Input.GetKeyDown(KeyCode.Keypad1))
+            if (input.SceltaRapidaPremutaQuestoFrame(1))
             {
                 AvviaPartita(DifficoltaPartita.Tranquilla);
             }
-            else if (Input.GetKeyDown(KeyCode.Alpha2) ||
-                     Input.GetKeyDown(KeyCode.Keypad2))
+            else if (input.SceltaRapidaPremutaQuestoFrame(2))
             {
                 AvviaPartita(DifficoltaPartita.Normale);
             }
-            else if (Input.GetKeyDown(KeyCode.Alpha3) ||
-                     Input.GetKeyDown(KeyCode.Keypad3))
+            else if (input.SceltaRapidaPremutaQuestoFrame(3))
             {
                 AvviaPartita(DifficoltaPartita.Difficile);
             }
-            else if (Input.GetKeyDown(KeyCode.Escape))
+            else if (input.AnnullaPremutaQuestoFrame)
             {
                 TornaAlPannelloPrincipale();
             }
@@ -139,7 +137,7 @@ public sealed class MenuInizialeController : MonoBehaviour
 
         if (ProfiloAperto)
         {
-            if (Input.GetKeyDown(KeyCode.Escape))
+            if (input.AnnullaPremutaQuestoFrame)
             {
                 TornaAlPannelloPrincipale();
             }
@@ -148,19 +146,18 @@ public sealed class MenuInizialeController : MonoBehaviour
 
         if (ConfermaUscitaAperta)
         {
-            if (Input.GetKeyDown(KeyCode.Escape))
+            if (input.AnnullaPremutaQuestoFrame)
             {
                 TornaAlPannelloPrincipale();
             }
             return;
         }
 
-        if (Input.GetKeyDown(KeyCode.Return) ||
-            Input.GetKeyDown(KeyCode.KeypadEnter))
+        if (input.ConfermaPremutaQuestoFrame)
         {
             ApriSelettoreDifficolta();
         }
-        else if (Input.GetKeyDown(KeyCode.Escape))
+        else if (input.AnnullaPremutaQuestoFrame)
         {
             RichiediUscita();
         }

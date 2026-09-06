@@ -15,6 +15,12 @@ public sealed class PlayerBalanceSettings
     [Min(0)] public int frequenzaBloccoBase;
     [Range(0f, 2f)] public float durataInvulnerabilitaDopoColpo = 0.65f;
 
+    [Header("Schivata")]
+    [Min(0.05f)] public float durataSchivata = 0.18f;
+    [Min(1f)] public float velocitaSchivata = 18f;
+    [Min(0.1f)] public float cooldownSchivata = 1.1f;
+    [Min(0.05f)] public float durataInvulnerabilitaSchivata = 0.24f;
+
     [Header("Sparo")]
     [Min(0.01f)] public float intervalloSparo = 0.4f;
     [Min(0.01f)] public float intervalloSparoMinimo = 0.12f;
@@ -708,6 +714,23 @@ public sealed class GameBalanceConfig : ScriptableObject
             giocatore.durataInvulnerabilitaDopoColpo,
             0f,
             2f
+        );
+        giocatore.durataSchivata = Mathf.Max(
+            0.05f,
+            giocatore.durataSchivata
+        );
+        giocatore.velocitaSchivata = Mathf.Max(
+            1f,
+            giocatore.velocitaSchivata
+        );
+        giocatore.cooldownSchivata = Mathf.Max(
+            giocatore.durataSchivata,
+            giocatore.cooldownSchivata
+        );
+        giocatore.durataInvulnerabilitaSchivata = Mathf.Clamp(
+            giocatore.durataInvulnerabilitaSchivata,
+            0.05f,
+            giocatore.durataSchivata + 0.15f
         );
         volpe.durataDropSullaMappa = Mathf.Max(
             0.1f,

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71eb059f1b8bf85479410b9626b3361b, type: 3}
   m_Name: GameBalanceConfig
   m_EditorClassIdentifier: Assembly-CSharp::GameBalanceConfig
-  versioneRiferimento: Survival infinito - evoluzioni build - 2026-09-05
+  versioneRiferimento: Survival infinito - input e schivata - 2026-09-06
   giocatore:
     velocitaMovimento: 8
     accelerazione: 45
@@ -21,6 +21,10 @@ MonoBehaviour:
     vitaMassima: 5
     frequenzaBloccoBase: 0
     durataInvulnerabilitaDopoColpo: 0.65
+    durataSchivata: 0.18
+    velocitaSchivata: 18
+    cooldownSchivata: 1.1
+    durataInvulnerabilitaSchivata: 0.24
     intervalloSparo: 0.4
     intervalloSparoMinimo: 0.12
     velocitaProiettile: 10

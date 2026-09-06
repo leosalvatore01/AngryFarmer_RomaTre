@@ -43,11 +43,29 @@ public class PlayerMovement : MonoBehaviour
     public float DurataBoostVelocitaTotale => Mathf.Max(0f, durataBoost);
     public bool NelFango => tempoRallentamentoTerreno > 0f;
     public bool StaCamminando => VelocitaAttuale.sqrMagnitude > 0.01f;
+    public bool SchivataAttiva => schivataInCorso &&
+        Time.time < schivataAttivaFinoA;
+    public bool SchivataPronta => !SchivataAttiva &&
+        Time.time >= prossimaSchivataDisponibile;
+    public float CooldownSchivata => cooldownSchivata;
+    public float CooldownSchivataRimasto => Mathf.Max(
+        0f,
+        prossimaSchivataDisponibile - Time.time
+    );
+    public float ProgressoCooldownSchivata => cooldownSchivata > 0f
+        ? 1f - Mathf.Clamp01(
+            CooldownSchivataRimasto / cooldownSchivata
+        )
+        : 1f;
+    public Vector2 DirezioneUltimaSchivata { get; private set; }
 
     [System.Obsolete("Usa VelocitaFinale.")]
     public float speed => VelocitaFinale;
 
     private Rigidbody2D corpo;
+    private FarmerInputController input;
+    private PlayerHealth salute;
+    private PlayerDodgeFeedback feedbackSchivata;
     private float bonusVelocita;
     private float bonusVelocitaPermanente;
     private float moltiplicatoreVelocita = 1f;
@@ -57,6 +75,17 @@ public class PlayerMovement : MonoBehaviour
     private float moltiplicatoreRallentamentoTerreno = 1f;
     private float tempoFineBoostVelocita;
     private Coroutine boostRoutine;
+    private float durataSchivata;
+    private float velocitaSchivata;
+    private float cooldownSchivata;
+    private float durataInvulnerabilitaSchivata;
+    private float schivataAttivaFinoA;
+    private float prossimaSchivataDisponibile;
+    private bool schivataInCorso;
+    private Vector2 ultimaDirezioneMovimento = Vector2.down;
+
+    public event System.Action SchivataIniziata;
+    public event System.Action SchivataTerminata;
 
     void Awake()
     {
@@ -75,9 +104,24 @@ public class PlayerMovement : MonoBehaviour
             1f,
             configurazione.moltiplicatoreBoostVelocita
         );
+        durataSchivata = Mathf.Max(0.05f, configurazione.durataSchivata);
+        velocitaSchivata = Mathf.Max(1f, configurazione.velocitaSchivata);
+        cooldownSchivata = Mathf.Max(
+            durataSchivata,
+            configurazione.cooldownSchivata
+        );
+        durataInvulnerabilitaSchivata = Mathf.Max(
+            0.05f,
+            configurazione.durataInvulnerabilitaSchivata
+        );
 
         corpo = GetComponent<Rigidbody2D>();
         corpo.interpolation = RigidbodyInterpolation2D.Interpolate;
+        input = Application.isPlaying
+            ? FarmerInputController.CreaOTrova()
+            : FarmerInputController.Instance;
+        salute = GetComponent<PlayerHealth>();
+        feedbackSchivata = PlayerDodgeFeedback.AggiungiOTrova(gameObject);
     }
 
     void Update()
@@ -91,34 +135,40 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
-        float orizzontale = 0f;
-        if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow))
+        if (input == null) input = FarmerInputController.CreaOTrova();
+        DirezioneMovimento = input != null
+            ? input.Movimento
+            : Vector2.zero;
+        if (DirezioneMovimento.sqrMagnitude > 0.001f)
         {
-            orizzontale -= 1f;
-        }
-        if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow))
-        {
-            orizzontale += 1f;
-        }
-
-        float verticale = 0f;
-        if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow))
-        {
-            verticale -= 1f;
-        }
-        if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow))
-        {
-            verticale += 1f;
+            ultimaDirezioneMovimento = DirezioneMovimento.normalized;
         }
 
-        DirezioneMovimento = Vector2.ClampMagnitude(
-            new Vector2(orizzontale, verticale),
-            1f
-        );
+        if (input != null && input.SchivataPremutaQuestoFrame)
+        {
+            ProvaSchivata(DirezioneMovimento);
+        }
     }
 
     void FixedUpdate()
     {
+        if (SchivataAttiva)
+        {
+            VelocitaAttuale =
+                DirezioneUltimaSchivata * velocitaSchivata;
+            corpo.MovePosition(
+                corpo.position + VelocitaAttuale * Time.fixedDeltaTime
+            );
+            return;
+        }
+
+        if (schivataInCorso)
+        {
+            schivataInCorso = false;
+            VelocitaAttuale = Vector2.zero;
+            SchivataTerminata?.Invoke();
+        }
+
         Vector2 velocitaDesiderata =
             DirezioneMovimento * VelocitaEffettiva;
 
@@ -141,6 +191,48 @@ public class PlayerMovement : MonoBehaviour
             corpo.position +
             VelocitaAttuale * Time.fixedDeltaTime
         );
+    }
+
+    public bool ProvaSchivata(Vector2 direzioneRichiesta)
+    {
+        if (!SchivataPronta ||
+            (GameManager.instance != null &&
+             !GameManager.instance.GameplayAttivo))
+        {
+            return false;
+        }
+
+        Vector2 direzione = direzioneRichiesta;
+        if (direzione.sqrMagnitude <= 0.001f)
+        {
+            PlayerShooting sparo = GetComponent<PlayerShooting>();
+            direzione = sparo != null && sparo.HaDirezioneMira
+                ? sparo.DirezioneMira
+                : ultimaDirezioneMovimento;
+        }
+        if (direzione.sqrMagnitude <= 0.001f) return false;
+
+        DirezioneUltimaSchivata = direzione.normalized;
+        ultimaDirezioneMovimento = DirezioneUltimaSchivata;
+        schivataInCorso = true;
+        schivataAttivaFinoA = Time.time + durataSchivata;
+        prossimaSchivataDisponibile = Time.time + cooldownSchivata;
+
+        if (salute == null) salute = GetComponent<PlayerHealth>();
+        salute?.AttivaInvulnerabilitaTemporanea(
+            durataInvulnerabilitaSchivata
+        );
+        if (feedbackSchivata == null)
+        {
+            feedbackSchivata =
+                PlayerDodgeFeedback.AggiungiOTrova(gameObject);
+        }
+        feedbackSchivata?.Avvia(
+            DirezioneUltimaSchivata,
+            durataSchivata
+        );
+        SchivataIniziata?.Invoke();
+        return true;
     }
 
     public void AttivaBoostVelocita()
@@ -246,5 +338,7 @@ public class PlayerMovement : MonoBehaviour
         moltiplicatoreRallentamentoTerreno = 1f;
         DirezioneMovimento = Vector2.zero;
         VelocitaAttuale = Vector2.zero;
+        schivataInCorso = false;
+        schivataAttivaFinoA = 0f;
     }
 }

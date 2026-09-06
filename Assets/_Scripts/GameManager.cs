@@ -158,6 +158,7 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
+        FarmerInputController input = FarmerInputController.CreaOTrova();
         if (ShopPermanentePrePartita.ApertoGlobale)
         {
             return;
@@ -165,18 +166,15 @@ public class GameManager : MonoBehaviour
 
         if (!DifficoltaConfermata)
         {
-            if (Input.GetKeyDown(KeyCode.Alpha1) ||
-                Input.GetKeyDown(KeyCode.Keypad1))
+            if (input.SceltaRapidaPremutaQuestoFrame(1))
             {
                 ConfermaDifficolta(DifficoltaPartita.Tranquilla);
             }
-            else if (Input.GetKeyDown(KeyCode.Alpha2) ||
-                     Input.GetKeyDown(KeyCode.Keypad2))
+            else if (input.SceltaRapidaPremutaQuestoFrame(2))
             {
                 ConfermaDifficolta(DifficoltaPartita.Normale);
             }
-            else if (Input.GetKeyDown(KeyCode.Alpha3) ||
-                     Input.GetKeyDown(KeyCode.Keypad3))
+            else if (input.SceltaRapidaPremutaQuestoFrame(3))
             {
                 ConfermaDifficolta(DifficoltaPartita.Difficile);
             }
@@ -188,7 +186,7 @@ public class GameManager : MonoBehaviour
             durataPartita += Time.unscaledDeltaTime;
         }
 
-        if (isGameOver && Input.GetKeyDown(KeyCode.R))
+        if (isGameOver && input.RiprovaPremutoQuestoFrame)
         {
             Riprova();
         }
