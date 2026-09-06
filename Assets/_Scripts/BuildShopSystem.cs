@@ -745,6 +745,16 @@ public struct ProfiloProiettileBuild
     public float MoltiplicatoreRallentamento;
     public float DurataRallentamento;
     public float ForzaSpinta;
+    public int NumeroFrammenti;
+    public float AngoloDivisione;
+    public float MoltiplicatoreDannoFrammento;
+    public int NumeroEsplosioniSecondarie;
+    public float RitardoEsplosioneSecondaria;
+    public float MoltiplicatoreRaggioSecondario;
+    public float MoltiplicatoreDannoSecondario;
+    public bool PenetrazioneIncondizionata;
+    public float RaggioPropagazioneRallentamento;
+    public float IntensitaPropagazioneRallentamento;
 
     public bool Esplosivo => RaggioEsplosione > 0f && DannoEsplosione > 0;
     public bool Rallentante =>
@@ -752,4 +762,11 @@ public struct ProfiloProiettileBuild
         MoltiplicatoreRallentamento < 1f &&
         DurataRallentamento > 0f;
     public bool Spinge => ForzaSpinta > 0f;
+    public bool SiDivide =>
+        NumeroFrammenti >= 2 && MoltiplicatoreDannoFrammento > 0f;
+    public bool HaEsplosioniSecondarie =>
+        NumeroEsplosioniSecondarie > 0 &&
+        MoltiplicatoreDannoSecondario > 0f;
+    public bool PropagaRallentamento =>
+        Rallentante && RaggioPropagazioneRallentamento > 0f;
 }

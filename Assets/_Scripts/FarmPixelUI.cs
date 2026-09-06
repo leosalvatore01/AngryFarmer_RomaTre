@@ -33,7 +33,11 @@ public enum FarmPixelIcon
     ArchetipoTiratore,
     ArchetipoArtigliere,
     ArchetipoCritico,
-    ArchetipoControllore
+    ArchetipoControllore,
+    EvoluzioneRaffica,
+    EvoluzioneArtiglieria,
+    EvoluzionePerforazione,
+    EvoluzioneControllo
 }
 
 /// <summary>
@@ -503,6 +507,18 @@ public static class FarmPixelUI
             case FarmPixelIcon.ArchetipoControllore:
                 DisegnaArchetipoControllore(pixel);
                 break;
+            case FarmPixelIcon.EvoluzioneRaffica:
+                DisegnaEvoluzioneRaffica(pixel);
+                break;
+            case FarmPixelIcon.EvoluzioneArtiglieria:
+                DisegnaEvoluzioneArtiglieria(pixel);
+                break;
+            case FarmPixelIcon.EvoluzionePerforazione:
+                DisegnaEvoluzionePerforazione(pixel);
+                break;
+            case FarmPixelIcon.EvoluzioneControllo:
+                DisegnaEvoluzioneControllo(pixel);
+                break;
         }
 
         return CreaSprite(
@@ -932,6 +948,47 @@ public static class FarmPixelUI
         DisegnaPatataPiccola(pixel, 17, 14, oro);
         Linea(pixel, 15, 9, 18, 9, oro, 1);
         Linea(pixel, 14, 6, 18, 6, oro, 1);
+    }
+
+    private static void DisegnaEvoluzioneRaffica(Color32[] pixel)
+    {
+        DisegnaRafficaRaccolto(pixel);
+        Color32 luce = new Color32(117, 230, 225, 255);
+        Linea(pixel, 10, 10, 17, 16, Contorno, 3);
+        Linea(pixel, 10, 10, 17, 16, luce, 1);
+        Linea(pixel, 10, 10, 17, 4, Contorno, 3);
+        Linea(pixel, 10, 10, 17, 4, luce, 1);
+    }
+
+    private static void DisegnaEvoluzioneArtiglieria(Color32[] pixel)
+    {
+        DisegnaPatataEsplosiva(pixel);
+        Color32 eco = new Color32(255, 191, 62, 255);
+        Linea(pixel, 1, 4, 1, 15, eco, 1);
+        Linea(pixel, 18, 4, 18, 15, eco, 1);
+        Linea(pixel, 4, 1, 15, 1, eco, 1);
+        Linea(pixel, 4, 18, 15, 18, eco, 1);
+    }
+
+    private static void DisegnaEvoluzionePerforazione(Color32[] pixel)
+    {
+        DisegnaRimbalzo(pixel);
+        Color32 azzurro = new Color32(112, 222, 233, 255);
+        Linea(pixel, 1, 10, 18, 10, Contorno, 3);
+        Linea(pixel, 1, 10, 18, 10, azzurro, 1);
+        Rettangolo(pixel, 15, 7, 18, 13, azzurro);
+    }
+
+    private static void DisegnaEvoluzioneControllo(Color32[] pixel)
+    {
+        DisegnaRallentamento(pixel);
+        Color32 onda = new Color32(92, 218, 139, 255);
+        Linea(pixel, 1, 2, 5, 2, onda, 1);
+        Linea(pixel, 14, 2, 18, 2, onda, 1);
+        Linea(pixel, 1, 17, 5, 17, onda, 1);
+        Linea(pixel, 14, 17, 18, 17, onda, 1);
+        Linea(pixel, 2, 1, 2, 5, onda, 1);
+        Linea(pixel, 17, 14, 17, 18, onda, 1);
     }
 
     private static void DisegnaArchetipoArtigliere(Color32[] pixel)

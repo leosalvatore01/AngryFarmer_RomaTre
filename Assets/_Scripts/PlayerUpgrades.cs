@@ -261,6 +261,7 @@ public class PlayerUpgrades : MonoBehaviour
             return false;
         }
 
+        int evoluzionePrima = OttieniLivelloEvoluzionePerTipo(tipo);
         Applica(tipo);
         PotenziamentoAcquistato?.Invoke(tipo);
         RunTelemetryController.Corrente?.RegistraPowerUp(
@@ -270,7 +271,11 @@ public class PlayerUpgrades : MonoBehaviour
             costo,
             OttieniLivello(tipo)
         );
-        messaggio = "Acquistato!";
+        messaggio = CreaMessaggioEvoluzione(
+            tipo,
+            evoluzionePrima,
+            "Acquistato!"
+        );
         return true;
     }
 
@@ -288,6 +293,7 @@ public class PlayerUpgrades : MonoBehaviour
             return false;
         }
 
+        int evoluzionePrima = OttieniLivelloEvoluzionePerTipo(tipo);
         Applica(tipo);
         PotenziamentoAcquistato?.Invoke(tipo);
         RunTelemetryController.Corrente?.RegistraPowerUp(
@@ -297,7 +303,11 @@ public class PlayerUpgrades : MonoBehaviour
             0,
             OttieniLivello(tipo)
         );
-        messaggio = "Ottenuto gratis!";
+        messaggio = CreaMessaggioEvoluzione(
+            tipo,
+            evoluzionePrima,
+            "Ottenuto gratis!"
+        );
         return true;
     }
 
@@ -395,7 +405,25 @@ public class PlayerUpgrades : MonoBehaviour
                 : "Non disponibile";
         }
 
-        return "Livello " + OttieniLivello(tipo);
+        DefinizionePotenziamentoBuild definizione =
+            CatalogoPotenziamentiBuild.Ottieni(tipo);
+        if (definizione == null ||
+            definizione.Percorso == PercorsoBuild.Utilita)
+        {
+            return "Livello " + OttieniLivello(tipo);
+        }
+
+        int punti = OttieniPuntiPercorso(definizione.Percorso);
+        int evoluzione = OttieniLivelloEvoluzione(definizione.Percorso);
+        int prossimaSoglia = evoluzione <= 0
+            ? CatalogoEvoluzioniBuild.SogliaPrimoStadio(Configurazione)
+            : CatalogoEvoluzioniBuild.SogliaSecondoStadio(Configurazione);
+        string statoEvoluzione = evoluzione >= 2
+            ? "E2 COMPLETA"
+            : "E" + (evoluzione + 1) + "  " + punti + "/" +
+              prossimaSoglia;
+        return "Livello " + OttieniLivello(tipo) +
+               "  •  " + statoEvoluzione;
     }
 
     /// <summary>
@@ -405,6 +433,11 @@ public class PlayerUpgrades : MonoBehaviour
     public string OttieniBonusProssimoLivello(TipoPotenziamento tipo)
     {
         ShopBalanceSettings configurazione = Configurazione;
+        string sblocco = OttieniSbloccoConProssimoPunto(tipo);
+        if (!string.IsNullOrEmpty(sblocco))
+        {
+            return "SBLOCCA EVOLUZIONE: " + sblocco;
+        }
         switch (tipo)
         {
             case TipoPotenziamento.Movimento:
@@ -423,12 +456,23 @@ public class PlayerUpgrades : MonoBehaviour
                     Mathf.Max(1, Mathf.RoundToInt(incremento * 100f)) + "%";
             }
             case TipoPotenziamento.SaluteMassima:
-                return "VITA MASSIMA +" +
-                    Mathf.Max(1, configurazione.incrementoSaluteMassima);
+            {
+                int incremento = CalcolaBonusSalute(livelloSalute + 1) -
+                    CalcolaBonusSalute(livelloSalute);
+                return incremento > 0
+                    ? "VITA MASSIMA +" + incremento
+                    : "ROBUSTEZZA IN CRESCITA";
+            }
             case TipoPotenziamento.Cura:
                 return "CURA +" + Mathf.Max(1, configurazione.quantitaCura);
             case TipoPotenziamento.Danno:
-                return "DANNO +" + Mathf.Max(1, configurazione.incrementoDanno);
+            {
+                int incremento = CalcolaBonusDanno(livelloDanno + 1) -
+                    CalcolaBonusDanno(livelloDanno);
+                return incremento > 0
+                    ? "DANNO +" + incremento
+                    : "POTENZA DANNO IN CRESCITA";
+            }
             case TipoPotenziamento.Cadenza:
             {
                 float attuale = sparo != null
@@ -450,8 +494,14 @@ public class PlayerUpgrades : MonoBehaviour
                 return "ATTACCO RAPIDO +" + incremento + "%";
             }
             case TipoPotenziamento.Penetrazione:
-                return "PENETRAZIONE +" +
-                    Mathf.Max(1, configurazione.incrementoPenetrazione);
+            {
+                int incremento = CalcolaBonusPenetrazione(
+                    livelloPenetrazione + 1
+                ) - CalcolaBonusPenetrazione(livelloPenetrazione);
+                return incremento > 0
+                    ? "PENETRAZIONE +" + incremento
+                    : "POTENZA PERFORANTE IN CRESCITA";
+            }
             case TipoPotenziamento.ColpoAggiuntivo:
             {
                 if (ValoreColpiAggiuntivi < MassimoColpiAggiuntiviFisici)
@@ -618,12 +668,11 @@ public class PlayerUpgrades : MonoBehaviour
             case TipoPotenziamento.SaluteMassima:
             {
                 int attuale = salute != null ? salute.VitaMassimaFinale : 0;
+                int incremento = CalcolaBonusSalute(livelloSalute + 1) -
+                    CalcolaBonusSalute(livelloSalute);
                 return Confronto(
                     attuale.ToString(),
-                    SommaSicura(
-                        attuale,
-                        Mathf.Max(1, configurazione.incrementoSaluteMassima)
-                    ).ToString()
+                    SommaSicura(attuale, incremento).ToString()
                 );
             }
             case TipoPotenziamento.Cura:
@@ -641,12 +690,11 @@ public class PlayerUpgrades : MonoBehaviour
             case TipoPotenziamento.Danno:
             {
                 int attuale = sparo != null ? sparo.DannoFinale : 0;
+                int incremento = CalcolaBonusDanno(livelloDanno + 1) -
+                    CalcolaBonusDanno(livelloDanno);
                 return Confronto(
                     attuale.ToString(),
-                    SommaSicura(
-                        attuale,
-                        Mathf.Max(1, configurazione.incrementoDanno)
-                    ).ToString()
+                    SommaSicura(attuale, incremento).ToString()
                 );
             }
             case TipoPotenziamento.Cadenza:
@@ -667,12 +715,12 @@ public class PlayerUpgrades : MonoBehaviour
             case TipoPotenziamento.Penetrazione:
             {
                 int attuale = sparo != null ? sparo.PenetrazioneFinale : 0;
+                int incremento = CalcolaBonusPenetrazione(
+                    livelloPenetrazione + 1
+                ) - CalcolaBonusPenetrazione(livelloPenetrazione);
                 return Confronto(
                     attuale.ToString(),
-                    SommaSicura(
-                        attuale,
-                        Mathf.Max(1, configurazione.incrementoPenetrazione)
-                    ).ToString()
+                    SommaSicura(attuale, incremento).ToString()
                 );
             }
             case TipoPotenziamento.ColpoAggiuntivo:
@@ -843,6 +891,25 @@ public class PlayerUpgrades : MonoBehaviour
         return punti;
     }
 
+    public int OttieniLivelloEvoluzione(PercorsoBuild percorso)
+    {
+        if (percorso == PercorsoBuild.Utilita) return 0;
+        return CatalogoEvoluzioniBuild.OttieniLivello(
+            OttieniPuntiPercorso(percorso),
+            Configurazione
+        );
+    }
+
+    public string OttieniNomeEvoluzione(PercorsoBuild percorso)
+    {
+        int livello = OttieniLivelloEvoluzione(percorso);
+        DefinizioneEvoluzioneBuild definizione =
+            CatalogoEvoluzioniBuild.Ottieni(percorso);
+        return livello > 0 && definizione != null
+            ? definizione.OttieniNome(livello)
+            : string.Empty;
+    }
+
     public string DescriviBuildCompatta()
     {
         StringBuilder testo = new StringBuilder();
@@ -884,7 +951,9 @@ public class PlayerUpgrades : MonoBehaviour
         if (colpoRaffica && livelloRafficaRaccolto > 0)
         {
             moltiplicatoreDanno *= 1d +
-                0.1d * Math.Max(0, livelloRafficaRaccolto - 1);
+                0.1d * CalcolaOverflowDecrescente(
+                    livelloRafficaRaccolto - 1
+                );
         }
 
         ProfiloProiettileBuild profilo = new ProfiloProiettileBuild
@@ -916,6 +985,7 @@ public class PlayerUpgrades : MonoBehaviour
                 livelloPatataGigante
             )
         };
+        ApplicaEvoluzioniAlProfilo(ref profilo, configurazione);
 
         if (critico)
         {
@@ -931,26 +1001,118 @@ public class PlayerUpgrades : MonoBehaviour
         {
             profilo.Danno = SommaSicura(
                 profilo.Danno,
-                livelloRafficaRaccolto - 1
+                Mathf.FloorToInt(
+                    (float)CatalogoEvoluzioniBuild
+                        .CalcolaProgressoDecrescente(
+                            livelloRafficaRaccolto - 1,
+                            configurazione
+                        )
+                )
             );
         }
+        double crescitaEsplosiva = Math.Max(
+            0d,
+            CatalogoEvoluzioniBuild.CalcolaProgressoDecrescente(
+                livelloPatataEsplosiva,
+                configurazione
+            ) - 1d
+        );
+        double moltiplicatoreEsplosione = livelloPatataEsplosiva > 0
+            ? Math.Max(0.1d, configurazione.moltiplicatoreDannoEsplosione)
+            : Math.Max(0.1d, configurazione.dannoEsplosioneEvoluzione);
         profilo.DannoEsplosione = profilo.RaggioEsplosione > 0f
             ? SommaSicura(
                 MoltiplicaDannoSicuro(
                     profilo.Danno,
-                    Math.Max(
-                        0.1d,
-                        configurazione.moltiplicatoreDannoEsplosione
-                    ) *
-                    (1d + 0.14d * Math.Max(
-                        0,
-                        livelloPatataEsplosiva - 1
-                    ))
+                    moltiplicatoreEsplosione *
+                    (1d + 0.14d * crescitaEsplosiva)
                 ),
-                Math.Max(0, livelloPatataEsplosiva - 1)
+                Mathf.FloorToInt((float)crescitaEsplosiva)
             )
             : 0;
         return profilo;
+    }
+
+    private void ApplicaEvoluzioniAlProfilo(
+        ref ProfiloProiettileBuild profilo,
+        ShopBalanceSettings configurazione
+    )
+    {
+        int raffica = OttieniLivelloEvoluzione(PercorsoBuild.Raffica);
+        int artiglieria = OttieniLivelloEvoluzione(
+            PercorsoBuild.Artiglieria
+        );
+        int perforazione = OttieniLivelloEvoluzione(
+            PercorsoBuild.Perforazione
+        );
+        int controllo = OttieniLivelloEvoluzione(PercorsoBuild.Controllo);
+
+        if (raffica > 0)
+        {
+            profilo.NumeroFrammenti = raffica >= 2
+                ? configurazione.frammentiRafficaSecondoStadio
+                : configurazione.frammentiRafficaPrimoStadio;
+            profilo.AngoloDivisione = configurazione.angoloDivisioneRaffica;
+            profilo.MoltiplicatoreDannoFrammento = raffica >= 2
+                ? configurazione.dannoFrammentiSecondoStadio
+                : configurazione.dannoFrammentiPrimoStadio;
+        }
+
+        if (artiglieria > 0)
+        {
+            float raggioEvoluzione = configurazione
+                .raggioEsplosioneEvoluzione *
+                (artiglieria >= 2 ? 1.15f : 1f);
+            profilo.RaggioEsplosione = Mathf.Max(
+                profilo.RaggioEsplosione,
+                raggioEvoluzione
+            );
+            profilo.NumeroEsplosioniSecondarie = artiglieria >= 2
+                ? configurazione.esplosioniSecondarieSecondoStadio
+                : configurazione.esplosioniSecondariePrimoStadio;
+            profilo.RitardoEsplosioneSecondaria =
+                configurazione.ritardoEsplosioniSecondarie;
+            profilo.MoltiplicatoreRaggioSecondario =
+                configurazione.raggioEsplosioniSecondarie;
+            profilo.MoltiplicatoreDannoSecondario =
+                configurazione.dannoEsplosioniSecondarie;
+        }
+
+        if (perforazione > 0)
+        {
+            int bonusPenetrazioni = perforazione >= 2
+                ? configurazione.penetrazioniEvoluzioneSecondoStadio
+                : configurazione.penetrazioniEvoluzionePrimoStadio;
+            profilo.Penetrazioni = SommaSicura(
+                profilo.Penetrazioni,
+                bonusPenetrazioni
+            );
+            profilo.PenetrazioneIncondizionata = true;
+            if (perforazione >= 2)
+            {
+                profilo.Rimbalzi = SommaSicura(
+                    profilo.Rimbalzi,
+                    configurazione.rimbalziEvoluzioneSecondoStadio
+                );
+            }
+        }
+
+        if (controllo > 0)
+        {
+            if (!profilo.Rallentante)
+            {
+                profilo.MoltiplicatoreRallentamento =
+                    configurazione.rallentamentoBaseEvoluzione;
+                profilo.DurataRallentamento =
+                    configurazione.durataRallentamentoEvoluzione;
+            }
+            profilo.RaggioPropagazioneRallentamento = controllo >= 2
+                ? configurazione.raggioContagioSecondoStadio
+                : configurazione.raggioContagioPrimoStadio;
+            profilo.IntensitaPropagazioneRallentamento = controllo >= 2
+                ? configurazione.intensitaContagioSecondoStadio
+                : configurazione.intensitaContagioPrimoStadio;
+        }
     }
 
     private void Applica(TipoPotenziamento tipo)
@@ -973,10 +1135,7 @@ public class PlayerUpgrades : MonoBehaviour
             case TipoPotenziamento.SaluteMassima:
                 livelloSalute = IncrementaLivello(livelloSalute);
                 salute.ImpostaBonusVitaMassima(
-                    ProdottoSicuro(
-                        livelloSalute,
-                        Mathf.Max(1, configurazione.incrementoSaluteMassima)
-                    ),
+                    CalcolaBonusSalute(livelloSalute),
                     Mathf.Max(0, configurazione.curaSuIncrementoSalute)
                 );
                 break;
@@ -986,10 +1145,7 @@ public class PlayerUpgrades : MonoBehaviour
             case TipoPotenziamento.Danno:
                 livelloDanno = IncrementaLivello(livelloDanno);
                 sparo.ImpostaBonusDanno(
-                    ProdottoSicuro(
-                        livelloDanno,
-                        Mathf.Max(1, configurazione.incrementoDanno)
-                    )
+                    CalcolaBonusDanno(livelloDanno)
                 );
                 break;
             case TipoPotenziamento.Cadenza:
@@ -1005,10 +1161,7 @@ public class PlayerUpgrades : MonoBehaviour
             case TipoPotenziamento.Penetrazione:
                 livelloPenetrazione = IncrementaLivello(livelloPenetrazione);
                 sparo.ImpostaBonusPenetrazione(
-                    ProdottoSicuro(
-                        livelloPenetrazione,
-                        Mathf.Max(1, configurazione.incrementoPenetrazione)
-                    )
+                    CalcolaBonusPenetrazione(livelloPenetrazione)
                 );
                 break;
             case TipoPotenziamento.ColpoAggiuntivo:
@@ -1060,6 +1213,39 @@ public class PlayerUpgrades : MonoBehaviour
         );
         double costante = Math.Max(1d, limite / incremento - 1d);
         return (float)(limite * livello / (livello + costante));
+    }
+
+    private int CalcolaBonusDanno(int livello)
+    {
+        double progresso = CatalogoEvoluzioniBuild
+            .CalcolaProgressoDecrescente(livello, Configurazione);
+        return MoltiplicaDannoSicuro(
+            Mathf.Max(1, Configurazione.incrementoDanno),
+            progresso
+        );
+    }
+
+    private int CalcolaBonusSalute(int livello)
+    {
+        double progresso = CatalogoEvoluzioniBuild
+            .CalcolaProgressoDecrescente(livello, Configurazione);
+        return MoltiplicaDannoSicuro(
+            Mathf.Max(1, Configurazione.incrementoSaluteMassima),
+            progresso
+        );
+    }
+
+    private int CalcolaBonusPenetrazione(int livello)
+    {
+        double progresso = CatalogoEvoluzioniBuild
+            .CalcolaProgressoDecrescente(livello, Configurazione);
+        double valore = progresso * Mathf.Max(
+            1,
+            Configurazione.incrementoPenetrazione
+        );
+        return valore >= int.MaxValue
+            ? int.MaxValue
+            : Mathf.Max(0, Mathf.FloorToInt((float)valore));
     }
 
     private float CalcolaVelocitaMovimento(int livello)
@@ -1133,7 +1319,11 @@ public class PlayerUpgrades : MonoBehaviour
         double oltreCentoPercento = Math.Max(0d, valoreCritico - 1d);
         return (float)Math.Min(
             float.MaxValue,
-            baseCritico * (1d + 0.45d * oltreCentoPercento)
+            baseCritico * (
+                1d + 0.45d * CalcolaValoreDecrescente(
+                    oltreCentoPercento
+                )
+            )
         );
     }
 
@@ -1265,37 +1455,55 @@ public class PlayerUpgrades : MonoBehaviour
         );
 
         return 1d +
-            overflowGigante * 0.05d +
-            overflowRimbalzo * 0.035d +
-            overflowRallentamento * 0.025d +
-            overflowSpinta * 0.025d +
-            overflowColpi * 0.035d;
+            CalcolaValoreDecrescente(overflowGigante) * 0.05d +
+            CalcolaOverflowDecrescente(overflowRimbalzo) * 0.035d +
+            CalcolaOverflowDecrescente(overflowRallentamento) * 0.025d +
+            CalcolaOverflowDecrescente(overflowSpinta) * 0.025d +
+            CalcolaValoreDecrescente(overflowColpi) * 0.035d;
+    }
+
+    private double CalcolaOverflowDecrescente(int valore)
+    {
+        return CalcolaValoreDecrescente(Math.Max(0, valore));
+    }
+
+    private double CalcolaValoreDecrescente(double valore)
+    {
+        if (valore <= 0d) return 0d;
+        double esponente = Mathf.Clamp(
+            Configurazione.esponenteRendimentoDecrescente,
+            0.45f,
+            0.9f
+        );
+        return Math.Pow(valore, esponente);
     }
 
     private int CalcolaBonusDannoOverflowIntero()
     {
-        long bonus = 0L;
-        bonus += Math.Max(
+        double bonus = 0d;
+        bonus += CalcolaOverflowDecrescente(Math.Max(
             0,
             livelloPatataGigante - CalcolaLivelloCapPatataGigante()
-        );
-        bonus += Math.Max(
+        ));
+        bonus += CalcolaOverflowDecrescente(Math.Max(
             0,
             livelloColpoAggiuntivo - CalcolaLivelloCapColpiAggiuntivi()
-        );
-        bonus += Math.Max(
+        ));
+        bonus += CalcolaOverflowDecrescente(Math.Max(
             0,
             livelloRimbalzo - MassimoRimbalziFisici
-        );
-        bonus += Math.Max(
+        ));
+        bonus += CalcolaOverflowDecrescente(Math.Max(
             0,
             livelloRallentamento - MassimoLivelloRallentamentoFisico
-        );
-        bonus += Math.Max(
+        ));
+        bonus += CalcolaOverflowDecrescente(Math.Max(
             0,
             livelloSpinta - CalcolaLivelloCapSpinta()
-        );
-        return bonus >= int.MaxValue ? int.MaxValue : (int)bonus;
+        ));
+        return bonus >= int.MaxValue
+            ? int.MaxValue
+            : Mathf.FloorToInt((float)bonus);
     }
 
     private int CalcolaLivelloCapColpiAggiuntivi()
@@ -1361,9 +1569,13 @@ public class PlayerUpgrades : MonoBehaviour
 
     private int CalcolaBonusDannoCriticoIntero(int livello)
     {
-        return Math.Max(
-            0,
-            livello - CalcolaLivelloSogliaCriticoGarantito()
+        return Mathf.FloorToInt(
+            (float)CalcolaOverflowDecrescente(
+                Math.Max(
+                    0,
+                    livello - CalcolaLivelloSogliaCriticoGarantito()
+                )
+            )
         );
     }
 
@@ -1413,9 +1625,12 @@ public class PlayerUpgrades : MonoBehaviour
             livello - MassimoLivelloRallentamentoFisico
         );
         return overflow > 0
-            ? descrizione + " / potenza +" + (overflow * 2.5f)
+            ? descrizione + " / potenza +" +
+              (CalcolaOverflowDecrescente(overflow) * 2.5d)
                 .ToString("0.#", CultureInfo.InvariantCulture) +
-              "% / danno +" + overflow
+              "% / danno +" + Mathf.FloorToInt(
+                  (float)CalcolaOverflowDecrescente(overflow)
+              )
             : descrizione;
     }
 
@@ -1437,9 +1652,13 @@ public class PlayerUpgrades : MonoBehaviour
             0d,
             valore - MassimoColpiAggiuntiviFisici
         );
-        int bonusIntero = Math.Max(
-            0,
-            livello - CalcolaLivelloCapColpiAggiuntivi()
+        int bonusIntero = Mathf.FloorToInt(
+            (float)CalcolaOverflowDecrescente(
+                Math.Max(
+                    0,
+                    livello - CalcolaLivelloCapColpiAggiuntivi()
+                )
+            )
         );
 
         string risultato = garantiti > 0
@@ -1453,7 +1672,10 @@ public class PlayerUpgrades : MonoBehaviour
         if (overflow > 0d)
         {
             risultato += " / potenza +" +
-                Math.Round(overflow * 3.5d, 1) + "%";
+                Math.Round(
+                    CalcolaValoreDecrescente(overflow) * 3.5d,
+                    1
+                ) + "%";
         }
         if (bonusIntero > 0)
         {
@@ -1467,10 +1689,15 @@ public class PlayerUpgrades : MonoBehaviour
         if (livello <= 0) return "disattiva";
         int intervallo = CalcolaIntervalloRaffica(livello);
         int proiettili = CalcolaNumeroProiettiliRaffica(livello);
-        float bonusDanno = Mathf.Max(0, livello - 1) * 10f;
-        int bonusIntero = Math.Max(0, livello - 1);
+        double progresso = CatalogoEvoluzioniBuild
+            .CalcolaProgressoDecrescente(
+                Math.Max(0, livello - 1),
+                Configurazione
+            );
+        double bonusDanno = progresso * 10d;
+        int bonusIntero = Mathf.FloorToInt((float)progresso);
         return proiettili + " colpi ogni " + intervallo +
-            " spari / danno +" + FormattaDecimale(bonusDanno) +
+            " spari / danno +" + FormattaDecimale((float)bonusDanno) +
             "% e +" + bonusIntero;
     }
 
@@ -1511,12 +1738,18 @@ public class PlayerUpgrades : MonoBehaviour
         );
         string testo = FormattaPercentuale(scala, true) +
             " / spinta " + FormattaDecimale(spinta);
-        int bonusIntero = Math.Max(
-            0,
-            livello - CalcolaLivelloCapPatataGigante()
+        double overflowEffettivo = CalcolaValoreDecrescente(overflow);
+        int bonusIntero = Mathf.FloorToInt(
+            (float)CalcolaOverflowDecrescente(
+                Math.Max(
+                    0,
+                    livello - CalcolaLivelloCapPatataGigante()
+                )
+            )
         );
         return overflow > 0d
-            ? testo + " / potenza +" + Math.Round(overflow * 5d, 1) +
+            ? testo + " / potenza +" +
+              Math.Round(overflowEffettivo * 5d, 1) +
               "% / danno +" + bonusIntero
             : testo;
     }
@@ -1524,11 +1757,18 @@ public class PlayerUpgrades : MonoBehaviour
     private string DescriviEsplosione(int livello)
     {
         if (livello <= 0) return "nessuna";
+        double crescita = Math.Max(
+            0d,
+            CatalogoEvoluzioniBuild.CalcolaProgressoDecrescente(
+                livello,
+                Configurazione
+            ) - 1d
+        );
         double moltiplicatore = Math.Max(
             0.1d,
             Configurazione.moltiplicatoreDannoEsplosione
-        ) * (1d + 0.14d * Math.Max(0, livello - 1));
-        int bonusIntero = Math.Max(0, livello - 1);
+        ) * (1d + 0.14d * crescita);
+        int bonusIntero = Mathf.FloorToInt((float)crescita);
         return "raggio " +
             FormattaDecimale(CalcolaRaggioEsplosione(livello)) +
             " / danno " + Math.Round(moltiplicatore * 100d) +
@@ -1553,9 +1793,10 @@ public class PlayerUpgrades : MonoBehaviour
     {
         if (livello <= 0) return "nessuno";
         int fisici = Mathf.Min(livello, MassimoRimbalziFisici);
-        int bonusIntero = Math.Max(
-            0,
-            livello - MassimoRimbalziFisici
+        int bonusIntero = Mathf.FloorToInt(
+            (float)CalcolaOverflowDecrescente(
+                Math.Max(0, livello - MassimoRimbalziFisici)
+            )
         );
         return fisici + " / potenza " +
             FormattaPercentuale(CalcolaDannoRimbalzo(livello), true) +
@@ -1577,10 +1818,70 @@ public class PlayerUpgrades : MonoBehaviour
             (int)Math.Ceiling(ForzaSpintaMassima / incremento)
         );
         int overflow = Math.Max(0, livello - livelliFisici);
+        double overflowEffettivo = CalcolaOverflowDecrescente(overflow);
         return overflow > 0
             ? FormattaDecimale(forza) + " / potenza +" +
-              Math.Round(overflow * 2.5d, 1) + "% / danno +" + overflow
+              Math.Round(overflowEffettivo * 2.5d, 1) +
+              "% / danno +" + Mathf.FloorToInt((float)overflowEffettivo)
             : FormattaDecimale(forza);
+    }
+
+    private int OttieniLivelloEvoluzionePerTipo(TipoPotenziamento tipo)
+    {
+        DefinizionePotenziamentoBuild definizione =
+            CatalogoPotenziamentiBuild.Ottieni(tipo);
+        return definizione != null &&
+               definizione.Percorso != PercorsoBuild.Utilita
+            ? OttieniLivelloEvoluzione(definizione.Percorso)
+            : 0;
+    }
+
+    private string OttieniSbloccoConProssimoPunto(
+        TipoPotenziamento tipo
+    )
+    {
+        DefinizionePotenziamentoBuild potenziamento =
+            CatalogoPotenziamentiBuild.Ottieni(tipo);
+        if (potenziamento == null ||
+            potenziamento.Percorso == PercorsoBuild.Utilita)
+        {
+            return string.Empty;
+        }
+
+        int punti = OttieniPuntiPercorso(potenziamento.Percorso);
+        int prima = CatalogoEvoluzioniBuild.OttieniLivello(
+            punti,
+            Configurazione
+        );
+        int dopo = CatalogoEvoluzioniBuild.OttieniLivello(
+            SommaSicura(punti, 1),
+            Configurazione
+        );
+        DefinizioneEvoluzioneBuild evoluzione =
+            CatalogoEvoluzioniBuild.Ottieni(potenziamento.Percorso);
+        return dopo > prima && evoluzione != null
+            ? evoluzione.OttieniNome(dopo)
+            : string.Empty;
+    }
+
+    private string CreaMessaggioEvoluzione(
+        TipoPotenziamento tipo,
+        int livelloPrima,
+        string messaggioBase
+    )
+    {
+        int livelloDopo = OttieniLivelloEvoluzionePerTipo(tipo);
+        if (livelloDopo <= livelloPrima) return messaggioBase;
+
+        DefinizionePotenziamentoBuild potenziamento =
+            CatalogoPotenziamentiBuild.Ottieni(tipo);
+        DefinizioneEvoluzioneBuild evoluzione = potenziamento != null
+            ? CatalogoEvoluzioniBuild.Ottieni(potenziamento.Percorso)
+            : null;
+        return evoluzione != null
+            ? messaggioBase + "  EVOLUZIONE SBLOCCATA: " +
+              evoluzione.OttieniNome(livelloDopo) + "!"
+            : messaggioBase;
     }
 
     private void AggiungiPercorso(StringBuilder testo, PercorsoBuild percorso)
@@ -1591,6 +1892,12 @@ public class PlayerUpgrades : MonoBehaviour
         testo.Append(CatalogoPotenziamentiBuild.NomePercorso(percorso));
         testo.Append(' ');
         testo.Append(punti);
+        int evoluzione = OttieniLivelloEvoluzione(percorso);
+        if (evoluzione > 0)
+        {
+            testo.Append(" E");
+            testo.Append(evoluzione);
+        }
     }
 
     private static int CostoLivello(int[] costi, int livello)

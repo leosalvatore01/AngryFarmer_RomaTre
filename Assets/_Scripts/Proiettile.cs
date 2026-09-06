@@ -8,6 +8,8 @@ public class Proiettile : MonoBehaviour
         new Collider2D[CapacitaQueryFisica];
     private static readonly Collider2D[] bufferRimbalzo =
         new Collider2D[CapacitaQueryFisica];
+    private static readonly Collider2D[] bufferControllo =
+        new Collider2D[CapacitaQueryFisica];
     private static readonly ContactFilter2D filtroQuery =
         ContactFilter2D.noFilter;
 
@@ -16,6 +18,8 @@ public class Proiettile : MonoBehaviour
     [Min(0f)] public float rotazioneVisivaMassima = 165f;
 
     private readonly HashSet<int> bersagliColpiti = new HashSet<int>();
+    private readonly HashSet<int> rallentamentiPropagati =
+        new HashSet<int>();
     private int penetrazioniRimaste;
     private int penetrazioniIniziali;
     private int rimbalziRimasti;
@@ -26,6 +30,17 @@ public class Proiettile : MonoBehaviour
     private float moltiplicatoreRallentamento = 1f;
     private float durataRallentamento;
     private float forzaSpinta;
+    private int numeroFrammenti;
+    private float angoloDivisione;
+    private float moltiplicatoreDannoFrammento;
+    private int numeroEsplosioniSecondarie;
+    private float ritardoEsplosioneSecondaria;
+    private float moltiplicatoreRaggioSecondario;
+    private float moltiplicatoreDannoSecondario;
+    private bool penetrazioneIncondizionata;
+    private float raggioPropagazioneRallentamento;
+    private float intensitaPropagazioneRallentamento;
+    private ProfiloProiettileBuild profiloBuild;
     private float scalaBuild = 1f;
     private Vector3 scalaPrefab = Vector3.one;
     private Transform grafica;
@@ -49,6 +64,11 @@ public class Proiettile : MonoBehaviour
     public bool EsplosioneUsata => esplosioneUsata;
     public float RaggioEsplosione => raggioEsplosione;
     public float ScalaBuild => scalaBuild;
+    public int NumeroFrammenti => numeroFrammenti;
+    public int NumeroEsplosioniSecondarie => numeroEsplosioniSecondarie;
+    public bool PenetrazioneIncondizionata => penetrazioneIncondizionata;
+    public float RaggioPropagazioneRallentamento =>
+        raggioPropagazioneRallentamento;
 
     void Awake()
     {
@@ -104,6 +124,8 @@ public class Proiettile : MonoBehaviour
         bool perforante
     )
     {
+        AzzeraStatoRuntime();
+        profiloBuild = profilo;
         danno = Mathf.Max(1, profilo.Danno);
         penetrazioniRimaste = Mathf.Max(0, profilo.Penetrazioni);
         penetrazioniIniziali = penetrazioniRimaste;
@@ -127,6 +149,40 @@ public class Proiettile : MonoBehaviour
         );
         durataRallentamento = Mathf.Max(0f, profilo.DurataRallentamento);
         forzaSpinta = Mathf.Max(0f, profilo.ForzaSpinta);
+        numeroFrammenti = Mathf.Clamp(profilo.NumeroFrammenti, 0, 5);
+        angoloDivisione = Mathf.Clamp(profilo.AngoloDivisione, 1f, 40f);
+        moltiplicatoreDannoFrammento = Mathf.Clamp(
+            profilo.MoltiplicatoreDannoFrammento,
+            0f,
+            1f
+        );
+        numeroEsplosioniSecondarie = Mathf.Clamp(
+            profilo.NumeroEsplosioniSecondarie,
+            0,
+            4
+        );
+        ritardoEsplosioneSecondaria = Mathf.Max(
+            0.05f,
+            profilo.RitardoEsplosioneSecondaria
+        );
+        moltiplicatoreRaggioSecondario = Mathf.Clamp(
+            profilo.MoltiplicatoreRaggioSecondario,
+            0.2f,
+            2f
+        );
+        moltiplicatoreDannoSecondario = Mathf.Clamp(
+            profilo.MoltiplicatoreDannoSecondario,
+            0f,
+            1f
+        );
+        penetrazioneIncondizionata = profilo.PenetrazioneIncondizionata;
+        raggioPropagazioneRallentamento = Mathf.Max(
+            0f,
+            profilo.RaggioPropagazioneRallentamento
+        );
+        intensitaPropagazioneRallentamento = Mathf.Clamp01(
+            profilo.IntensitaPropagazioneRallentamento
+        );
         scalaBuild = Mathf.Max(0.25f, profilo.Scala);
         transform.localScale = new Vector3(
             scalaPrefab.x * scalaBuild,
@@ -187,10 +243,15 @@ public class Proiettile : MonoBehaviour
             direzioneColpo
         );
         AttivaEsplosione(posizioneImpatto);
+        AttivaDivisione(
+            posizioneImpatto,
+            direzioneColpo,
+            idBersaglio
+        );
 
         bool puoPenetrare =
-            esito.Ucciso &&
-            esito.ConsentePenetrazioneAllaMorte &&
+            (penetrazioneIncondizionata ||
+             (esito.Ucciso && esito.ConsentePenetrazioneAllaMorte)) &&
             penetrazioniRimaste > 0;
         bool haRimbalzato = false;
 
@@ -259,11 +320,146 @@ public class Proiettile : MonoBehaviour
                 moltiplicatoreRallentamento,
                 durataRallentamento
             );
+            PropagaRallentamento(volpe);
         }
         if (forzaSpinta > 0f)
         {
             volpe.ApplicaSpinta(direzioneColpo, forzaSpinta);
         }
+    }
+
+    private void PropagaRallentamento(EnemyAI sorgente)
+    {
+        if (sorgente == null ||
+            raggioPropagazioneRallentamento <= 0f ||
+            intensitaPropagazioneRallentamento <= 0f)
+        {
+            return;
+        }
+
+        rallentamentiPropagati.Clear();
+        rallentamentiPropagati.Add(sorgente.gameObject.GetInstanceID());
+        Vector2 centro = sorgente.transform.position;
+        int numero = Physics2D.OverlapCircle(
+            centro,
+            raggioPropagazioneRallentamento,
+            filtroQuery,
+            bufferControllo
+        );
+        float intensita = Mathf.Clamp01(
+            intensitaPropagazioneRallentamento
+        );
+        float moltiplicatorePropagato = Mathf.Lerp(
+            1f,
+            moltiplicatoreRallentamento,
+            intensita
+        );
+        float durataPropagata = durataRallentamento * intensita;
+        bool applicato = false;
+        for (int i = 0; i < numero; i++)
+        {
+            Collider2D collider = bufferControllo[i];
+            bufferControllo[i] = null;
+            if (collider == null) continue;
+            EnemyAI volpe = collider.GetComponentInParent<EnemyAI>();
+            if (volpe == null || volpe.IsDead) continue;
+            int id = volpe.gameObject.GetInstanceID();
+            if (!rallentamentiPropagati.Add(id)) continue;
+
+            volpe.ApplicaRallentamento(
+                moltiplicatorePropagato,
+                durataPropagata
+            );
+            applicato = true;
+        }
+
+        if (applicato)
+        {
+            BuildCombatVfx.CreaOndaControllo(
+                centro,
+                raggioPropagazioneRallentamento
+            );
+        }
+    }
+
+    private void AttivaDivisione(
+        Vector2 posizione,
+        Vector2 direzioneBase,
+        int idBersaglioDaIgnorare
+    )
+    {
+        int quantita = numeroFrammenti;
+        if (quantita < 2 || moltiplicatoreDannoFrammento <= 0f) return;
+        numeroFrammenti = 0;
+
+        Rigidbody2D corpoOriginale = GetComponent<Rigidbody2D>();
+        float velocita = corpoOriginale != null
+            ? corpoOriginale.linearVelocity.magnitude
+            : 0f;
+        velocita = Mathf.Max(1f, velocita) * 0.9f;
+        float centro = (quantita - 1) * 0.5f;
+
+        for (int i = 0; i < quantita; i++)
+        {
+            float angolo = (i - centro) * angoloDivisione;
+            Vector2 direzione = Quaternion.Euler(0f, 0f, angolo) *
+                direzioneBase;
+            if (direzione.sqrMagnitude < 0.0001f) continue;
+            direzione.Normalize();
+
+            Vector3 puntoNascita = posizione + direzione * 0.22f;
+            GameObject frammento = Instantiate(
+                gameObject,
+                puntoNascita,
+                Quaternion.Euler(
+                    0f,
+                    0f,
+                    Mathf.Atan2(direzione.y, direzione.x) * Mathf.Rad2Deg
+                )
+            );
+            Proiettile comportamento = frammento.GetComponent<Proiettile>();
+            if (comportamento == null)
+            {
+                Destroy(frammento);
+                continue;
+            }
+
+            ProfiloProiettileBuild profiloFrammento = profiloBuild;
+            profiloFrammento.Danno = Mathf.Max(
+                1,
+                Mathf.RoundToInt(
+                    danno * moltiplicatoreDannoFrammento
+                )
+            );
+            profiloFrammento.NumeroFrammenti = 0;
+            profiloFrammento.NumeroEsplosioniSecondarie = 0;
+            profiloFrammento.Scala = Mathf.Max(
+                0.45f,
+                profiloFrammento.Scala * 0.72f
+            );
+            comportamento.scalaPrefab = scalaPrefab;
+            comportamento.transform.localScale = scalaPrefab;
+            comportamento.InizializzaBuild(
+                profiloFrammento,
+                true,
+                profiloFrammento.Penetrazioni > 0
+            );
+            comportamento.bersagliColpiti.Add(idBersaglioDaIgnorare);
+
+            Rigidbody2D corpo = frammento.GetComponent<Rigidbody2D>();
+            if (corpo != null) corpo.linearVelocity = direzione * velocita;
+            GameManager.instance?.RegistraProiettileSparato();
+        }
+    }
+
+    private void AzzeraStatoRuntime()
+    {
+        bersagliColpiti.Clear();
+        rallentamentiPropagati.Clear();
+        esplosioneUsata = false;
+        consumato = false;
+        precisioneRegistrata = false;
+        transform.localScale = scalaPrefab;
     }
 
     private void AttivaEsplosione(Vector2 posizione)
@@ -315,6 +511,24 @@ public class Proiettile : MonoBehaviour
             raggioEsplosione,
             colpoCritico
         );
+        if (numeroEsplosioniSecondarie > 0 &&
+            moltiplicatoreDannoSecondario > 0f)
+        {
+            BuildSecondaryExplosionPulse.Crea(
+                posizione,
+                numeroEsplosioniSecondarie,
+                ritardoEsplosioneSecondaria,
+                raggioEsplosione * moltiplicatoreRaggioSecondario,
+                Mathf.Max(
+                    1,
+                    Mathf.RoundToInt(
+                        Mathf.Max(danno, dannoEsplosione) *
+                        moltiplicatoreDannoSecondario
+                    )
+                ),
+                colpoCritico
+            );
+        }
     }
 
     private bool ProvaRimbalzare(Vector2 posizioneImpatto)
@@ -468,6 +682,105 @@ public class Proiettile : MonoBehaviour
 
 }
 
+internal sealed class BuildSecondaryExplosionPulse : MonoBehaviour
+{
+    private const int CapacitaQuery = 64;
+    private static readonly Collider2D[] buffer =
+        new Collider2D[CapacitaQuery];
+    private static readonly ContactFilter2D filtro =
+        ContactFilter2D.noFilter;
+
+    private readonly HashSet<int> bersagliColpiti = new HashSet<int>();
+    private int impulsiRimasti;
+    private float intervallo;
+    private float contoAllaRovescia;
+    private float raggio;
+    private int danno;
+    private bool critico;
+
+    public static void Crea(
+        Vector2 posizione,
+        int numeroImpulsi,
+        float ritardo,
+        float nuovoRaggio,
+        int nuovoDanno,
+        bool nuovoCritico
+    )
+    {
+        if (numeroImpulsi <= 0 || nuovoRaggio <= 0f || nuovoDanno <= 0)
+        {
+            return;
+        }
+
+        GameObject oggetto = new GameObject("EcoEsplosivaBuild");
+        oggetto.transform.position = posizione;
+        BuildSecondaryExplosionPulse impulso =
+            oggetto.AddComponent<BuildSecondaryExplosionPulse>();
+        impulso.impulsiRimasti = numeroImpulsi;
+        impulso.intervallo = Mathf.Max(0.05f, ritardo);
+        impulso.contoAllaRovescia = impulso.intervallo;
+        impulso.raggio = Mathf.Max(0.2f, nuovoRaggio);
+        impulso.danno = Mathf.Max(1, nuovoDanno);
+        impulso.critico = nuovoCritico;
+    }
+
+    void Update()
+    {
+        contoAllaRovescia -= Time.deltaTime;
+        if (contoAllaRovescia > 0f) return;
+
+        EseguiImpulso();
+        impulsiRimasti--;
+        if (impulsiRimasti <= 0)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        contoAllaRovescia += intervallo;
+    }
+
+    private void EseguiImpulso()
+    {
+        bersagliColpiti.Clear();
+        Vector2 centro = transform.position;
+        int numero = Physics2D.OverlapCircle(
+            centro,
+            raggio,
+            filtro,
+            buffer
+        );
+        for (int i = 0; i < numero; i++)
+        {
+            Collider2D collider = buffer[i];
+            buffer[i] = null;
+            if (collider == null) continue;
+
+            IDanneggiabile bersaglio =
+                collider.GetComponentInParent<IDanneggiabile>();
+            if (bersaglio == null) continue;
+            Component componente = bersaglio as Component;
+            int id = componente != null
+                ? componente.gameObject.GetInstanceID()
+                : collider.GetInstanceID();
+            if (!bersagliColpiti.Add(id)) continue;
+
+            EsitoDanno esito = bersaglio.ProvaSubireDanno(danno);
+            if (!esito.Applicato) continue;
+            Vector2 posizioneNumero = componente != null
+                ? componente.transform.position
+                : collider.ClosestPoint(centro);
+            DamageNumberFeedback.Mostra(
+                posizioneNumero,
+                esito.DannoApplicato > 0 ? esito.DannoApplicato : danno,
+                critico
+            );
+        }
+
+        BuildCombatVfx.CreaEsplosione(centro, raggio, critico);
+    }
+}
+
 internal static class BuildCombatVfx
 {
     private const int LimiteEsplosioniAttive = 12;
@@ -479,6 +792,21 @@ internal static class BuildCombatVfx
         Vector2 posizione,
         float raggio,
         bool critico
+    )
+    {
+        CreaEffetto(posizione, raggio, critico, false);
+    }
+
+    public static void CreaOndaControllo(Vector2 posizione, float raggio)
+    {
+        CreaEffetto(posizione, raggio, false, true);
+    }
+
+    private static void CreaEffetto(
+        Vector2 posizione,
+        float raggio,
+        bool critico,
+        bool controllo
     )
     {
         if (esplosioniAttive >= LimiteEsplosioniAttive) return;
@@ -495,7 +823,7 @@ internal static class BuildCombatVfx
         }
         esplosioniAttive++;
         effetto.gameObject.SetActive(true);
-        effetto.Attiva(posizione, raggio, critico);
+        effetto.Attiva(posizione, raggio, critico, controllo);
     }
 
     public static void Rilascia(BuildExplosionBurst effetto)
@@ -527,6 +855,7 @@ internal sealed class BuildExplosionBurst : MonoBehaviour
     private float raggio;
     private float tempo;
     private bool critico;
+    private bool controllo;
 
     public bool InUso { get; private set; }
 
@@ -535,13 +864,19 @@ internal sealed class BuildExplosionBurst : MonoBehaviour
         AssicuraParticelle();
     }
 
-    public void Attiva(Vector2 posizione, float nuovoRaggio, bool nuovoCritico)
+    public void Attiva(
+        Vector2 posizione,
+        float nuovoRaggio,
+        bool nuovoCritico,
+        bool nuovoControllo
+    )
     {
         AssicuraParticelle();
         InUso = true;
         transform.position = posizione;
         raggio = Mathf.Max(0.2f, nuovoRaggio);
         critico = nuovoCritico;
+        controllo = nuovoControllo;
         tempo = 0f;
         Aggiorna(0f);
     }
@@ -600,11 +935,15 @@ internal sealed class BuildExplosionBurst : MonoBehaviour
                 (i % 2 == 0 ? 1f : 0.72f);
             renderer.transform.localScale =
                 Vector3.one * Mathf.Lerp(0.16f, 0.05f, t);
-            Color colore = critico
-                ? new Color(1f, 0.94f, 0.32f, alpha)
-                : i % 3 == 0
-                    ? new Color(1f, 0.34f, 0.12f, alpha)
-                    : new Color(1f, 0.72f, 0.2f, alpha);
+            Color colore = controllo
+                ? i % 3 == 0
+                    ? new Color(0.35f, 1f, 0.62f, alpha)
+                    : new Color(0.24f, 0.82f, 0.92f, alpha)
+                : critico
+                    ? new Color(1f, 0.94f, 0.32f, alpha)
+                    : i % 3 == 0
+                        ? new Color(1f, 0.34f, 0.12f, alpha)
+                        : new Color(1f, 0.72f, 0.2f, alpha);
             renderer.color = colore;
         }
     }

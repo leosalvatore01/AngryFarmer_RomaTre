@@ -87,6 +87,40 @@ public sealed class ShopBalanceSettings
     [Range(1f, 3f)] public float pesoArchetipoSinergia = 1.5f;
     [Range(1f, 2f)] public float pesoPercorsoEmergente = 1.2f;
 
+    [Header("Evoluzioni e crescita infinita")]
+    [Min(1)] public int sogliaPrimaEvoluzione = 3;
+    [Min(2)] public int sogliaSecondaEvoluzione = 6;
+    [Range(0.45f, 0.9f)] public float esponenteRendimentoDecrescente = 0.65f;
+
+    [Header("Evoluzione Raffica")]
+    [Range(2, 4)] public int frammentiRafficaPrimoStadio = 2;
+    [Range(2, 5)] public int frammentiRafficaSecondoStadio = 3;
+    [Range(5f, 35f)] public float angoloDivisioneRaffica = 18f;
+    [Range(0.2f, 0.8f)] public float dannoFrammentiPrimoStadio = 0.42f;
+    [Range(0.2f, 0.8f)] public float dannoFrammentiSecondoStadio = 0.52f;
+
+    [Header("Evoluzione Artiglieria")]
+    [Min(0.2f)] public float raggioEsplosioneEvoluzione = 0.9f;
+    [Range(0.1f, 1f)] public float dannoEsplosioneEvoluzione = 0.35f;
+    [Range(1, 3)] public int esplosioniSecondariePrimoStadio = 1;
+    [Range(1, 4)] public int esplosioniSecondarieSecondoStadio = 2;
+    [Range(0.05f, 0.5f)] public float ritardoEsplosioniSecondarie = 0.16f;
+    [Range(0.4f, 1.5f)] public float raggioEsplosioniSecondarie = 0.78f;
+    [Range(0.1f, 1f)] public float dannoEsplosioniSecondarie = 0.32f;
+
+    [Header("Evoluzione Perforazione")]
+    [Range(1, 4)] public int penetrazioniEvoluzionePrimoStadio = 1;
+    [Range(1, 6)] public int penetrazioniEvoluzioneSecondoStadio = 2;
+    [Range(1, 3)] public int rimbalziEvoluzioneSecondoStadio = 1;
+
+    [Header("Evoluzione Controllo")]
+    [Range(0.4f, 0.95f)] public float rallentamentoBaseEvoluzione = 0.82f;
+    [Range(0.2f, 4f)] public float durataRallentamentoEvoluzione = 1f;
+    [Range(0.5f, 4f)] public float raggioContagioPrimoStadio = 1.6f;
+    [Range(0.5f, 5f)] public float raggioContagioSecondoStadio = 2.4f;
+    [Range(0.2f, 1f)] public float intensitaContagioPrimoStadio = 0.65f;
+    [Range(0.2f, 1f)] public float intensitaContagioSecondoStadio = 0.9f;
+
     [Header("Prezzi per livello")]
     public int[] costiMovimento = { 3, 5, 8 };
     public int[] costiResistenza = { 4, 7, 10 };
@@ -727,6 +761,63 @@ public sealed class GameBalanceConfig : ScriptableObject
             shop.pesoPercorsoEmergente,
             1f,
             2f
+        );
+        shop.sogliaPrimaEvoluzione = Mathf.Max(
+            1,
+            shop.sogliaPrimaEvoluzione
+        );
+        shop.sogliaSecondaEvoluzione = Mathf.Max(
+            shop.sogliaPrimaEvoluzione + 1,
+            shop.sogliaSecondaEvoluzione
+        );
+        shop.esponenteRendimentoDecrescente = Mathf.Clamp(
+            shop.esponenteRendimentoDecrescente,
+            0.45f,
+            0.9f
+        );
+        shop.frammentiRafficaPrimoStadio = Mathf.Clamp(
+            shop.frammentiRafficaPrimoStadio,
+            2,
+            4
+        );
+        shop.frammentiRafficaSecondoStadio = Mathf.Clamp(
+            shop.frammentiRafficaSecondoStadio,
+            shop.frammentiRafficaPrimoStadio,
+            5
+        );
+        shop.esplosioniSecondariePrimoStadio = Mathf.Clamp(
+            shop.esplosioniSecondariePrimoStadio,
+            1,
+            3
+        );
+        shop.esplosioniSecondarieSecondoStadio = Mathf.Clamp(
+            shop.esplosioniSecondarieSecondoStadio,
+            shop.esplosioniSecondariePrimoStadio,
+            4
+        );
+        shop.penetrazioniEvoluzionePrimoStadio = Mathf.Max(
+            1,
+            shop.penetrazioniEvoluzionePrimoStadio
+        );
+        shop.penetrazioniEvoluzioneSecondoStadio = Mathf.Max(
+            shop.penetrazioniEvoluzionePrimoStadio,
+            shop.penetrazioniEvoluzioneSecondoStadio
+        );
+        shop.rimbalziEvoluzioneSecondoStadio = Mathf.Max(
+            1,
+            shop.rimbalziEvoluzioneSecondoStadio
+        );
+        shop.raggioEsplosioneEvoluzione = Mathf.Max(
+            0.2f,
+            shop.raggioEsplosioneEvoluzione
+        );
+        shop.ritardoEsplosioniSecondarie = Mathf.Max(
+            0.05f,
+            shop.ritardoEsplosioniSecondarie
+        );
+        shop.raggioContagioSecondoStadio = Mathf.Max(
+            shop.raggioContagioPrimoStadio,
+            shop.raggioContagioSecondoStadio
         );
         shop.colpiPerRafficaRaccolto = Mathf.Max(
             2,

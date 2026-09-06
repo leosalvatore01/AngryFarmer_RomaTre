@@ -27,6 +27,8 @@ public sealed class PowerUpHudController : MonoBehaviour
     private readonly Dictionary<TipoPotenziamentoPermanente, SlotHud>
         slotInterpartita =
             new Dictionary<TipoPotenziamentoPermanente, SlotHud>();
+    private readonly Dictionary<PercorsoBuild, SlotHud> slotEvoluzioni =
+        new Dictionary<PercorsoBuild, SlotHud>();
 
     private RectTransform rectRadice;
     private RectTransform rectGriglia;
@@ -43,6 +45,7 @@ public sealed class PowerUpHudController : MonoBehaviour
 
     public int NumeroPotenziamentiPermanentiAttivi { get; private set; }
     public int NumeroMiglioramentiInterpartitaAttivi { get; private set; }
+    public int NumeroEvoluzioniAttive { get; private set; }
     public int NumeroEffettiTemporaneiAttivi { get; private set; }
     public int NumeroSlotVisibili => numeroSlotVisibili;
 
@@ -194,6 +197,23 @@ public sealed class PowerUpHudController : MonoBehaviour
                 false
             );
             slotInterpartita[definizione.Tipo] = slot;
+        }
+
+        IReadOnlyList<DefinizioneEvoluzioneBuild> evoluzioni =
+            CatalogoEvoluzioniBuild.Tutte;
+        for (int i = 0; i < evoluzioni.Count; i++)
+        {
+            DefinizioneEvoluzioneBuild evoluzione = evoluzioni[i];
+            SlotHud slot = CreaSlot(
+                "Evoluzione_" + evoluzione.Percorso,
+                FarmPixelUI.OttieniIcona(evoluzione.Icona),
+                evoluzione.EtichettaCompatta,
+                CatalogoPotenziamentiBuild.ColorePercorso(
+                    evoluzione.Percorso
+                ),
+                false
+            );
+            slotEvoluzioni[evoluzione.Percorso] = slot;
         }
 
         slotTriploSparo = CreaSlot(
@@ -391,6 +411,21 @@ public sealed class PowerUpHudController : MonoBehaviour
             coppia.Value.testoLivello.text = "P" + livello;
         }
 
+        NumeroEvoluzioniAttive = 0;
+        foreach (KeyValuePair<PercorsoBuild, SlotHud> coppia in
+                 slotEvoluzioni)
+        {
+            int stadio = potenziamenti != null
+                ? potenziamenti.OttieniLivelloEvoluzione(coppia.Key)
+                : 0;
+            bool attivo = stadio > 0;
+            coppia.Value.radice.SetActive(attivo);
+            if (!attivo) continue;
+
+            NumeroEvoluzioniAttive++;
+            coppia.Value.testoLivello.text = "E" + stadio;
+        }
+
         bool triploAttivo = sparo != null && sparo.TriploSparoAttivo;
         bool boostAttivo = movimento != null && movimento.BoostVelocitaAttivo;
         slotTriploSparo.radice.SetActive(triploAttivo);
@@ -400,6 +435,7 @@ public sealed class PowerUpHudController : MonoBehaviour
 
         numeroSlotVisibili = NumeroPotenziamentiPermanentiAttivi +
                             NumeroMiglioramentiInterpartitaAttivi +
+                            NumeroEvoluzioniAttive +
                             NumeroEffettiTemporaneiAttivi;
         intestazione.text = numeroSlotVisibili == 1
             ? "1 POWER-UP ATTIVO"
