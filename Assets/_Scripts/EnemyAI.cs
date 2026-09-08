@@ -91,7 +91,6 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     private float moltiplicatoreInversione = 1.3f;
     private float moltiplicatoreRallentamento = 0.5f;
     private int monetePerEliminazione = 1;
-    private float probabilitaDenteSulDrop = 0.5f;
     private TipoVolpe tipo = TipoVolpe.Comune;
     private FoxVariantStats profiloVariante;
     private FoxVariantsBalanceSettings varianti;
@@ -153,6 +152,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         new Dictionary<TipoVolpe, Sprite[]>();
     private static readonly HashSet<EnemyAI> volpiAttive =
         new HashSet<EnemyAI>();
+    private static TemporaryDropDirector direttoreDrop;
     private static readonly Collider2D[] bufferProiettili = new Collider2D[32];
     private static readonly ContactFilter2D filtroProiettili =
         ContactFilter2D.noFilter;
@@ -167,6 +167,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     public int VitaMassima => vitaMassima;
     public int VitaCorrente => vitaCorrente;
     public int MonetePerEliminazione => monetePerEliminazione;
+    public int DropGarantiti => dropGarantiti;
     public bool IsDead => morto;
     public TipoVolpe Tipo => tipo;
     public string NomeTipo => FoxVariantStyle.Nome(tipo);
@@ -261,6 +262,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         cacheFrameCorsa.Clear();
         cacheFrameMorte.Clear();
         spriteBarra = null;
+        direttoreDrop = null;
     }
 
     void Awake()
@@ -336,9 +338,6 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
             bilanciamento.monetePerEliminazione
         );
         dropChance = Mathf.Clamp(bilanciamento.probabilitaDrop, 0f, 100f);
-        probabilitaDenteSulDrop = Mathf.Clamp01(
-            bilanciamento.probabilitaDenteSulDrop
-        );
     }
 
     void Start()
@@ -1867,23 +1866,38 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
             GameManager.instance.RegistraVolpeEliminata(tipo);
             GameManager.instance.AggiungiMonete(monetePerEliminazione);
         }
+        TemporaryDropDirector drop = OttieniDirettoreDrop();
+        bool vitaPiena = playerHealth != null && playerHealth.VitaPiena;
         if (dropGarantiti > 0)
         {
             for (int i = 0; i < dropGarantiti; i++)
             {
-                CreaDrop(i % 2 == 0);
+                drop.DeveCreareDrop(0f, true);
+                CreaDrop(drop.EstraiTipo(vitaPiena));
             }
         }
-        else if (Random.Range(0f, 100f) < dropChance)
+        else if (drop.DeveCreareDrop(Random.value))
         {
-            CreaDrop(Random.value > 1f - probabilitaDenteSulDrop);
+            CreaDrop(drop.EstraiTipo(vitaPiena));
         }
 
         StartCoroutine(AnimaMorte());
     }
 
-    private void CreaDrop(bool preferisciDente)
+    private static TemporaryDropDirector OttieniDirettoreDrop()
     {
+        if (direttoreDrop == null)
+        {
+            direttoreDrop = new TemporaryDropDirector(
+                GameBalanceConfig.Corrente.Volpe
+            );
+        }
+        return direttoreDrop;
+    }
+
+    private void CreaDrop(TipoDropTemporaneo tipoDrop)
+    {
+        bool preferisciDente = ((int)tipoDrop & 1) == 0;
         GameObject prefab = preferisciDente ? dentePrefab : codaPrefab;
         if (prefab == null)
         {
@@ -1894,11 +1908,42 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         Vector2 scarto = dropGarantiti > 1
             ? Random.insideUnitCircle * 0.28f
             : Vector2.zero;
-        Instantiate(
+        GameObject istanza = Instantiate(
             prefab,
             (Vector2)transform.position + scarto,
             Quaternion.identity
         );
+        istanza.GetComponent<PowerUp>()?.Configura(tipoDrop);
+    }
+
+    public static int DanneggiaNelRaggio(
+        Vector2 centro,
+        float raggio,
+        int dannoEsplosione
+    )
+    {
+        if (raggio <= 0f || dannoEsplosione <= 0) return 0;
+
+        float raggioQuadrato = raggio * raggio;
+        List<EnemyAI> bersagli = new List<EnemyAI>();
+        foreach (EnemyAI volpe in volpiAttive)
+        {
+            if (volpe == null || volpe.morto || !volpe.isActiveAndEnabled)
+                continue;
+            if (((Vector2)volpe.transform.position - centro).sqrMagnitude <=
+                raggioQuadrato)
+            {
+                bersagli.Add(volpe);
+            }
+        }
+
+        int colpiti = 0;
+        for (int i = 0; i < bersagli.Count; i++)
+        {
+            EsitoDanno esito = bersagli[i].ProvaSubireDanno(dannoEsplosione);
+            if (esito.Applicato) colpiti++;
+        }
+        return colpiti;
     }
 
     IEnumerator AnimaMorte()

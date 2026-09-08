@@ -37,6 +37,10 @@ public sealed class CombatFeedbackController : MonoBehaviour
 
     public int SpariRegistrati { get; private set; }
     public int ImpattiRegistrati { get; private set; }
+    public int CriticiRegistrati { get; private set; }
+    public int SchivateRegistrate { get; private set; }
+    public int PericoliRegistrati { get; private set; }
+    public int RicompenseRegistrate { get; private set; }
     public int SuoniSparoRiprodotti { get; private set; }
     public int SuoniImpattoRiprodotti { get; private set; }
     public int BurstEmessi { get; private set; }
@@ -148,7 +152,27 @@ public sealed class CombatFeedbackController : MonoBehaviour
         bool perforazioneEffettiva
     )
     {
+        RegistraImpatto(
+            posizione,
+            direzione,
+            rendererBersaglio,
+            potente,
+            perforazioneEffettiva,
+            false
+        );
+    }
+
+    public void RegistraImpatto(
+        Vector2 posizione,
+        Vector2 direzione,
+        SpriteRenderer rendererBersaglio,
+        bool potente,
+        bool perforazioneEffettiva,
+        bool critico
+    )
+    {
         ImpattiRegistrati++;
+        if (critico) CriticiRegistrati++;
 
         if (VfxAbilitati)
         {
@@ -170,21 +194,125 @@ public sealed class CombatFeedbackController : MonoBehaviour
                     sortingLayer,
                     sortingOrder,
                     potente,
-                    perforazioneEffettiva
+                    perforazioneEffettiva,
+                    critico
                 );
                 BurstEmessi++;
             }
         }
 
-        RiproduciAudio(true, posizione, perforazioneEffettiva);
+        RiproduciAudio(
+            true,
+            posizione,
+            perforazioneEffettiva || critico,
+            critico
+        );
 
-        if (perforazioneEffettiva)
+        if (perforazioneEffettiva || critico)
         {
             RichiediVibrazione(
-                impostazioni.intensitaVibrazione,
-                impostazioni.durataVibrazione * 1.1f
+                impostazioni.intensitaVibrazione * (critico ? 1.28f : 1f),
+                impostazioni.durataVibrazione * (critico ? 1.3f : 1.1f)
             );
         }
+    }
+
+    public void RegistraSchivata(Vector2 posizione, Vector2 direzione)
+    {
+        SchivateRegistrate++;
+        if (VfxAbilitati)
+        {
+            FoxAbilityVfx.CreaAnello(
+                posizione,
+                new Color32(93, 231, 241, 230),
+                0.24f,
+                1.15f,
+                0.24f,
+                null
+            );
+        }
+        FarmAudioController.RiproduciInterfaccia(0.42f);
+        RichiediVibrazione(
+            impostazioni.intensitaVibrazione * 0.42f,
+            impostazioni.durataVibrazione * 0.65f
+        );
+    }
+
+    public void RegistraPericolo(Vector2 posizione)
+    {
+        PericoliRegistrati++;
+        if (VfxAbilitati)
+        {
+            FoxAbilityVfx.CreaAnello(
+                posizione,
+                new Color32(238, 67, 45, 235),
+                0.2f,
+                1.3f,
+                0.3f,
+                null
+            );
+        }
+        FarmAudioController.RiproduciPericolo();
+        RichiediVibrazione(
+            impostazioni.intensitaVibrazione * 1.35f,
+            impostazioni.durataVibrazione * 1.45f
+        );
+    }
+
+    public void RegistraScudo(Vector2 posizione)
+    {
+        if (VfxAbilitati)
+        {
+            FoxAbilityVfx.CreaAnello(
+                posizione,
+                new Color32(96, 224, 246, 240),
+                0.75f,
+                1.45f,
+                0.3f,
+                null
+            );
+        }
+        FarmAudioController.RiproduciInterfaccia(0.65f);
+    }
+
+    public void RegistraRicompensa(
+        Vector2 posizione,
+        Color colore,
+        bool istantanea
+    )
+    {
+        RicompenseRegistrate++;
+        if (VfxAbilitati)
+        {
+            FoxAbilityVfx.CreaAnello(
+                posizione,
+                colore,
+                0.2f,
+                istantanea ? 1.65f : 1.05f,
+                istantanea ? 0.34f : 0.25f,
+                null
+            );
+        }
+        FarmAudioController.RiproduciSuccesso(istantanea ? 0.95f : 0.68f);
+    }
+
+    public void RegistraEsplosioneDrop(Vector2 posizione, float raggio)
+    {
+        if (VfxAbilitati)
+        {
+            FoxAbilityVfx.CreaAnello(
+                posizione,
+                new Color32(255, 143, 35, 245),
+                0.35f,
+                Mathf.Max(0.8f, raggio),
+                0.38f,
+                null
+            );
+        }
+        RichiediVibrazione(
+            impostazioni.intensitaVibrazione * 1.7f,
+            impostazioni.durataVibrazione * 1.8f
+        );
     }
 
     public void ImpostaVibrazione(bool abilitata)
@@ -408,7 +536,8 @@ public sealed class CombatFeedbackController : MonoBehaviour
     private void RiproduciAudio(
         bool impatto,
         Vector2 posizione,
-        bool varianteSpeciale
+        bool varianteSpeciale,
+        bool critico = false
     )
     {
         if (!AudioAbilitato || sorgentiAudio == null) return;
@@ -423,6 +552,7 @@ public sealed class CombatFeedbackController : MonoBehaviour
         float casuale = (float)casualitaCosmetica.NextDouble() * 2f - 1f;
         float pitch = 1f + casuale * variazione;
         if (varianteSpeciale) pitch += 0.045f;
+        if (critico) pitch += 0.12f;
 
         AudioSource sorgente = sorgentiAudio[indiceSorgenteAudio];
         indiceSorgenteAudio =
@@ -724,6 +854,16 @@ public sealed class CombatHitFeedback2D : MonoBehaviour
         bool perforante
     )
     {
+        Riproduci(direzioneColpo, potente, perforante, false);
+    }
+
+    public void Riproduci(
+        Vector2 direzioneColpo,
+        bool potente,
+        bool perforante,
+        bool critico
+    )
+    {
         CombatFeedbackSettings impostazioni =
             GameBalanceConfig.Corrente.FeedbackCombattimento;
         CombatFeedbackController controller = CombatFeedbackController.Instance;
@@ -737,7 +877,8 @@ public sealed class CombatHitFeedback2D : MonoBehaviour
             ? direzioneColpo.normalized
             : Vector2.right;
         distanzaRinculo = impostazioni.distanzaRinculoBersaglio *
-            (potente ? 1.2f : 1f) * moltiplicatoreRinculo;
+            (critico ? 1.45f : potente ? 1.2f : 1f) *
+            moltiplicatoreRinculo;
         durataRinculo = Mathf.Max(
             0.03f,
             impostazioni.durataRinculoBersaglio
@@ -889,6 +1030,31 @@ public sealed class PixelImpactBurst : MonoBehaviour
         bool perforante
     )
     {
+        Attiva(
+            posizione,
+            direzione,
+            numeroParticelle,
+            nuovaDurata,
+            sortingLayer,
+            sortingOrder,
+            potente,
+            perforante,
+            false
+        );
+    }
+
+    public void Attiva(
+        Vector2 posizione,
+        Vector2 direzione,
+        int numeroParticelle,
+        float nuovaDurata,
+        int sortingLayer,
+        int sortingOrder,
+        bool potente,
+        bool perforante,
+        bool critico
+    )
+    {
         gameObject.SetActive(true);
         transform.position = posizione;
         transform.rotation = Quaternion.identity;
@@ -899,7 +1065,8 @@ public sealed class PixelImpactBurst : MonoBehaviour
             ? direzione.normalized
             : Vector2.right;
         int quantita = Mathf.Clamp(
-            numeroParticelle + (potente ? 1 : 0) + (perforante ? 1 : 0),
+            numeroParticelle + (potente ? 1 : 0) +
+            (perforante ? 1 : 0) + (critico ? 2 : 0),
             1,
             NumeroMassimoParticelle
         );
@@ -916,7 +1083,7 @@ public sealed class PixelImpactBurst : MonoBehaviour
                 : 0f;
             Vector2 direzioneParticella =
                 Quaternion.Euler(0f, 0f, apertura) * avanti;
-            float velocita = (perforante ? 2.7f : 1.75f) +
+            float velocita = (critico ? 3.1f : perforante ? 2.7f : 1.75f) +
                               (i % 3) * 0.23f;
             velocitaParticelle[i] = direzioneParticella * velocita;
             renderer.transform.localPosition = Vector3.zero;
@@ -933,7 +1100,13 @@ public sealed class PixelImpactBurst : MonoBehaviour
             );
             renderer.sortingLayerID = sortingLayer;
             renderer.sortingOrder = sortingOrder + (i % 2);
-            renderer.color = ColoreParticella(i, potente, perforante, 1f);
+            renderer.color = ColoreParticella(
+                i,
+                potente,
+                perforante,
+                critico,
+                1f
+            );
         }
     }
 
@@ -970,9 +1143,20 @@ public sealed class PixelImpactBurst : MonoBehaviour
         int indice,
         bool potente,
         bool perforante,
+        bool critico,
         float alpha
     )
     {
+        if (critico)
+        {
+            Color[] criticoColori =
+            {
+                new Color(1f, 0.96f, 0.78f, alpha),
+                new Color(0.93f, 0.35f, 0.88f, alpha),
+                new Color(0.56f, 0.18f, 0.72f, alpha)
+            };
+            return criticoColori[indice % criticoColori.Length];
+        }
         if (perforante)
         {
             Color[] oro =

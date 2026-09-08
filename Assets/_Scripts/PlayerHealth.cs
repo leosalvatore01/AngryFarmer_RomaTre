@@ -23,6 +23,7 @@ public class PlayerHealth : MonoBehaviour
     private float invulnerabileFinoA;
     private bool invulnerabilitaSegnalata;
     private PlayerInvulnerabilityFeedback feedbackInvulnerabilita;
+    private PlayerTemporaryEffects effettiTemporanei;
 
     public int VitaCorrente => vitaCorrente;
     public int VitaMassimaBase => vitaMassimaBase;
@@ -90,6 +91,8 @@ public class PlayerHealth : MonoBehaviour
         casualitaBlocco = new System.Random(
             unchecked(Environment.TickCount ^ GetInstanceID() * 397)
         );
+        effettiTemporanei =
+            PlayerTemporaryEffects.AggiungiOTrova(gameObject);
     }
 
     void Start()
@@ -158,6 +161,17 @@ public class PlayerHealth : MonoBehaviour
     {
         if (danno <= 0 || vitaCorrente <= 0 || Invulnerabile) return false;
 
+        if (effettiTemporanei == null)
+        {
+            effettiTemporanei =
+                PlayerTemporaryEffects.AggiungiOTrova(gameObject);
+        }
+        if (effettiTemporanei != null &&
+            effettiTemporanei.ProvaAssorbireDanno())
+        {
+            return false;
+        }
+
         float probabilitaBlocco = ProbabilitaBloccoFinale;
         if (probabilitaBlocco > 0f && EstraiProbabilita(probabilitaBlocco))
         {
@@ -189,7 +203,12 @@ public class PlayerHealth : MonoBehaviour
                 transform.position,
                 dannoEffettivo
             );
-            FarmAudioController.RiproduciPericolo();
+            if (Application.isPlaying)
+            {
+                CombatFeedbackController.CreaOTrova()?.RegistraPericolo(
+                    transform.position
+                );
+            }
         }
 
         if (vitaCorrente <= 0 && GameManager.instance != null)

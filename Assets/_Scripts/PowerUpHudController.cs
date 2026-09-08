@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
@@ -37,9 +38,13 @@ public sealed class PowerUpHudController : MonoBehaviour
     private TMP_Text intestazione;
     private SlotHud slotTriploSparo;
     private SlotHud slotBoostVelocita;
+    private SlotHud slotScudo;
+    private SlotHud slotCalamita;
+    private SlotHud slotFuria;
     private PlayerUpgrades potenziamenti;
     private PlayerShooting sparo;
     private PlayerMovement movimento;
+    private PlayerTemporaryEffects effettiTemporanei;
     private float prossimoAggiornamento;
     private int numeroSlotVisibili;
 
@@ -51,6 +56,13 @@ public sealed class PowerUpHudController : MonoBehaviour
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void InizializzaDopoCaricamentoScena()
+    {
+        SceneManager.sceneLoaded -= ScenaCaricata;
+        SceneManager.sceneLoaded += ScenaCaricata;
+        CreaOTrova();
+    }
+
+    private static void ScenaCaricata(Scene scena, LoadSceneMode modalita)
     {
         CreaOTrova();
     }
@@ -230,6 +242,27 @@ public sealed class PowerUpHudController : MonoBehaviour
             new Color32(244, 196, 61, 255),
             true
         );
+        slotScudo = CreaSlot(
+            "ScudoTemporaneo",
+            FarmPixelUI.OttieniIcona(FarmPixelIcon.ScudoTemporaneo),
+            "SCUDO",
+            new Color32(86, 205, 232, 255),
+            true
+        );
+        slotCalamita = CreaSlot(
+            "Calamita",
+            FarmPixelUI.OttieniIcona(FarmPixelIcon.Calamita),
+            "MAGNETE",
+            new Color32(93, 207, 215, 255),
+            true
+        );
+        slotFuria = CreaSlot(
+            "Furia",
+            FarmPixelUI.OttieniIcona(FarmPixelIcon.Furia),
+            "FURIA",
+            new Color32(242, 92, 54, 255),
+            true
+        );
     }
 
     private SlotHud CreaSlot(
@@ -369,12 +402,14 @@ public sealed class PowerUpHudController : MonoBehaviour
             potenziamenti = null;
             sparo = null;
             movimento = null;
+            effettiTemporanei = null;
             return;
         }
 
         potenziamenti = giocatore.GetComponent<PlayerUpgrades>();
         sparo = giocatore.GetComponent<PlayerShooting>();
         movimento = giocatore.GetComponent<PlayerMovement>();
+        effettiTemporanei = giocatore.GetComponent<PlayerTemporaryEffects>();
     }
 
     private void AggiornaStatoCompleto()
@@ -428,10 +463,23 @@ public sealed class PowerUpHudController : MonoBehaviour
 
         bool triploAttivo = sparo != null && sparo.TriploSparoAttivo;
         bool boostAttivo = movimento != null && movimento.BoostVelocitaAttivo;
+        bool scudoAttivo = effettiTemporanei != null &&
+            effettiTemporanei.ScudoAttivo;
+        bool calamitaAttiva = effettiTemporanei != null &&
+            effettiTemporanei.CalamitaAttiva;
+        bool furiaAttiva = effettiTemporanei != null &&
+            effettiTemporanei.FuriaAttiva;
         slotTriploSparo.radice.SetActive(triploAttivo);
         slotBoostVelocita.radice.SetActive(boostAttivo);
+        slotScudo.radice.SetActive(scudoAttivo);
+        slotCalamita.radice.SetActive(calamitaAttiva);
+        slotFuria.radice.SetActive(furiaAttiva);
         NumeroEffettiTemporaneiAttivi =
-            (triploAttivo ? 1 : 0) + (boostAttivo ? 1 : 0);
+            (triploAttivo ? 1 : 0) +
+            (boostAttivo ? 1 : 0) +
+            (scudoAttivo ? 1 : 0) +
+            (calamitaAttiva ? 1 : 0) +
+            (furiaAttiva ? 1 : 0);
 
         numeroSlotVisibili = NumeroPotenziamentiPermanentiAttivi +
                             NumeroMiglioramentiInterpartitaAttivi +
@@ -460,6 +508,34 @@ public sealed class PowerUpHudController : MonoBehaviour
                 slotBoostVelocita,
                 movimento.TempoBoostVelocitaRimasto,
                 movimento.DurataBoostVelocitaTotale
+            );
+        }
+        if (effettiTemporanei != null && slotScudo.radice.activeSelf)
+        {
+            AggiornaTimer(
+                slotScudo,
+                effettiTemporanei.TempoScudoRimasto,
+                effettiTemporanei.DurataScudoTotale
+            );
+            slotScudo.testoLivello.text =
+                effettiTemporanei.CaricheScudo + "x " +
+                effettiTemporanei.TempoScudoRimasto
+                    .ToString("0.0").Replace('.', ',') + "s";
+        }
+        if (effettiTemporanei != null && slotCalamita.radice.activeSelf)
+        {
+            AggiornaTimer(
+                slotCalamita,
+                effettiTemporanei.TempoCalamitaRimasto,
+                effettiTemporanei.DurataCalamitaTotale
+            );
+        }
+        if (effettiTemporanei != null && slotFuria.radice.activeSelf)
+        {
+            AggiornaTimer(
+                slotFuria,
+                effettiTemporanei.TempoFuriaRimasto,
+                effettiTemporanei.DurataFuriaTotale
             );
         }
     }

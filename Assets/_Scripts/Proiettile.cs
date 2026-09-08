@@ -283,7 +283,8 @@ public class Proiettile : MonoBehaviour
             feedback.Riproduci(
                 direzioneColpo,
                 colpoPotente || colpoCritico,
-                puoPenetrare || haRimbalzato
+                puoPenetrare || haRimbalzato,
+                colpoCritico
             );
         }
 
@@ -292,7 +293,8 @@ public class Proiettile : MonoBehaviour
             direzioneColpo,
             rendererBersaglio,
             colpoPotente || colpoCritico,
-            puoPenetrare || haRimbalzato
+            puoPenetrare || haRimbalzato,
+            colpoCritico
         );
     }
 

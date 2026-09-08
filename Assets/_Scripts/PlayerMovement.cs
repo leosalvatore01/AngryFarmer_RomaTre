@@ -231,6 +231,13 @@ public class PlayerMovement : MonoBehaviour
             DirezioneUltimaSchivata,
             durataSchivata
         );
+        if (Application.isPlaying)
+        {
+            CombatFeedbackController.CreaOTrova()?.RegistraSchivata(
+                transform.position,
+                DirezioneUltimaSchivata
+            );
+        }
         SchivataIniziata?.Invoke();
         return true;
     }

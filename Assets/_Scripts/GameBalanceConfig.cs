@@ -36,6 +36,17 @@ public sealed class PlayerBalanceSettings
     [Min(1f)] public float moltiplicatoreBoostVelocita = 2f;
     [Min(0f)] public float durataTriploSparo = 5f;
     [Range(0f, 45f)] public float angoloLateraleTriploSparo = 10f;
+    [Min(0.1f)] public float durataScudoTemporaneo = 8f;
+    [Min(1)] public int caricheScudoTemporaneo = 1;
+    [Min(1)] public int quantitaCuraDrop = 2;
+    [Min(0.1f)] public float durataCalamita = 9f;
+    [Min(0.5f)] public float raggioCalamita = 5.5f;
+    [Min(0.1f)] public float velocitaAttrazioneCalamita = 9f;
+    [Min(0.1f)] public float durataFuria = 7f;
+    [Min(1f)] public float moltiplicatoreDannoFuria = 1.75f;
+    [Range(0.2f, 1f)] public float moltiplicatoreIntervalloFuria = 0.68f;
+    [Min(0.5f)] public float raggioEsplosioneDrop = 4.5f;
+    [Min(1)] public int dannoEsplosioneDrop = 8;
 }
 
 [Serializable]
@@ -59,6 +70,15 @@ public sealed class FoxBalanceSettings
     [Range(0f, 100f)] public float probabilitaDrop = 30f;
     [Range(0f, 1f)] public float probabilitaDenteSulDrop = 0.5f;
     [Min(0.1f)] public float durataDropSullaMappa = 12f;
+    [Min(1)] public int uccisioniSenzaDropMassime = 5;
+    [Min(1)] public int ripetizioniMassimeStessoDrop = 2;
+    [Min(0f)] public float pesoDropTriploSparo = 1.2f;
+    [Min(0f)] public float pesoDropVelocita = 1.15f;
+    [Min(0f)] public float pesoDropScudo = 0.9f;
+    [Min(0f)] public float pesoDropCura = 0.8f;
+    [Min(0f)] public float pesoDropCalamita = 0.75f;
+    [Min(0f)] public float pesoDropFuria = 0.7f;
+    [Min(0f)] public float pesoDropEsplosione = 0.55f;
 }
 
 [Serializable]
@@ -732,10 +752,67 @@ public sealed class GameBalanceConfig : ScriptableObject
             0.05f,
             giocatore.durataSchivata + 0.15f
         );
+        giocatore.durataScudoTemporaneo = Mathf.Max(
+            0.1f,
+            giocatore.durataScudoTemporaneo
+        );
+        giocatore.caricheScudoTemporaneo = Mathf.Max(
+            1,
+            giocatore.caricheScudoTemporaneo
+        );
+        giocatore.quantitaCuraDrop = Mathf.Max(
+            1,
+            giocatore.quantitaCuraDrop
+        );
+        giocatore.durataCalamita = Mathf.Max(
+            0.1f,
+            giocatore.durataCalamita
+        );
+        giocatore.raggioCalamita = Mathf.Max(
+            0.5f,
+            giocatore.raggioCalamita
+        );
+        giocatore.velocitaAttrazioneCalamita = Mathf.Max(
+            0.1f,
+            giocatore.velocitaAttrazioneCalamita
+        );
+        giocatore.durataFuria = Mathf.Max(0.1f, giocatore.durataFuria);
+        giocatore.moltiplicatoreDannoFuria = Mathf.Max(
+            1f,
+            giocatore.moltiplicatoreDannoFuria
+        );
+        giocatore.moltiplicatoreIntervalloFuria = Mathf.Clamp(
+            giocatore.moltiplicatoreIntervalloFuria,
+            0.2f,
+            1f
+        );
+        giocatore.raggioEsplosioneDrop = Mathf.Max(
+            0.5f,
+            giocatore.raggioEsplosioneDrop
+        );
+        giocatore.dannoEsplosioneDrop = Mathf.Max(
+            1,
+            giocatore.dannoEsplosioneDrop
+        );
         volpe.durataDropSullaMappa = Mathf.Max(
             0.1f,
             volpe.durataDropSullaMappa
         );
+        volpe.uccisioniSenzaDropMassime = Mathf.Max(
+            1,
+            volpe.uccisioniSenzaDropMassime
+        );
+        volpe.ripetizioniMassimeStessoDrop = Mathf.Max(
+            1,
+            volpe.ripetizioniMassimeStessoDrop
+        );
+        volpe.pesoDropTriploSparo = Mathf.Max(0f, volpe.pesoDropTriploSparo);
+        volpe.pesoDropVelocita = Mathf.Max(0f, volpe.pesoDropVelocita);
+        volpe.pesoDropScudo = Mathf.Max(0f, volpe.pesoDropScudo);
+        volpe.pesoDropCura = Mathf.Max(0f, volpe.pesoDropCura);
+        volpe.pesoDropCalamita = Mathf.Max(0f, volpe.pesoDropCalamita);
+        volpe.pesoDropFuria = Mathf.Max(0f, volpe.pesoDropFuria);
+        volpe.pesoDropEsplosione = Mathf.Max(0f, volpe.pesoDropEsplosione);
         maialino.cambioDirezioneMassimo = Mathf.Max(
             maialino.cambioDirezioneMinimo,
             maialino.cambioDirezioneMassimo

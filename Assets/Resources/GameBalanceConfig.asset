@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71eb059f1b8bf85479410b9626b3361b, type: 3}
   m_Name: GameBalanceConfig
   m_EditorClassIdentifier: Assembly-CSharp::GameBalanceConfig
-  versioneRiferimento: Survival infinito - input e schivata - 2026-09-06
+  versioneRiferimento: Survival infinito - drop e feedback - 2026-09-08
   giocatore:
     velocitaMovimento: 8
     accelerazione: 45
@@ -37,6 +37,17 @@ MonoBehaviour:
     moltiplicatoreBoostVelocita: 2
     durataTriploSparo: 5
     angoloLateraleTriploSparo: 10
+    durataScudoTemporaneo: 8
+    caricheScudoTemporaneo: 1
+    quantitaCuraDrop: 2
+    durataCalamita: 9
+    raggioCalamita: 5.5
+    velocitaAttrazioneCalamita: 9
+    durataFuria: 7
+    moltiplicatoreDannoFuria: 1.75
+    moltiplicatoreIntervalloFuria: 0.68
+    raggioEsplosioneDrop: 4.5
+    dannoEsplosioneDrop: 8
   volpe:
     velocita: 2.4
     accelerazione: 12
@@ -53,6 +64,15 @@ MonoBehaviour:
     probabilitaDrop: 30
     probabilitaDenteSulDrop: 0.5
     durataDropSullaMappa: 12
+    uccisioniSenzaDropMassime: 5
+    ripetizioniMassimeStessoDrop: 2
+    pesoDropTriploSparo: 1.2
+    pesoDropVelocita: 1.15
+    pesoDropScudo: 0.9
+    pesoDropCura: 0.8
+    pesoDropCalamita: 0.75
+    pesoDropFuria: 0.7
+    pesoDropEsplosione: 0.55
   variantiVolpe:
     comune:
       moltiplicatoreVelocita: 1

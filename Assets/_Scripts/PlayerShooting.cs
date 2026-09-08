@@ -52,10 +52,14 @@ public class PlayerShooting : MonoBehaviour
             return 1f / (1f + Mathf.Max(0f, intensita));
         }
     }
-    public float IntervalloSparoFinale =>
+    public float IntervalloSparoFinale => Mathf.Max(
+        intervalloSparoMinimo,
         ApplicaBonusPermanenteAIntervallo(
             IntervalloSparoDopoBonusRun
-        );
+        ) * (effettiTemporanei != null
+            ? effettiTemporanei.MoltiplicatoreIntervalloSparo
+            : 1f)
+    );
 
     public float VelocitaProiettileBase => velocitaProiettileBase;
     public float BonusVelocitaProiettile => bonusVelocitaProiettile;
@@ -72,11 +76,26 @@ public class PlayerShooting : MonoBehaviour
         bonusDannoPermanente,
         0
     );
-    public int DannoFinale => SommaSicura(
+    public int DannoPrimaFuria => SommaSicura(
         dannoBase,
         BonusDannoTotale,
         1
     );
+    public int DannoFinale
+    {
+        get
+        {
+            float moltiplicatore = effettiTemporanei != null
+                ? effettiTemporanei.MoltiplicatoreDanno
+                : 1f;
+            double risultato = Math.Ceiling(
+                DannoPrimaFuria * (double)Mathf.Max(1f, moltiplicatore)
+            );
+            return risultato >= int.MaxValue
+                ? int.MaxValue
+                : Mathf.Max(1, (int)risultato);
+        }
+    }
 
     public int PenetrazioneBase => penetrazioneBase;
     public int BonusPenetrazione => bonusPenetrazione;
@@ -115,6 +134,7 @@ public class PlayerShooting : MonoBehaviour
     private FarmerInputController input;
     private PlayerVisualController controllerVisivo;
     private PlayerUpgrades potenziamenti;
+    private PlayerTemporaryEffects effettiTemporanei;
     private System.Random casualitaBuild;
     private bool attendiRilascioMouse;
     private int colpiContatiPerRaffica;
@@ -167,6 +187,8 @@ public class PlayerShooting : MonoBehaviour
 
         cameraPrincipale = Camera.main;
         controllerVisivo = GetComponent<PlayerVisualController>();
+        effettiTemporanei =
+            PlayerTemporaryEffects.AggiungiOTrova(gameObject);
         potenziamenti = GetComponent<PlayerUpgrades>();
         if (potenziamenti == null)
         {

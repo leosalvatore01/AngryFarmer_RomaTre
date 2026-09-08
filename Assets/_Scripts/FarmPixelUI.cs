@@ -38,7 +38,12 @@ public enum FarmPixelIcon
     EvoluzioneRaffica,
     EvoluzioneArtiglieria,
     EvoluzionePerforazione,
-    EvoluzioneControllo
+    EvoluzioneControllo,
+    ScudoTemporaneo,
+    CuraTemporanea,
+    Calamita,
+    Furia,
+    EsplosioneIstantanea
 }
 
 /// <summary>
@@ -490,6 +495,21 @@ public static class FarmPixelUI
             case FarmPixelIcon.BoostVelocita:
                 DisegnaBoostVelocita(pixel);
                 break;
+            case FarmPixelIcon.ScudoTemporaneo:
+                DisegnaScudoTemporaneo(pixel);
+                break;
+            case FarmPixelIcon.CuraTemporanea:
+                DisegnaCuraTemporanea(pixel);
+                break;
+            case FarmPixelIcon.Calamita:
+                DisegnaCalamita(pixel);
+                break;
+            case FarmPixelIcon.Furia:
+                DisegnaFuria(pixel);
+                break;
+            case FarmPixelIcon.EsplosioneIstantanea:
+                DisegnaEsplosioneIstantanea(pixel);
+                break;
             case FarmPixelIcon.Schivata:
                 DisegnaSchivata(pixel);
                 break;
@@ -934,6 +954,66 @@ public static class FarmPixelUI
         Linea(pixel, 15, 18, 12, 12, giallo, 1);
         Linea(pixel, 12, 12, 16, 12, giallo, 1);
         Linea(pixel, 16, 12, 13, 3, giallo, 1);
+    }
+
+    private static void DisegnaScudoTemporaneo(Color32[] pixel)
+    {
+        DisegnaScudo(pixel);
+        Color32 luce = new Color32(196, 251, 255, 255);
+        Linea(pixel, 2, 17, 6, 17, Contorno, 3);
+        Linea(pixel, 4, 15, 4, 19, Contorno, 3);
+        Linea(pixel, 2, 17, 6, 17, luce, 1);
+        Linea(pixel, 4, 15, 4, 19, luce, 1);
+    }
+
+    private static void DisegnaCuraTemporanea(Color32[] pixel)
+    {
+        DisegnaPozione(pixel);
+        Color32 verde = new Color32(96, 224, 111, 255);
+        Rettangolo(pixel, 13, 3, 18, 5, Contorno);
+        Rettangolo(pixel, 15, 1, 17, 7, Contorno);
+        Rettangolo(pixel, 14, 4, 17, 4, verde);
+        Rettangolo(pixel, 16, 2, 16, 6, verde);
+    }
+
+    private static void DisegnaCalamita(Color32[] pixel)
+    {
+        Color32 rosso = new Color32(218, 63, 48, 255);
+        Color32 azzurro = new Color32(77, 202, 219, 255);
+        Rettangolo(pixel, 3, 7, 7, 16, Contorno);
+        Rettangolo(pixel, 12, 7, 16, 16, Contorno);
+        Rettangolo(pixel, 6, 3, 13, 7, Contorno);
+        Rettangolo(pixel, 5, 8, 7, 15, rosso);
+        Rettangolo(pixel, 12, 8, 14, 15, azzurro);
+        Rettangolo(pixel, 7, 4, 12, 6, new Color32(177, 193, 190, 255));
+        Rettangolo(pixel, 5, 14, 7, 17, Crema);
+        Rettangolo(pixel, 12, 14, 14, 17, Crema);
+    }
+
+    private static void DisegnaFuria(Color32[] pixel)
+    {
+        Color32 rosso = new Color32(221, 65, 40, 255);
+        Color32 arancio = new Color32(255, 139, 35, 255);
+        Color32 giallo = new Color32(255, 221, 72, 255);
+        Linea(pixel, 10, 1, 5, 10, Contorno, 5);
+        Linea(pixel, 5, 10, 8, 18, Contorno, 5);
+        Linea(pixel, 8, 18, 15, 11, Contorno, 5);
+        Linea(pixel, 15, 11, 12, 5, Contorno, 5);
+        Linea(pixel, 10, 2, 6, 10, rosso, 3);
+        Linea(pixel, 6, 10, 8, 17, arancio, 3);
+        Linea(pixel, 8, 17, 14, 11, arancio, 3);
+        Linea(pixel, 14, 11, 12, 6, rosso, 3);
+        Rettangolo(pixel, 8, 7, 11, 14, giallo);
+    }
+
+    private static void DisegnaEsplosioneIstantanea(Color32[] pixel)
+    {
+        DisegnaPatataEsplosiva(pixel);
+        Color32 giallo = new Color32(255, 230, 79, 255);
+        Rettangolo(pixel, 0, 9, 3, 10, giallo);
+        Rettangolo(pixel, 16, 9, 19, 10, giallo);
+        Rettangolo(pixel, 9, 0, 10, 3, giallo);
+        Rettangolo(pixel, 9, 16, 10, 19, giallo);
     }
 
     private static void DisegnaSchivata(Color32[] pixel)
