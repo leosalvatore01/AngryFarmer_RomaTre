@@ -376,7 +376,10 @@ public static class ProgressionePermanente
 
     public static int CalcolaRicompensaOndata(int indiceOnda)
     {
-        return indiceOnda <= 0 ? 0 : 1 + (indiceOnda - 1) / 5;
+        // Il primo acquisto resta rapido, ma il guadagno non raddoppia gia
+        // dopo cinque ondate: una fascia di dieci evita che una singola run
+        // sblocchi quasi tutto il primo livello dello shop permanente.
+        return indiceOnda <= 0 ? 0 : 1 + (indiceOnda - 1) / 10;
     }
 
     public static int AssegnaRicompensaOndata(int indiceOnda)

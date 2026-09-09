@@ -105,10 +105,10 @@ public static class SpecialEncounterDirector
     {
         int baseMonete = impostazioni != null
             ? Mathf.Max(0, impostazioni.moneteBossBase)
-            : 35;
+            : 28;
         int incremento = impostazioni != null
             ? Mathf.Max(0, impostazioni.moneteBossPerApparizione)
-            : 15;
+            : 12;
         return SommaSaturata(baseMonete, incremento, apparizione - 1);
     }
 

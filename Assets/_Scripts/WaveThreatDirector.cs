@@ -63,6 +63,7 @@ public sealed class ThreatBudgetSettings
     [Header("Budget per ondata")]
     public bool attivo = true;
     [Min(1)] public int budgetPrimaOndata = 3;
+    [Min(0)] public int bonusBudgetDopoPrimaOndata = 1;
     [Min(0)] public int incrementoBudgetPerOnda = 2;
     [Min(1)] public int ondeCrescitaLineare = 20;
     [Min(0f)] public float incrementoBudgetAvanzato = 2f;
@@ -92,6 +93,10 @@ public sealed class ThreatBudgetSettings
     public void Normalizza()
     {
         budgetPrimaOndata = Mathf.Max(1, budgetPrimaOndata);
+        bonusBudgetDopoPrimaOndata = Mathf.Max(
+            0,
+            bonusBudgetDopoPrimaOndata
+        );
         incrementoBudgetPerOnda = Mathf.Max(0, incrementoBudgetPerOnda);
         ondeCrescitaLineare = Mathf.Max(1, ondeCrescitaLineare);
         incrementoBudgetAvanzato = Mathf.Max(0f, incrementoBudgetAvanzato);
@@ -421,6 +426,9 @@ public static class WaveThreatDirector
         double crescitaAvanzata = Math.Sqrt(trattoAvanzato) *
             Math.Max(0f, regole.incrementoBudgetAvanzato);
         long budget = Math.Max(1, regole.budgetPrimaOndata) +
+            (onda > 1
+                ? Math.Max(0, regole.bonusBudgetDopoPrimaOndata)
+                : 0) +
             trattoLineare * Math.Max(0, regole.incrementoBudgetPerOnda) +
             (long)Math.Floor(crescitaAvanzata);
 

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71eb059f1b8bf85479410b9626b3361b, type: 3}
   m_Name: GameBalanceConfig
   m_EditorClassIdentifier: Assembly-CSharp::GameBalanceConfig
-  versioneRiferimento: Survival infinito - pooling ondate alte - 2026-09-08
+  versioneRiferimento: Blocco 12 - prima taratura quantitativa - 2026-09-09
   giocatore:
     velocitaMovimento: 8
     accelerazione: 45
@@ -61,10 +61,10 @@ MonoBehaviour:
     vitaPrimaOndata: 2
     vitaAggiuntivaPerOndata: 1
     monetePerEliminazione: 1
-    probabilitaDrop: 30
+    probabilitaDrop: 24
     probabilitaDenteSulDrop: 0.5
     durataDropSullaMappa: 12
-    uccisioniSenzaDropMassime: 5
+    uccisioniSenzaDropMassime: 6
     ripetizioniMassimeStessoDrop: 2
     pesoDropTriploSparo: 1.2
     pesoDropVelocita: 1.15
@@ -348,6 +348,7 @@ MonoBehaviour:
     minaccia:
       attivo: 1
       budgetPrimaOndata: 3
+      bonusBudgetDopoPrimaOndata: 1
       incrementoBudgetPerOnda: 2
       ondeCrescitaLineare: 20
       incrementoBudgetAvanzato: 2
@@ -382,9 +383,9 @@ MonoBehaviour:
       moltiplicatoreVitaBoss: 5.5
       crescitaVitaPerApparizione: 0.35
       moltiplicatoreScalaBoss: 1.12
-      moneteBossBase: 35
-      moneteBossPerApparizione: 15
-      dropGarantitiBoss: 3
+      moneteBossBase: 28
+      moneteBossPerApparizione: 12
+      dropGarantitiBoss: 2
       sogliaSecondaFase: 0.5
       velocitaInseguimento: 1.55
       velocitaSecondaFase: 1.3

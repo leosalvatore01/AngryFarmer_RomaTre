@@ -67,10 +67,10 @@ public sealed class FoxBalanceSettings
     [Min(1)] public int vitaPrimaOndata = 2;
     [Min(0)] public int vitaAggiuntivaPerOndata = 1;
     [Min(0)] public int monetePerEliminazione = 1;
-    [Range(0f, 100f)] public float probabilitaDrop = 30f;
+    [Range(0f, 100f)] public float probabilitaDrop = 24f;
     [Range(0f, 1f)] public float probabilitaDenteSulDrop = 0.5f;
     [Min(0.1f)] public float durataDropSullaMappa = 12f;
-    [Min(1)] public int uccisioniSenzaDropMassime = 5;
+    [Min(1)] public int uccisioniSenzaDropMassime = 6;
     [Min(1)] public int ripetizioniMassimeStessoDrop = 2;
     [Min(0f)] public float pesoDropTriploSparo = 1.2f;
     [Min(0f)] public float pesoDropVelocita = 1.15f;
@@ -217,9 +217,9 @@ public sealed class SpecialEncounterBalanceSettings
     [Min(1f)] public float moltiplicatoreVitaBoss = 5.5f;
     [Min(0f)] public float crescitaVitaPerApparizione = 0.35f;
     [Min(1f)] public float moltiplicatoreScalaBoss = 1.12f;
-    [Min(0)] public int moneteBossBase = 35;
-    [Min(0)] public int moneteBossPerApparizione = 15;
-    [Range(1, 8)] public int dropGarantitiBoss = 3;
+    [Min(0)] public int moneteBossBase = 28;
+    [Min(0)] public int moneteBossPerApparizione = 12;
+    [Range(1, 8)] public int dropGarantitiBoss = 2;
     [Range(0.2f, 0.8f)] public float sogliaSecondaFase = 0.5f;
 
     [Header("Movimento e ritmo boss")]
