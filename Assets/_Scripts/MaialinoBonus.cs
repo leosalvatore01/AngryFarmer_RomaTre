@@ -6,7 +6,8 @@ using UnityEngine;
 [RequireComponent(typeof(SpriteRenderer))]
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(Collider2D))]
-public class MaialinoBonus : MonoBehaviour, IDanneggiabile
+public class MaialinoBonus : MonoBehaviour, IDanneggiabile,
+    IPoolableGameplayObject
 {
     [Header("Passeggio e fuga")]
     [Min(0f)] public float velocitaPasseggio = 1.45f;
@@ -66,6 +67,9 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
     private Transform barraVita;
     private Transform riempimentoBarra;
     private SpriteRenderer rendererRiempimentoBarra;
+    private Vector3 scalaGraficaBase = Vector3.one;
+    private Vector3 posizioneGraficaBase;
+    private Quaternion rotazioneGraficaBase = Quaternion.identity;
 
     public int VitaMassima => vitaMassima;
     public int VitaCorrente => vitaCorrente;
@@ -85,6 +89,12 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
 
         spriteRendererVisibile =
             CreaRendererVisivo(GetComponent<SpriteRenderer>());
+        if (grafica != null)
+        {
+            scalaGraficaBase = grafica.localScale;
+            posizioneGraficaBase = grafica.localPosition;
+            rotazioneGraficaBase = grafica.localRotation;
+        }
         coloreBase = spriteRendererVisibile != null
             ? spriteRendererVisibile.color
             : Color.white;
@@ -158,20 +168,12 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
 
     void Start()
     {
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-        if (player != null)
-        {
-            giocatore = player.transform;
-        }
-
-        ScegliNuovaDirezione();
-        tempoScadenza = Time.time + durataSullaMappa;
+        if (tempoScadenza <= Time.time)
+            ReimpostaStatoRuntime();
     }
 
     public void Inizializza(int vita, int monete)
     {
-        if (morto) return;
-
         vitaMassima = Mathf.Max(1, vita);
         vitaCorrente = vitaMassima;
         moneteRicompensa = Mathf.Max(0, monete);
@@ -416,7 +418,7 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
             yield return null;
         }
 
-        Destroy(gameObject);
+        GameplayObjectPool.RilasciaODistruggi(gameObject);
     }
 
     IEnumerator AnimaScala(Vector3 da, Vector3 a, float durata)
@@ -467,18 +469,24 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
         float scala
     )
     {
-        GameObject particella = new GameObject(nome);
-        particella.transform.position =
-            transform.position + (Vector3)(Random.insideUnitCircle * 0.18f);
+        GameObject particella = GameplayObjectPool.SpawnProcedurale(
+            "pig_reward_particle",
+            CreaOggettoParticella,
+            transform.position + (Vector3)(Random.insideUnitCircle * 0.18f),
+            Quaternion.identity,
+            GameBalanceConfig.Corrente.Pooling.particelleRicompensa
+        );
+        if (particella == null) return;
+        particella.name = nome;
         particella.transform.localScale = Vector3.one * scala;
 
-        SpriteRenderer renderer = particella.AddComponent<SpriteRenderer>();
+        SpriteRenderer renderer = particella.GetComponent<SpriteRenderer>();
         renderer.sprite = sprite;
         renderer.color = colore;
         renderer.sortingLayerID = spriteRendererVisibile.sortingLayerID;
         renderer.sortingOrder = spriteRendererVisibile.sortingOrder + 5;
 
-        Rigidbody2D fisica = particella.AddComponent<Rigidbody2D>();
+        Rigidbody2D fisica = particella.GetComponent<Rigidbody2D>();
         fisica.gravityScale = 1.25f;
         fisica.linearVelocity = new Vector2(
             Random.Range(-1.7f, 1.7f),
@@ -486,16 +494,22 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
         );
         fisica.angularVelocity = Random.Range(-320f, 320f);
 
-        particella.AddComponent<AutoDistruzioneRealtime>();
+        particella.GetComponent<AutoDistruzioneRealtime>().Attiva(0.75f);
     }
 
     TextMeshPro CreaTestoBonus()
     {
-        GameObject oggettoTesto = new GameObject("TestoBonusMonete");
-        oggettoTesto.transform.position = transform.position + Vector3.up * 0.48f;
+        GameObject oggettoTesto = GameplayObjectPool.SpawnProcedurale(
+            "pig_reward_text",
+            CreaOggettoTesto,
+            transform.position + Vector3.up * 0.48f,
+            Quaternion.identity,
+            GameBalanceConfig.Corrente.Pooling.particelleRicompensa
+        );
+        if (oggettoTesto == null) return null;
         oggettoTesto.transform.localScale = Vector3.one * 0.16f;
 
-        TextMeshPro testo = oggettoTesto.AddComponent<TextMeshPro>();
+        TextMeshPro testo = oggettoTesto.GetComponent<TextMeshPro>();
         testo.text = "+" + moneteRicompensa + " MONETE";
         testo.fontSize = 3.2f;
         testo.fontStyle = FontStyles.Bold;
@@ -507,8 +521,26 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
         testo.renderer.sortingLayerID = spriteRendererVisibile.sortingLayerID;
         testo.renderer.sortingOrder = spriteRendererVisibile.sortingOrder + 8;
 
-        oggettoTesto.AddComponent<AutoDistruzioneRealtime>();
+        oggettoTesto.GetComponent<AutoDistruzioneRealtime>().Attiva(0.75f);
         return testo;
+    }
+
+    private static GameObject CreaOggettoParticella()
+    {
+        GameObject oggetto = new GameObject("ParticellaRicompensaMaialino");
+        oggetto.AddComponent<SpriteRenderer>();
+        Rigidbody2D fisica = oggetto.AddComponent<Rigidbody2D>();
+        fisica.gravityScale = 1.25f;
+        oggetto.AddComponent<AutoDistruzioneRealtime>();
+        return oggetto;
+    }
+
+    private static GameObject CreaOggettoTesto()
+    {
+        GameObject oggetto = new GameObject("TestoBonusMonete");
+        oggetto.AddComponent<TextMeshPro>();
+        oggetto.AddComponent<AutoDistruzioneRealtime>();
+        return oggetto;
     }
 
     void RimuoviSenzaPremio()
@@ -526,7 +558,7 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
     {
         if (grafica == null)
         {
-            Destroy(gameObject);
+            GameplayObjectPool.RilasciaODistruggi(gameObject);
             yield break;
         }
 
@@ -543,7 +575,7 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
             );
             yield return null;
         }
-        Destroy(gameObject);
+        GameplayObjectPool.RilasciaODistruggi(gameObject);
     }
 
     void CreaBarraVita()
@@ -761,7 +793,7 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
         {
             if (maialino != null)
             {
-                Destroy(maialino.gameObject);
+                GameplayObjectPool.RilasciaODistruggi(maialino.gameObject);
             }
         }
         attivi.Clear();
@@ -775,15 +807,103 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile
             spriteRendererVisibile.color = coloreBase;
         }
     }
+
+    public void PreparaUscitaDalPool()
+    {
+        ReimpostaStatoRuntime();
+    }
+
+    public void PreparaRientroNelPool()
+    {
+        StopAllCoroutines();
+        flashRoutine = null;
+        morto = true;
+        velocitaDesiderata = Vector2.zero;
+        velocitaAttuale = Vector2.zero;
+        if (corpo != null)
+        {
+            corpo.linearVelocity = Vector2.zero;
+            corpo.angularVelocity = 0f;
+        }
+    }
+
+    private void ReimpostaStatoRuntime()
+    {
+        StopAllCoroutines();
+        flashRoutine = null;
+        morto = false;
+        ricompensaAssegnata = false;
+        vitaMassima = Mathf.Max(1, vitaBase);
+        vitaCorrente = vitaMassima;
+        moneteRicompensa = Mathf.Max(0, moneteBase);
+        velocitaDesiderata = Vector2.zero;
+        velocitaAttuale = Vector2.zero;
+        timerAnimazione = 0f;
+        faseSaltello = Random.Range(0f, Mathf.PI * 2f);
+        if (colliderFisico != null) colliderFisico.enabled = true;
+        if (corpo != null)
+        {
+            corpo.linearVelocity = Vector2.zero;
+            corpo.angularVelocity = 0f;
+        }
+        if (grafica != null)
+        {
+            grafica.localScale = scalaGraficaBase;
+            grafica.localPosition = posizioneGraficaBase;
+            grafica.localRotation = rotazioneGraficaBase;
+        }
+        if (spriteRendererVisibile != null)
+        {
+            spriteRendererVisibile.color = coloreBase;
+            if (frameTrotto != null && frameTrotto.Length > 0)
+                spriteRendererVisibile.sprite = frameTrotto[0];
+        }
+        if (barraVita != null) barraVita.gameObject.SetActive(true);
+        AggiornaBarraVita();
+
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        giocatore = player != null ? player.transform : null;
+        ScegliNuovaDirezione();
+        tempoScadenza = Time.time + durataSullaMappa;
+    }
 }
 
-public class AutoDistruzioneRealtime : MonoBehaviour
+public class AutoDistruzioneRealtime : MonoBehaviour,
+    IPoolableGameplayObject
 {
     [Min(0.01f)] public float durata = 0.75f;
+    private float scadeA;
 
-    IEnumerator Start()
+    public void Attiva(float nuovaDurata)
     {
-        yield return new WaitForSeconds(durata);
-        Destroy(gameObject);
+        durata = Mathf.Max(0.01f, nuovaDurata);
+        scadeA = Time.time + durata;
+    }
+
+    void Update()
+    {
+        if (Time.time >= scadeA)
+            GameplayObjectPool.RilasciaODistruggi(gameObject);
+    }
+
+    public void PreparaUscitaDalPool()
+    {
+        scadeA = Time.time + Mathf.Max(0.01f, durata);
+        Rigidbody2D corpo = GetComponent<Rigidbody2D>();
+        if (corpo != null)
+        {
+            corpo.linearVelocity = Vector2.zero;
+            corpo.angularVelocity = 0f;
+        }
+    }
+
+    public void PreparaRientroNelPool()
+    {
+        Rigidbody2D corpo = GetComponent<Rigidbody2D>();
+        if (corpo != null)
+        {
+            corpo.linearVelocity = Vector2.zero;
+            corpo.angularVelocity = 0f;
+        }
     }
 }

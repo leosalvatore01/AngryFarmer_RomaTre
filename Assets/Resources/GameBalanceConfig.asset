@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71eb059f1b8bf85479410b9626b3361b, type: 3}
   m_Name: GameBalanceConfig
   m_EditorClassIdentifier: Assembly-CSharp::GameBalanceConfig
-  versioneRiferimento: Survival infinito - drop e feedback - 2026-09-08
+  versioneRiferimento: Survival infinito - pooling ondate alte - 2026-09-08
   giocatore:
     velocitaMovimento: 8
     accelerazione: 45
@@ -292,6 +292,20 @@ MonoBehaviour:
     vibrazioneCameraAttiva: 1
     intensitaVibrazione: 0.045
     durataVibrazione: 0.075
+  pooling:
+    volpiComuni: 40
+    volpiElite: 4
+    boss: 2
+    proiettiliContadino: 160
+    drop: 32
+    maialini: 8
+    proiettiliNemici: 32
+    anelliVfx: 72
+    lineeVfx: 16
+    impulsiSecondari: 16
+    particelleRicompensa: 32
+    fpsObiettivo: 60
+    budgetMemoriaPoolMb: 96
   difficolta:
     tranquilla:
       nomeVisualizzato: TRANQUILLA

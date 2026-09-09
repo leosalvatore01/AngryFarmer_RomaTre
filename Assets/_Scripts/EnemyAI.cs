@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 
 [RequireComponent(typeof(Rigidbody2D))]
-public class EnemyAI : MonoBehaviour, IDanneggiabile
+public class EnemyAI : MonoBehaviour, IDanneggiabile, IPoolableGameplayObject
 {
     private const float IntervalloControlloProiettili = 0.04f;
     private const float DurataMiraFango = 0.68f;
@@ -81,6 +81,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     private Transform grafica;
     private SpriteRenderer spriteRendererVisibile;
     private SpriteRenderer ombraRenderer;
+    private Color coloreOmbraBase;
     private Sprite spriteIdle;
     private Sprite[] frameCorsa;
     private Sprite[] frameMorte;
@@ -162,6 +163,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
     [Range(0, 100)] public float dropChance = 50f;
 
     public static bool isSlowed = false;
+    public static int NumeroAttive => volpiAttive.Count;
 
     public SpriteRenderer RendererVisibile => spriteRendererVisibile;
     public int VitaMassima => vitaMassima;
@@ -293,6 +295,9 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
             new Vector2(0f, -0.36f),
             new Vector2(0.74f, 0.24f)
         );
+        coloreOmbraBase = ombraRenderer != null
+            ? ombraRenderer.color
+            : Color.clear;
 
         vitaMassima = Mathf.Max(1, vitaBase);
         vitaCorrente = vitaMassima;
@@ -1908,12 +1913,14 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
         Vector2 scarto = dropGarantiti > 1
             ? Random.insideUnitCircle * 0.28f
             : Vector2.zero;
-        GameObject istanza = Instantiate(
+        GameObject istanza = GameplayObjectPool.Spawn(
             prefab,
             (Vector2)transform.position + scarto,
-            Quaternion.identity
+            Quaternion.identity,
+            GameBalanceConfig.Corrente.Pooling.drop,
+            "drop"
         );
-        istanza.GetComponent<PowerUp>()?.Configura(tipoDrop);
+        istanza?.GetComponent<PowerUp>()?.Configura(tipoDrop);
     }
 
     public static int DanneggiaNelRaggio(
@@ -2031,7 +2038,69 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile
             yield return null;
         }
 
-        Destroy(gameObject);
+        GameplayObjectPool.RilasciaODistruggi(gameObject);
+    }
+
+    public void PreparaUscitaDalPool()
+    {
+        StopAllCoroutines();
+        morto = false;
+        neutralizzazioneSegnalata = false;
+        controlloEsterno = false;
+        dropGarantiti = 0;
+        target = null;
+        playerHealth = null;
+        prossimaRicercaGiocatore = 0f;
+        flashDannoRoutine = null;
+        velocitaAttuale = Vector2.zero;
+        velocitaDesiderata = Vector2.zero;
+        velocitaSpinta = Vector2.zero;
+        staInseguendo = false;
+        tempoRallentamentoBuild = 0f;
+        moltiplicatoreRallentamentoBuild = 1f;
+        tempoRallentamentoTerreno = 0f;
+        moltiplicatoreRallentamentoTerreno = 1f;
+        transform.localScale = scalaPrefab;
+
+        if (colliderFisico != null) colliderFisico.enabled = true;
+        if (corpo != null)
+        {
+            corpo.linearVelocity = Vector2.zero;
+            corpo.angularVelocity = 0f;
+        }
+        if (grafica != null)
+        {
+            grafica.localPosition = Vector3.zero;
+            grafica.localRotation = Quaternion.identity;
+            grafica.localScale = Vector3.one;
+        }
+        if (spriteRendererVisibile != null)
+        {
+            Color colore = coloreBase;
+            colore.a = 1f;
+            spriteRendererVisibile.color = colore;
+            spriteRendererVisibile.enabled = true;
+        }
+        if (ombraRenderer != null)
+        {
+            ombraRenderer.color = coloreOmbraBase;
+            ombraRenderer.enabled = true;
+        }
+        if (barraVita != null) barraVita.gameObject.SetActive(true);
+    }
+
+    public void PreparaRientroNelPool()
+    {
+        StopAllCoroutines();
+        InterrompiAbilitaSpeciali();
+        velocitaAttuale = Vector2.zero;
+        velocitaDesiderata = Vector2.zero;
+        velocitaSpinta = Vector2.zero;
+        if (corpo != null)
+        {
+            corpo.linearVelocity = Vector2.zero;
+            corpo.angularVelocity = 0f;
+        }
     }
 
     void OnDisable()

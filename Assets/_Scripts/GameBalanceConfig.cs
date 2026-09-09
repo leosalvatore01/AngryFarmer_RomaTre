@@ -602,6 +602,46 @@ public sealed class CombatFeedbackSettings
     [Range(0.02f, 0.25f)] public float durataVibrazione = 0.075f;
 }
 
+[Serializable]
+public sealed class PoolingBalanceSettings
+{
+    [Header("Capacita dei pool prefab")]
+    [Range(8, 96)] public int volpiComuni = 40;
+    [Range(1, 12)] public int volpiElite = 4;
+    [Range(1, 6)] public int boss = 2;
+    [Range(32, 256)] public int proiettiliContadino = 160;
+    [Range(8, 64)] public int drop = 32;
+    [Range(2, 16)] public int maialini = 8;
+
+    [Header("Capacita oggetti procedurali")]
+    [Range(8, 64)] public int proiettiliNemici = 32;
+    [Range(16, 128)] public int anelliVfx = 72;
+    [Range(4, 32)] public int lineeVfx = 16;
+    [Range(4, 32)] public int impulsiSecondari = 16;
+    [Range(8, 64)] public int particelleRicompensa = 32;
+
+    [Header("Obiettivi stabilita")]
+    [Range(30, 120)] public int fpsObiettivo = 60;
+    [Range(32, 256)] public int budgetMemoriaPoolMb = 96;
+
+    public void Normalizza()
+    {
+        volpiComuni = Mathf.Clamp(volpiComuni, 8, 96);
+        volpiElite = Mathf.Clamp(volpiElite, 1, 12);
+        boss = Mathf.Clamp(boss, 1, 6);
+        proiettiliContadino = Mathf.Clamp(proiettiliContadino, 32, 256);
+        drop = Mathf.Clamp(drop, 8, 64);
+        maialini = Mathf.Clamp(maialini, 2, 16);
+        proiettiliNemici = Mathf.Clamp(proiettiliNemici, 8, 64);
+        anelliVfx = Mathf.Clamp(anelliVfx, 16, 128);
+        lineeVfx = Mathf.Clamp(lineeVfx, 4, 32);
+        impulsiSecondari = Mathf.Clamp(impulsiSecondari, 4, 32);
+        particelleRicompensa = Mathf.Clamp(particelleRicompensa, 8, 64);
+        fpsObiettivo = Mathf.Clamp(fpsObiettivo, 30, 120);
+        budgetMemoriaPoolMb = Mathf.Clamp(budgetMemoriaPoolMb, 32, 256);
+    }
+}
+
 [CreateAssetMenu(
     fileName = "GameBalanceConfig",
     menuName = "Angry Farmer/Bilanciamento di riferimento"
@@ -630,6 +670,8 @@ public sealed class GameBalanceConfig : ScriptableObject
         new BilanciamentoDifficolta();
     [SerializeField] private CombatFeedbackSettings feedbackCombattimento =
         new CombatFeedbackSettings();
+    [SerializeField] private PoolingBalanceSettings pooling =
+        new PoolingBalanceSettings();
 
     private static GameBalanceConfig corrente;
     private static bool avvisoFallbackMostrato;
@@ -648,6 +690,8 @@ public sealed class GameBalanceConfig : ScriptableObject
     public CombatFeedbackSettings FeedbackCombattimento =>
         feedbackCombattimento ??
         (feedbackCombattimento = new CombatFeedbackSettings());
+    public PoolingBalanceSettings Pooling =>
+        pooling ?? (pooling = new PoolingBalanceSettings());
 
     public static GameBalanceConfig Corrente
     {
@@ -692,6 +736,10 @@ public sealed class GameBalanceConfig : ScriptableObject
         {
             feedbackCombattimento = new CombatFeedbackSettings();
         }
+        if (pooling == null)
+        {
+            pooling = new PoolingBalanceSettings();
+        }
         if (variantiVolpe == null)
         {
             variantiVolpe = new FoxVariantsBalanceSettings();
@@ -721,6 +769,7 @@ public sealed class GameBalanceConfig : ScriptableObject
         ondate.minaccia.Normalizza();
         ondate.incontriSpeciali.Normalizza();
         difficolta.Normalizza();
+        pooling.Normalizza();
 
         giocatore.intervalloSparoMinimo = Mathf.Max(
             0.01f,

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Proiettile : MonoBehaviour
+public class Proiettile : MonoBehaviour, IPoolableGameplayObject
 {
     private const int CapacitaQueryFisica = 64;
     private static readonly Collider2D[] bufferEsplosione =
@@ -47,6 +47,7 @@ public class Proiettile : MonoBehaviour
     private SpriteRenderer rendererGrafica;
     private float velocitaRotazioneVisiva;
     private float durataVita = 3f;
+    private float tempoFineVita;
     private bool colpoPotente;
     private bool aspettoPerforante;
     private bool colpoCritico;
@@ -192,16 +193,24 @@ public class Proiettile : MonoBehaviour
         colpoCritico = profilo.Critico;
         colpoPotente = potente || colpoCritico || scalaBuild > 1.01f;
         aspettoPerforante = perforante && penetrazioniIniziali > 0;
+        tempoFineVita = Time.time + durataVita;
         AggiornaAspettoColpo();
     }
 
     void Start()
     {
-        Destroy(gameObject, durataVita);
+        if (tempoFineVita <= Time.time)
+            tempoFineVita = Time.time + durataVita;
     }
 
     void Update()
     {
+        if (!consumato && Time.time >= tempoFineVita)
+        {
+            consumato = true;
+            GameplayObjectPool.RilasciaODistruggi(gameObject);
+            return;
+        }
         if (grafica != null)
         {
             grafica.Rotate(
@@ -265,7 +274,7 @@ public class Proiettile : MonoBehaviour
             if (!haRimbalzato)
             {
                 consumato = true;
-                Destroy(gameObject);
+                GameplayObjectPool.RilasciaODistruggi(gameObject);
             }
         }
 
@@ -410,7 +419,7 @@ public class Proiettile : MonoBehaviour
             direzione.Normalize();
 
             Vector3 puntoNascita = posizione + direzione * 0.22f;
-            GameObject frammento = Instantiate(
+            GameObject frammento = GameplayObjectPool.SpawnDalloStessoPool(
                 gameObject,
                 puntoNascita,
                 Quaternion.Euler(
@@ -422,7 +431,7 @@ public class Proiettile : MonoBehaviour
             Proiettile comportamento = frammento.GetComponent<Proiettile>();
             if (comportamento == null)
             {
-                Destroy(frammento);
+                GameplayObjectPool.RilasciaODistruggi(frammento);
                 continue;
             }
 
@@ -462,6 +471,35 @@ public class Proiettile : MonoBehaviour
         consumato = false;
         precisioneRegistrata = false;
         transform.localScale = scalaPrefab;
+    }
+
+    public void PreparaUscitaDalPool()
+    {
+        AzzeraStatoRuntime();
+        tempoFineVita = Time.time + durataVita;
+        Rigidbody2D corpo = GetComponent<Rigidbody2D>();
+        if (corpo != null)
+        {
+            corpo.linearVelocity = Vector2.zero;
+            corpo.angularVelocity = 0f;
+        }
+        if (grafica != null)
+        {
+            grafica.localRotation = Quaternion.identity;
+            grafica.localScale = Vector3.one;
+        }
+    }
+
+    public void PreparaRientroNelPool()
+    {
+        consumato = true;
+        tempoFineVita = 0f;
+        Rigidbody2D corpo = GetComponent<Rigidbody2D>();
+        if (corpo != null)
+        {
+            corpo.linearVelocity = Vector2.zero;
+            corpo.angularVelocity = 0f;
+        }
     }
 
     private void AttivaEsplosione(Vector2 posizione)
@@ -684,7 +722,8 @@ public class Proiettile : MonoBehaviour
 
 }
 
-internal sealed class BuildSecondaryExplosionPulse : MonoBehaviour
+internal sealed class BuildSecondaryExplosionPulse : MonoBehaviour,
+    IPoolableGameplayObject
 {
     private const int CapacitaQuery = 64;
     private static readonly Collider2D[] buffer =
@@ -714,16 +753,29 @@ internal sealed class BuildSecondaryExplosionPulse : MonoBehaviour
             return;
         }
 
-        GameObject oggetto = new GameObject("EcoEsplosivaBuild");
-        oggetto.transform.position = posizione;
+        GameObject oggetto = GameplayObjectPool.SpawnProcedurale(
+            "build_secondary_explosion",
+            CreaOggetto,
+            posizione,
+            Quaternion.identity,
+            GameBalanceConfig.Corrente.Pooling.impulsiSecondari
+        );
+        if (oggetto == null) return;
         BuildSecondaryExplosionPulse impulso =
-            oggetto.AddComponent<BuildSecondaryExplosionPulse>();
+            oggetto.GetComponent<BuildSecondaryExplosionPulse>();
         impulso.impulsiRimasti = numeroImpulsi;
         impulso.intervallo = Mathf.Max(0.05f, ritardo);
         impulso.contoAllaRovescia = impulso.intervallo;
         impulso.raggio = Mathf.Max(0.2f, nuovoRaggio);
         impulso.danno = Mathf.Max(1, nuovoDanno);
         impulso.critico = nuovoCritico;
+    }
+
+    private static GameObject CreaOggetto()
+    {
+        GameObject oggetto = new GameObject("EcoEsplosivaBuild");
+        oggetto.AddComponent<BuildSecondaryExplosionPulse>();
+        return oggetto;
     }
 
     void Update()
@@ -735,7 +787,7 @@ internal sealed class BuildSecondaryExplosionPulse : MonoBehaviour
         impulsiRimasti--;
         if (impulsiRimasti <= 0)
         {
-            Destroy(gameObject);
+            GameplayObjectPool.RilasciaODistruggi(gameObject);
             return;
         }
 
@@ -780,6 +832,20 @@ internal sealed class BuildSecondaryExplosionPulse : MonoBehaviour
         }
 
         BuildCombatVfx.CreaEsplosione(centro, raggio, critico);
+    }
+
+    public void PreparaUscitaDalPool()
+    {
+        bersagliColpiti.Clear();
+        impulsiRimasti = 0;
+        contoAllaRovescia = float.PositiveInfinity;
+    }
+
+    public void PreparaRientroNelPool()
+    {
+        bersagliColpiti.Clear();
+        impulsiRimasti = 0;
+        contoAllaRovescia = float.PositiveInfinity;
     }
 }
 

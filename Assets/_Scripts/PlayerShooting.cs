@@ -450,11 +450,14 @@ public class PlayerShooting : MonoBehaviour
         float angolo = Mathf.Atan2(direzione.y, direzione.x) * Mathf.Rad2Deg;
         Vector3 posizioneUscita = transform.position +
             (Vector3)(direzione.normalized * distanzaUscitaProiettile);
-        GameObject proiettile = Instantiate(
+        GameObject proiettile = GameplayObjectPool.Spawn(
             bulletPrefab,
             posizioneUscita,
-            Quaternion.Euler(0f, 0f, angolo)
+            Quaternion.Euler(0f, 0f, angolo),
+            GameBalanceConfig.Corrente.Pooling.proiettiliContadino,
+            "proiettile_contadino"
         );
+        if (proiettile == null) return;
 
         Proiettile comportamento = proiettile.GetComponent<Proiettile>();
         if (comportamento != null)

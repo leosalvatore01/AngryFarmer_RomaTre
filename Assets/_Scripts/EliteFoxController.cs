@@ -62,6 +62,7 @@ public sealed class EliteFoxController : MonoBehaviour
             ),
             impostazioni.dropGarantitiElite
         );
+        if (etichetta != null) etichetta.gameObject.SetActive(true);
         transform.localScale *= impostazioni.moltiplicatoreScalaElite;
         gameObject.name = "Volpe_ELITE_" + nemico.NomeTipo;
 

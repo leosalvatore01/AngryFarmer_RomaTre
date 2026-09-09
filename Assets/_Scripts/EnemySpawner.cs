@@ -1766,8 +1766,28 @@ public class EnemySpawner : MonoBehaviour
     {
         if (foxPrefab == null) return null;
 
-        GameObject nuovaVolpe =
-            Instantiate(foxPrefab, spawnPos, Quaternion.identity);
+        PoolingBalanceSettings pooling = GameBalanceConfig.Corrente.Pooling;
+        int limitePool;
+        switch (ruoloSpeciale)
+        {
+            case RuoloIncontroSpeciale.Elite:
+                limitePool = pooling.volpiElite;
+                break;
+            case RuoloIncontroSpeciale.Boss:
+                limitePool = pooling.boss;
+                break;
+            default:
+                limitePool = pooling.volpiComuni;
+                break;
+        }
+        GameObject nuovaVolpe = GameplayObjectPool.Spawn(
+            foxPrefab,
+            spawnPos,
+            Quaternion.identity,
+            limitePool,
+            "volpe_" + ruoloSpeciale
+        );
+        if (nuovaVolpe == null) return null;
 
         EnemyAI nemico = nuovaVolpe.GetComponent<EnemyAI>();
         if (nemico == null)
@@ -1776,7 +1796,7 @@ public class EnemySpawner : MonoBehaviour
                 "Il prefab della volpe non contiene EnemyAI.",
                 nuovaVolpe
             );
-            Destroy(nuovaVolpe);
+            GameplayObjectPool.RilasciaODistruggi(nuovaVolpe);
             return null;
         }
 
@@ -1814,8 +1834,14 @@ public class EnemySpawner : MonoBehaviour
             distanzaSpawnMaialino
         );
 
-        GameObject nuovoMaialino =
-            Instantiate(pigPrefab, spawnPos, Quaternion.identity);
+        GameObject nuovoMaialino = GameplayObjectPool.Spawn(
+            pigPrefab,
+            spawnPos,
+            Quaternion.identity,
+            GameBalanceConfig.Corrente.Pooling.maialini,
+            "maialino"
+        );
+        if (nuovoMaialino == null) return false;
         MaialinoBonus bonus = nuovoMaialino.GetComponent<MaialinoBonus>();
 
         if (bonus == null)
@@ -1824,7 +1850,7 @@ public class EnemySpawner : MonoBehaviour
                 "Il prefab del maialino non contiene MaialinoBonus.",
                 nuovoMaialino
             );
-            Destroy(nuovoMaialino);
+            GameplayObjectPool.RilasciaODistruggi(nuovoMaialino);
             return false;
         }
 
@@ -1849,7 +1875,9 @@ public class EnemySpawner : MonoBehaviour
         {
             if (proiettile != null)
             {
-                Destroy(proiettile.gameObject);
+                GameplayObjectPool.RilasciaODistruggi(
+                    proiettile.gameObject
+                );
             }
         }
 

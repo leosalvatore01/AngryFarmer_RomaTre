@@ -521,6 +521,7 @@ public sealed class BossFoxController : MonoBehaviour
         fineGestita = true;
         velocita = Vector2.zero;
         StopAllCoroutines();
+        GameplayObjectPool.RilasciaTuttiAttivi<BossFireProjectile>();
         BossHealthBarController.Nascondi(this);
     }
 
@@ -542,7 +543,8 @@ public sealed class BossFoxController : MonoBehaviour
     }
 }
 
-internal sealed class BossFireProjectile : MonoBehaviour
+internal sealed class BossFireProjectile : MonoBehaviour,
+    IPoolableGameplayObject
 {
     private static Sprite spriteProiettile;
     private BossFoxController proprietario;
@@ -562,34 +564,47 @@ internal sealed class BossFireProjectile : MonoBehaviour
         int danno
     )
     {
-        GameObject oggetto = new GameObject("ProiettileBoss");
-        oggetto.transform.position = posizione;
-        oggetto.transform.localScale = Vector3.one * 0.62f;
-
-        SpriteRenderer renderer = oggetto.AddComponent<SpriteRenderer>();
-        renderer.sprite = OttieniSprite();
-        renderer.sortingOrder = 35;
-
-        CircleCollider2D collider = oggetto.AddComponent<CircleCollider2D>();
-        collider.isTrigger = true;
-        collider.radius = 0.42f;
-
-        Rigidbody2D corpo = oggetto.AddComponent<Rigidbody2D>();
-        corpo.bodyType = RigidbodyType2D.Kinematic;
-        corpo.gravityScale = 0f;
-        corpo.interpolation = RigidbodyInterpolation2D.Interpolate;
-        corpo.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-
+        GameObject oggetto = GameplayObjectPool.SpawnProcedurale(
+            "boss_fire_projectile",
+            CreaOggetto,
+            posizione,
+            Quaternion.identity,
+            GameBalanceConfig.Corrente.Pooling.proiettiliNemici
+        );
+        if (oggetto == null) return null;
         BossFireProjectile proiettile =
-            oggetto.AddComponent<BossFireProjectile>();
+            oggetto.GetComponent<BossFireProjectile>();
         proiettile.proprietario = proprietario;
-        proiettile.corpo = corpo;
         proiettile.direzione = direzione.sqrMagnitude > 0.001f
             ? direzione.normalized
             : Vector2.right;
         proiettile.velocita = Mathf.Max(1f, velocita);
         proiettile.danno = Mathf.Max(1, danno);
+        proiettile.durata = 4.5f;
+        proiettile.prossimaTraccia = Time.time;
+        proiettile.consumato = false;
         return proiettile;
+    }
+
+    private static GameObject CreaOggetto()
+    {
+        GameObject oggetto = new GameObject("ProiettileBoss");
+        oggetto.transform.localScale = Vector3.one * 0.62f;
+        SpriteRenderer renderer = oggetto.AddComponent<SpriteRenderer>();
+        renderer.sprite = OttieniSprite();
+        renderer.sortingOrder = 35;
+        CircleCollider2D collider = oggetto.AddComponent<CircleCollider2D>();
+        collider.isTrigger = true;
+        collider.radius = 0.42f;
+        Rigidbody2D corpo = oggetto.AddComponent<Rigidbody2D>();
+        corpo.bodyType = RigidbodyType2D.Kinematic;
+        corpo.gravityScale = 0f;
+        corpo.interpolation = RigidbodyInterpolation2D.Interpolate;
+        corpo.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+        BossFireProjectile proiettile =
+            oggetto.AddComponent<BossFireProjectile>();
+        proiettile.corpo = corpo;
+        return oggetto;
     }
 
     void FixedUpdate()
@@ -605,12 +620,12 @@ internal sealed class BossFireProjectile : MonoBehaviour
         if (consumato) return;
         if (proprietario == null || proprietario.IsDead)
         {
-            Destroy(gameObject);
+            GameplayObjectPool.RilasciaODistruggi(gameObject);
             return;
         }
         if (GameManager.instance != null && GameManager.instance.isGameOver)
         {
-            Destroy(gameObject);
+            GameplayObjectPool.RilasciaODistruggi(gameObject);
             return;
         }
 
@@ -628,7 +643,8 @@ internal sealed class BossFireProjectile : MonoBehaviour
                 null
             );
         }
-        if (durata <= 0f) Destroy(gameObject);
+        if (durata <= 0f)
+            GameplayObjectPool.RilasciaODistruggi(gameObject);
     }
 
     void OnTriggerEnter2D(Collider2D other)
@@ -651,7 +667,31 @@ internal sealed class BossFireProjectile : MonoBehaviour
             0.35f,
             null
         );
-        Destroy(gameObject);
+        GameplayObjectPool.RilasciaODistruggi(gameObject);
+    }
+
+    public void PreparaUscitaDalPool()
+    {
+        consumato = false;
+        durata = 4.5f;
+        prossimaTraccia = Time.time;
+        if (corpo == null) corpo = GetComponent<Rigidbody2D>();
+        if (corpo != null)
+        {
+            corpo.linearVelocity = Vector2.zero;
+            corpo.angularVelocity = 0f;
+        }
+    }
+
+    public void PreparaRientroNelPool()
+    {
+        consumato = true;
+        proprietario = null;
+        if (corpo != null)
+        {
+            corpo.linearVelocity = Vector2.zero;
+            corpo.angularVelocity = 0f;
+        }
     }
 
     private static Sprite OttieniSprite()

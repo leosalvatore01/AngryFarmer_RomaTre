@@ -8,11 +8,14 @@ public sealed class DamageNumberFeedback : MonoBehaviour
     private readonly Queue<DamageNumberPopup> pool =
         new Queue<DamageNumberPopup>();
     private int popupCreati;
+    private int popupAttivi;
 
     public static DamageNumberFeedback Instance { get; private set; }
     public int NumeriMostrati { get; private set; }
     public int NumeriSaltati { get; private set; }
     public int PopupCreati => popupCreati;
+    public int PopupAttivi => popupAttivi;
+    public int PopupDisponibili => pool.Count;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void AzzeraStatici()
@@ -106,12 +109,15 @@ public sealed class DamageNumberFeedback : MonoBehaviour
 
         popup.gameObject.SetActive(true);
         popup.Attiva(posizione, danno, critico, giocatore);
+        popupAttivi++;
         NumeriMostrati++;
     }
 
     internal void Rilascia(DamageNumberPopup popup)
     {
-        if (popup == null) return;
+        if (popup == null || !popup.InUso) return;
+        popup.SegnaRilasciato();
+        popupAttivi = Mathf.Max(0, popupAttivi - 1);
         popup.gameObject.SetActive(false);
         pool.Enqueue(popup);
     }
@@ -130,6 +136,7 @@ internal sealed class DamageNumberPopup : MonoBehaviour
     private float tempo;
     private float durata;
     private Color coloreBase;
+    internal bool InUso { get; private set; }
 
     public void Configura(DamageNumberFeedback nuovoProprietario)
     {
@@ -152,6 +159,7 @@ internal sealed class DamageNumberPopup : MonoBehaviour
         bool giocatore
     )
     {
+        InUso = true;
         transform.position = posizione + new Vector2(
             Random.Range(-0.12f, 0.12f),
             giocatore ? 0.72f : 0.5f
@@ -180,6 +188,11 @@ internal sealed class DamageNumberPopup : MonoBehaviour
             coloreBase = new Color(1f, 0.95f, 0.72f, 1f);
         }
         testo.color = coloreBase;
+    }
+
+    internal void SegnaRilasciato()
+    {
+        InUso = false;
     }
 
     void Update()

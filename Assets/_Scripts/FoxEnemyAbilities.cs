@@ -38,9 +38,15 @@ internal static class FoxAbilityVfx
         Transform segui
     )
     {
-        GameObject oggetto = new GameObject("TelegraphAbilitaVolpe");
-        oggetto.transform.position = posizione;
-        FoxAbilityRingVfx effetto = oggetto.AddComponent<FoxAbilityRingVfx>();
+        GameObject oggetto = GameplayObjectPool.SpawnProcedurale(
+            "fox_ability_ring",
+            CreaOggettoAnello,
+            posizione,
+            Quaternion.identity,
+            GameBalanceConfig.Corrente.Pooling.anelliVfx
+        );
+        if (oggetto == null) return;
+        FoxAbilityRingVfx effetto = oggetto.GetComponent<FoxAbilityRingVfx>();
         effetto.Inizializza(
             segui,
             colore,
@@ -59,17 +65,29 @@ internal static class FoxAbilityVfx
     )
     {
         if (origine == null) return;
-        GameObject oggetto = new GameObject("MiraSputafango");
-        oggetto.transform.position = origine.position;
-        FoxAbilityLineVfx effetto = oggetto.AddComponent<FoxAbilityLineVfx>();
+        GameObject oggetto = GameplayObjectPool.SpawnProcedurale(
+            "fox_ability_line",
+            CreaOggettoLinea,
+            origine.position,
+            Quaternion.identity,
+            GameBalanceConfig.Corrente.Pooling.lineeVfx
+        );
+        if (oggetto == null) return;
+        FoxAbilityLineVfx effetto = oggetto.GetComponent<FoxAbilityLineVfx>();
         effetto.Inizializza(origine, destinazione, colore, durata);
     }
 
     public static void CreaTracciaScavo(Vector2 posizione)
     {
-        GameObject oggetto = new GameObject("TracciaScavatrice");
-        oggetto.transform.position = posizione;
-        FoxAbilityRingVfx effetto = oggetto.AddComponent<FoxAbilityRingVfx>();
+        GameObject oggetto = GameplayObjectPool.SpawnProcedurale(
+            "fox_ability_ring",
+            CreaOggettoAnello,
+            posizione,
+            Quaternion.identity,
+            GameBalanceConfig.Corrente.Pooling.anelliVfx
+        );
+        if (oggetto == null) return;
+        FoxAbilityRingVfx effetto = oggetto.GetComponent<FoxAbilityRingVfx>();
         effetto.Inizializza(
             null,
             new Color32(157, 96, 40, 210),
@@ -79,11 +97,28 @@ internal static class FoxAbilityVfx
             10
         );
     }
+
+    private static GameObject CreaOggettoAnello()
+    {
+        GameObject oggetto = new GameObject("TelegraphAbilitaVolpe");
+        oggetto.AddComponent<FoxAbilityRingVfx>();
+        return oggetto;
+    }
+
+    private static GameObject CreaOggettoLinea()
+    {
+        GameObject oggetto = new GameObject("MiraAbilitaVolpe");
+        oggetto.AddComponent<FoxAbilityLineVfx>();
+        return oggetto;
+    }
 }
 
-internal sealed class FoxAbilityRingVfx : MonoBehaviour
+internal sealed class FoxAbilityRingVfx : MonoBehaviour,
+    IPoolableGameplayObject
 {
+    private const int NumeroPuntiMassimo = 24;
     private SpriteRenderer[] punti;
+    private int numeroPuntiAttivi;
     private Transform bersaglio;
     private Color colore;
     private float raggioIniziale;
@@ -105,17 +140,12 @@ internal sealed class FoxAbilityRingVfx : MonoBehaviour
         raggioIniziale = Mathf.Max(0.01f, nuovoRaggioIniziale);
         raggioFinale = Mathf.Max(raggioIniziale, nuovoRaggioFinale);
         durata = Mathf.Max(0.05f, nuovaDurata);
-        punti = new SpriteRenderer[Mathf.Clamp(numeroPunti, 6, 24)];
-
+        tempo = 0f;
+        CreaPuntiSeNecessario();
+        numeroPuntiAttivi = Mathf.Clamp(numeroPunti, 6, NumeroPuntiMassimo);
         for (int i = 0; i < punti.Length; i++)
         {
-            GameObject punto = new GameObject("Punto_" + i);
-            punto.transform.SetParent(transform, false);
-            SpriteRenderer renderer = punto.AddComponent<SpriteRenderer>();
-            renderer.sprite = FoxAbilityVfx.Pixel;
-            renderer.sortingOrder = 32;
-            renderer.color = colore;
-            punti[i] = renderer;
+            punti[i].gameObject.SetActive(i < numeroPuntiAttivi);
         }
         AggiornaAspetto(0f);
     }
@@ -126,7 +156,8 @@ internal sealed class FoxAbilityRingVfx : MonoBehaviour
         tempo += Time.deltaTime;
         float t = Mathf.Clamp01(tempo / durata);
         AggiornaAspetto(t);
-        if (tempo >= durata) Destroy(gameObject);
+        if (tempo >= durata)
+            GameplayObjectPool.RilasciaODistruggi(gameObject);
     }
 
     private void AggiornaAspetto(float t)
@@ -139,9 +170,9 @@ internal sealed class FoxAbilityRingVfx : MonoBehaviour
         );
         float scala = Mathf.Lerp(0.1f, 0.055f, curva);
 
-        for (int i = 0; i < punti.Length; i++)
+        for (int i = 0; i < numeroPuntiAttivi; i++)
         {
-            float angolo = (i / (float)punti.Length) * Mathf.PI * 2f;
+            float angolo = (i / (float)numeroPuntiAttivi) * Mathf.PI * 2f;
             SpriteRenderer renderer = punti[i];
             renderer.transform.localPosition = new Vector3(
                 Mathf.Cos(angolo) * raggio,
@@ -154,9 +185,39 @@ internal sealed class FoxAbilityRingVfx : MonoBehaviour
             renderer.color = coloreCorrente;
         }
     }
+
+    private void CreaPuntiSeNecessario()
+    {
+        if (punti != null && punti.Length == NumeroPuntiMassimo) return;
+        punti = new SpriteRenderer[NumeroPuntiMassimo];
+        for (int i = 0; i < punti.Length; i++)
+        {
+            GameObject punto = new GameObject("Punto_" + i);
+            punto.transform.SetParent(transform, false);
+            SpriteRenderer renderer = punto.AddComponent<SpriteRenderer>();
+            renderer.sprite = FoxAbilityVfx.Pixel;
+            renderer.sortingOrder = 32;
+            punti[i] = renderer;
+        }
+    }
+
+    public void PreparaUscitaDalPool()
+    {
+        tempo = 0f;
+    }
+
+    public void PreparaRientroNelPool()
+    {
+        bersaglio = null;
+        tempo = 0f;
+        if (punti == null) return;
+        for (int i = 0; i < punti.Length; i++)
+            punti[i].gameObject.SetActive(false);
+    }
 }
 
-internal sealed class FoxAbilityLineVfx : MonoBehaviour
+internal sealed class FoxAbilityLineVfx : MonoBehaviour,
+    IPoolableGameplayObject
 {
     private const int NumeroPunti = 13;
     private SpriteRenderer[] punti;
@@ -177,17 +238,10 @@ internal sealed class FoxAbilityLineVfx : MonoBehaviour
         destinazione = nuovaDestinazione;
         colore = nuovoColore;
         durata = Mathf.Max(0.05f, nuovaDurata);
-        punti = new SpriteRenderer[NumeroPunti];
+        tempo = 0f;
+        CreaPuntiSeNecessario();
         for (int i = 0; i < punti.Length; i++)
-        {
-            GameObject punto = new GameObject("PuntoMira_" + i);
-            punto.transform.SetParent(transform, false);
-            SpriteRenderer renderer = punto.AddComponent<SpriteRenderer>();
-            renderer.sprite = FoxAbilityVfx.Pixel;
-            renderer.sortingOrder = 31;
-            renderer.transform.localScale = Vector3.one * 0.065f;
-            punti[i] = renderer;
-        }
+            punti[i].gameObject.SetActive(true);
         AggiornaAspetto(0f);
     }
 
@@ -195,13 +249,14 @@ internal sealed class FoxAbilityLineVfx : MonoBehaviour
     {
         if (origine == null)
         {
-            Destroy(gameObject);
+            GameplayObjectPool.RilasciaODistruggi(gameObject);
             return;
         }
         tempo += Time.deltaTime;
         float t = Mathf.Clamp01(tempo / durata);
         AggiornaAspetto(t);
-        if (tempo >= durata) Destroy(gameObject);
+        if (tempo >= durata)
+            GameplayObjectPool.RilasciaODistruggi(gameObject);
     }
 
     private void AggiornaAspetto(float t)
@@ -227,13 +282,44 @@ internal sealed class FoxAbilityLineVfx : MonoBehaviour
             punti[i].color = corrente;
         }
     }
+
+    private void CreaPuntiSeNecessario()
+    {
+        if (punti != null && punti.Length == NumeroPunti) return;
+        punti = new SpriteRenderer[NumeroPunti];
+        for (int i = 0; i < punti.Length; i++)
+        {
+            GameObject punto = new GameObject("PuntoMira_" + i);
+            punto.transform.SetParent(transform, false);
+            SpriteRenderer renderer = punto.AddComponent<SpriteRenderer>();
+            renderer.sprite = FoxAbilityVfx.Pixel;
+            renderer.sortingOrder = 31;
+            renderer.transform.localScale = Vector3.one * 0.065f;
+            punti[i] = renderer;
+        }
+    }
+
+    public void PreparaUscitaDalPool()
+    {
+        tempo = 0f;
+    }
+
+    public void PreparaRientroNelPool()
+    {
+        origine = null;
+        tempo = 0f;
+        if (punti == null) return;
+        for (int i = 0; i < punti.Length; i++)
+            punti[i].gameObject.SetActive(false);
+    }
 }
 
 /// <summary>
 /// Proiettile ostile creato dalla Sputafango. Ha una traiettoria leggibile,
 /// non insegue il giocatore e applica un rallentamento breve all'impatto.
 /// </summary>
-internal sealed class FoxMudProjectile : MonoBehaviour
+internal sealed class FoxMudProjectile : MonoBehaviour,
+    IPoolableGameplayObject
 {
     private static Sprite spriteFango;
     private Rigidbody2D corpo;
@@ -255,26 +341,15 @@ internal sealed class FoxMudProjectile : MonoBehaviour
         float nuovaDurataRallentamento
     )
     {
-        GameObject oggetto = new GameObject("ProiettileFangoVolpe");
-        oggetto.transform.position = posizione;
-        oggetto.transform.localScale = Vector3.one * 0.48f;
-
-        SpriteRenderer renderer = oggetto.AddComponent<SpriteRenderer>();
-        renderer.sprite = OttieniSpriteFango();
-        renderer.sortingOrder = 18;
-
-        CircleCollider2D collider = oggetto.AddComponent<CircleCollider2D>();
-        collider.isTrigger = true;
-        collider.radius = 0.42f;
-
-        Rigidbody2D corpo = oggetto.AddComponent<Rigidbody2D>();
-        corpo.bodyType = RigidbodyType2D.Kinematic;
-        corpo.gravityScale = 0f;
-        corpo.interpolation = RigidbodyInterpolation2D.Interpolate;
-        corpo.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-
-        FoxMudProjectile proiettile = oggetto.AddComponent<FoxMudProjectile>();
-        proiettile.corpo = corpo;
+        GameObject oggetto = GameplayObjectPool.SpawnProcedurale(
+            "fox_mud_projectile",
+            CreaOggetto,
+            posizione,
+            Quaternion.identity,
+            GameBalanceConfig.Corrente.Pooling.proiettiliNemici
+        );
+        if (oggetto == null) return null;
+        FoxMudProjectile proiettile = oggetto.GetComponent<FoxMudProjectile>();
         proiettile.direzione = nuovaDirezione.sqrMagnitude > 0.001f
             ? nuovaDirezione.normalized
             : Vector2.right;
@@ -289,7 +364,30 @@ internal sealed class FoxMudProjectile : MonoBehaviour
             0.1f,
             nuovaDurataRallentamento
         );
+        proiettile.durata = 4f;
+        proiettile.prossimaTraccia = Time.time;
+        proiettile.consumato = false;
         return proiettile;
+    }
+
+    private static GameObject CreaOggetto()
+    {
+        GameObject oggetto = new GameObject("ProiettileFangoVolpe");
+        oggetto.transform.localScale = Vector3.one * 0.48f;
+        SpriteRenderer renderer = oggetto.AddComponent<SpriteRenderer>();
+        renderer.sprite = OttieniSpriteFango();
+        renderer.sortingOrder = 18;
+        CircleCollider2D collider = oggetto.AddComponent<CircleCollider2D>();
+        collider.isTrigger = true;
+        collider.radius = 0.42f;
+        Rigidbody2D corpo = oggetto.AddComponent<Rigidbody2D>();
+        corpo.bodyType = RigidbodyType2D.Kinematic;
+        corpo.gravityScale = 0f;
+        corpo.interpolation = RigidbodyInterpolation2D.Interpolate;
+        corpo.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+        FoxMudProjectile proiettile = oggetto.AddComponent<FoxMudProjectile>();
+        proiettile.corpo = corpo;
+        return oggetto;
     }
 
     void FixedUpdate()
@@ -317,7 +415,8 @@ internal sealed class FoxMudProjectile : MonoBehaviour
                 null
             );
         }
-        if (durata <= 0f) Destroy(gameObject);
+        if (durata <= 0f)
+            GameplayObjectPool.RilasciaODistruggi(gameObject);
     }
 
     void OnTriggerEnter2D(Collider2D other)
@@ -348,7 +447,30 @@ internal sealed class FoxMudProjectile : MonoBehaviour
             0.38f,
             null
         );
-        Destroy(gameObject);
+        GameplayObjectPool.RilasciaODistruggi(gameObject);
+    }
+
+    public void PreparaUscitaDalPool()
+    {
+        consumato = false;
+        durata = 4f;
+        prossimaTraccia = Time.time;
+        if (corpo == null) corpo = GetComponent<Rigidbody2D>();
+        if (corpo != null)
+        {
+            corpo.linearVelocity = Vector2.zero;
+            corpo.angularVelocity = 0f;
+        }
+    }
+
+    public void PreparaRientroNelPool()
+    {
+        consumato = true;
+        if (corpo != null)
+        {
+            corpo.linearVelocity = Vector2.zero;
+            corpo.angularVelocity = 0f;
+        }
     }
 
     private static Sprite OttieniSpriteFango()

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PowerUp : MonoBehaviour
+public class PowerUp : MonoBehaviour, IPoolableGameplayObject
 {
     // Mantenuto come int per non rompere i prefab Dente (0) e Coda (1).
     public int type;
@@ -9,6 +9,9 @@ public class PowerUp : MonoBehaviour
     private static readonly List<PowerUp> dropAttivi = new List<PowerUp>();
     private Vector3 scalaBase;
     private SpriteRenderer rendererDrop;
+    private Collider2D colliderRaccolta;
+    private float scadeA;
+    private bool raccolto;
 
     public TipoDropTemporaneo Tipo => CatalogoDropTemporanei.Normalizza(type);
     public float DurataDespawn { get; private set; }
@@ -24,6 +27,13 @@ public class PowerUp : MonoBehaviour
         if (!dropAttivi.Contains(this)) dropAttivi.Add(this);
     }
 
+    void Awake()
+    {
+        scalaBase = transform.localScale;
+        rendererDrop = GetComponentInChildren<SpriteRenderer>();
+        colliderRaccolta = GetComponent<Collider2D>();
+    }
+
     void OnDisable()
     {
         dropAttivi.Remove(this);
@@ -31,17 +41,17 @@ public class PowerUp : MonoBehaviour
 
     void Start()
     {
-        scalaBase = transform.localScale;
-        DurataDespawn = Mathf.Max(
-            0.1f,
-            GameBalanceConfig.Corrente.Volpe.durataDropSullaMappa
-        );
+        ReimpostaScadenza();
         AggiornaAspetto();
-        Destroy(gameObject, DurataDespawn);
     }
 
     void Update()
     {
+        if (scadeA > 0f && Time.time >= scadeA)
+        {
+            GameplayObjectPool.RilasciaODistruggi(gameObject);
+            return;
+        }
         transform.Rotate(0f, 0f, 120f * Time.deltaTime);
         float pulsazione = 1f + Mathf.Sin(Time.time * 5f) * 0.12f;
         transform.localScale = scalaBase * pulsazione;
@@ -68,11 +78,12 @@ public class PowerUp : MonoBehaviour
 
     void OnTriggerEnter2D(Collider2D other)
     {
-        if (!other.CompareTag("Player")) return;
+        if (raccolto || !other.CompareTag("Player")) return;
 
         PlayerTemporaryEffects effetti =
             PlayerTemporaryEffects.AggiungiOTrova(other.gameObject);
         if (effetti == null || !effetti.Applica(Tipo)) return;
+        raccolto = true;
 
         DefinizioneDropTemporaneo definizione =
             CatalogoDropTemporanei.Ottieni(Tipo);
@@ -85,7 +96,32 @@ public class PowerUp : MonoBehaviour
             definizione.Colore,
             definizione.Istantaneo
         );
-        Destroy(gameObject);
+        GameplayObjectPool.RilasciaODistruggi(gameObject);
+    }
+
+    public void PreparaUscitaDalPool()
+    {
+        raccolto = false;
+        transform.localScale = scalaBase;
+        transform.localRotation = Quaternion.identity;
+        if (colliderRaccolta != null) colliderRaccolta.enabled = true;
+        ReimpostaScadenza();
+        AggiornaAspetto();
+    }
+
+    public void PreparaRientroNelPool()
+    {
+        raccolto = true;
+        scadeA = 0f;
+    }
+
+    private void ReimpostaScadenza()
+    {
+        DurataDespawn = Mathf.Max(
+            0.1f,
+            GameBalanceConfig.Corrente.Volpe.durataDropSullaMappa
+        );
+        scadeA = Time.time + DurataDespawn;
     }
 
     public static int AttraiDropVerso(
