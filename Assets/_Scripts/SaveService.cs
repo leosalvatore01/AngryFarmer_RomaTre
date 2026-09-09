@@ -10,7 +10,7 @@ using UnityEngine;
 /// </summary>
 public static class SaveService
 {
-    public const int VersioneSchemaCorrente = 2;
+    public const int VersioneSchemaCorrente = 3;
     public const int VersioneMigrazioneLegacy = 1;
     public const string IdProfiloOspite = "guest";
 
@@ -565,6 +565,14 @@ public static class SaveService
         risultato.flashAttivi = feedback.effettiVisiviAttivi;
         risultato.numeriDannoAttivi = true;
         risultato.dimensioneMirino = feedback.dimensioneMirino;
+        risultato.larghezzaRisoluzione = 0;
+        risultato.altezzaRisoluzione = 0;
+        risultato.modalitaSchermo =
+            (int)FullScreenMode.FullScreenWindow;
+        risultato.vSyncAttivo = true;
+        risultato.limiteFps = 60;
+        risultato.tutorialCompletato = false;
+        risultato.overrideBindingGameplayJson = string.Empty;
         return risultato;
     }
 
@@ -828,8 +836,7 @@ public static class SaveService
             return;
         }
 
-        bool punteggioLegacyNonConfrontabile =
-            dati.versioneSchema < VersioneSchemaCorrente;
+        bool punteggioLegacyNonConfrontabile = dati.versioneSchema < 2;
         if (dati.versioneSchema < VersioneSchemaCorrente)
         {
             dati.versioneSchema = VersioneSchemaCorrente;
@@ -929,6 +936,18 @@ public static class SaveService
             return;
         }
 
+        bool opzioniPcDaInizializzare = dati.versioneSchema < 3;
+        if (opzioniPcDaInizializzare)
+        {
+            dati.larghezzaRisoluzione = 0;
+            dati.altezzaRisoluzione = 0;
+            dati.modalitaSchermo =
+                (int)FullScreenMode.FullScreenWindow;
+            dati.vSyncAttivo = true;
+            dati.limiteFps = 60;
+            dati.tutorialCompletato = false;
+            dati.overrideBindingGameplayJson = string.Empty;
+        }
         if (dati.versioneSchema < VersioneSchemaCorrente)
         {
             dati.versioneSchema = VersioneSchemaCorrente;
@@ -958,6 +977,45 @@ public static class SaveService
                 48f
             )
         );
+        bool risoluzioneAutomatica =
+            dati.larghezzaRisoluzione <= 0 ||
+            dati.altezzaRisoluzione <= 0;
+        dati.larghezzaRisoluzione = risoluzioneAutomatica
+            ? 0
+            : Mathf.Clamp(dati.larghezzaRisoluzione, 640, 7680);
+        dati.altezzaRisoluzione = risoluzioneAutomatica
+            ? 0
+            : Mathf.Clamp(dati.altezzaRisoluzione, 360, 4320);
+        if (!Enum.IsDefined(
+                typeof(FullScreenMode),
+                dati.modalitaSchermo
+            ))
+        {
+            dati.modalitaSchermo =
+                (int)FullScreenMode.FullScreenWindow;
+        }
+        dati.limiteFps = NormalizzaLimiteFps(dati.limiteFps);
+        if (dati.overrideBindingGameplayJson == null)
+        {
+            dati.overrideBindingGameplayJson = string.Empty;
+        }
+    }
+
+    private static int NormalizzaLimiteFps(int valore)
+    {
+        if (valore <= 0) return 0;
+
+        int[] consentiti = { 30, 60, 120, 144, 165, 240 };
+        int migliore = consentiti[0];
+        int distanzaMigliore = Math.Abs(valore - migliore);
+        for (int i = 1; i < consentiti.Length; i++)
+        {
+            int distanza = Math.Abs(valore - consentiti[i]);
+            if (distanza >= distanzaMigliore) continue;
+            migliore = consentiti[i];
+            distanzaMigliore = distanza;
+        }
+        return migliore;
     }
 
     private static int[] RidimensionaInteriNonNegativi(

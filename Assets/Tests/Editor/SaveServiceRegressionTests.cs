@@ -230,6 +230,36 @@ public sealed class SaveServiceRegressionTests
     }
 
     [Test]
+    public void SchemaDue_AggiungeOpzioniPcSenzaCancellareIRecordSurvival()
+    {
+        SaveData profilo = CreaProfiloValido("Veterano PC");
+        profilo.versioneSchema = 2;
+        profilo.recordDifficolta[0] = new DatiRecordDifficolta
+        {
+            difficolta = 0,
+            migliorPunteggio = 4321,
+            massimoVolpi = 38,
+            massimaOndata = 14
+        };
+        DeviceSettingsData dispositivo = CreaDispositivoValido();
+        dispositivo.versioneSchema = 2;
+        dispositivo.vSyncAttivo = false;
+        dispositivo.limiteFps = 0;
+        ScriviFixture(profilo, dispositivo);
+
+        Assert.That(
+            SaveService.Profilo.recordDifficolta[0].migliorPunteggio,
+            Is.EqualTo(4321)
+        );
+        Assert.That(SaveService.Dispositivo.vSyncAttivo, Is.True);
+        Assert.That(SaveService.Dispositivo.limiteFps, Is.EqualTo(60));
+        Assert.That(
+            SaveService.Dispositivo.versioneSchema,
+            Is.EqualTo(SaveService.VersioneSchemaCorrente)
+        );
+    }
+
+    [Test]
     public void ImportLegacy_IgnoraPunteggioPreSurvivalMaConservaVolpi()
     {
         SaveData profilo = CreaProfiloValido("Veterano PlayerPrefs");

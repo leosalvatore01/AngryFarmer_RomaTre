@@ -25,6 +25,7 @@ public sealed class PauseSettingsMenu : MonoBehaviour
     private Button pulsanteApri;
     private Button pulsanteChiudi;
     private Button pulsanteMenuPrincipale;
+    private Button pulsanteVideoComandi;
     private TMP_Text testoTitolo;
     private TMP_Text testoPulsanteChiudi;
     private TMP_Text testoValoreMusica;
@@ -47,6 +48,7 @@ public sealed class PauseSettingsMenu : MonoBehaviour
     public static PauseSettingsMenu Instance { get; private set; }
     public bool Aperto =>
         pannelloOverlay != null && pannelloOverlay.activeSelf;
+    public Selectable SelezioneVideoComandi => pulsanteVideoComandi;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void AzzeraStatoStatico()
@@ -128,6 +130,7 @@ public sealed class PauseSettingsMenu : MonoBehaviour
     private void Update()
     {
         AggiornaVisibilitaPulsanteApri();
+        if (PcSettingsMenu.ApertoGlobale) return;
         if (ShopPermanentePrePartita.ApertoGlobale ||
             ShopPermanentePrePartita.InputModaleConsumataQuestoFrame)
         {
@@ -213,6 +216,7 @@ public sealed class PauseSettingsMenu : MonoBehaviour
 
         AggiornaControlli();
         AggiornaTestiStatoPartita();
+        input?.SelezionaPerInterfaccia(pulsanteChiudi);
     }
 
     public void Nascondi()
@@ -397,7 +401,7 @@ public sealed class PauseSettingsMenu : MonoBehaviour
         CreaTesto(
             "SuggerimentoComandi",
             pannello.transform,
-            "ESC: APRI O CHIUDI  -  MOUSE: REGOLA LE OPZIONI",
+            "TASTIERA O GAMEPAD: REGOLA LE OPZIONI  -  ESC: CHIUDI",
             new Vector2(0f, -276f),
             new Vector2(670f, 32f),
             20f,
@@ -410,8 +414,8 @@ public sealed class PauseSettingsMenu : MonoBehaviour
             "Ripristina",
             pannello.transform,
             "PREDEFINITI",
-            new Vector2(-245f, -346f),
-            new Vector2(210f, 58f),
+            new Vector2(-300f, -346f),
+            new Vector2(170f, 58f),
             FarmPixelUI.ColorePulsanteNeutroFlat,
             opzioni.RipristinaPredefiniti
         );
@@ -419,17 +423,26 @@ public sealed class PauseSettingsMenu : MonoBehaviour
             "MenuPrincipale",
             pannello.transform,
             "MENU PRINCIPALE",
-            new Vector2(0f, -346f),
-            new Vector2(250f, 58f),
+            new Vector2(-105f, -346f),
+            new Vector2(190f, 58f),
             FarmPixelUI.ColorePulsanteNeutroFlat,
             TornaAlMenuPrincipale
+        );
+        pulsanteVideoComandi = CreaPulsante(
+            "VideoComandi",
+            pannello.transform,
+            "VIDEO E COMANDI",
+            new Vector2(105f, -346f),
+            new Vector2(210f, 58f),
+            FarmPixelUI.ColorePulsanteOroFlat,
+            ApriVideoComandi
         );
         pulsanteChiudi = CreaPulsante(
             "Chiudi",
             pannello.transform,
             "RIPRENDI",
-            new Vector2(245f, -346f),
-            new Vector2(210f, 58f),
+            new Vector2(300f, -346f),
+            new Vector2(170f, 58f),
             FarmPixelUI.ColorePulsanteVerdeFlat,
             Nascondi
         );
@@ -516,6 +529,11 @@ public sealed class PauseSettingsMenu : MonoBehaviour
 
         Nascondi();
         gestore.TornaAlMenuPrincipale();
+    }
+
+    private void ApriVideoComandi()
+    {
+        PcSettingsMenu.CreaOTrova()?.Mostra();
     }
 
     private static void AggiornaStatoToggle(TMP_Text testo, bool attivo)

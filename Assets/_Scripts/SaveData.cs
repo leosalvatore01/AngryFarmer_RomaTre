@@ -57,4 +57,11 @@ public sealed class DeviceSettingsData
     public bool flashAttivi = true;
     public bool numeriDannoAttivi = true;
     public float dimensioneMirino = 24f;
+    public int larghezzaRisoluzione;
+    public int altezzaRisoluzione;
+    public int modalitaSchermo = (int)UnityEngine.FullScreenMode.FullScreenWindow;
+    public bool vSyncAttivo = true;
+    public int limiteFps = 60;
+    public bool tutorialCompletato;
+    public string overrideBindingGameplayJson = string.Empty;
 }

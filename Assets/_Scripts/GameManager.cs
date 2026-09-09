@@ -135,6 +135,7 @@ public class GameManager : MonoBehaviour
 
         shopInterOndata = ShopInterOndata.CreaOTrova();
         shopPermanente = ShopPermanentePrePartita.CreaOTrova();
+        PcOnboardingController.CreaOTrova();
         SincronizzaBonusPermanentiPrimaPartita();
 
         if (DifficoltaConfermata)
@@ -190,6 +191,22 @@ public class GameManager : MonoBehaviour
         {
             Riprova();
         }
+    }
+
+    private void OnApplicationFocus(bool haFocus)
+    {
+        if (!DevePausarePerPerditaFocus(haFocus, GameplayAttivo)) return;
+
+        ImpostaPausaManuale(true);
+        PauseSettingsMenu.CreaOTrova()?.Mostra();
+    }
+
+    public static bool DevePausarePerPerditaFocus(
+        bool haFocus,
+        bool gameplayAttivo
+    )
+    {
+        return !haFocus && gameplayAttivo;
     }
 
     public static TMP_Text TrovaTestoInterfaccia(string nome)
@@ -1236,7 +1253,8 @@ public class GameManager : MonoBehaviour
             AggiungiMonete(bonus);
         }
 
-        int ricompensaPermanente = SommaRicompensePermanenti(
+        int ricompensaPermanente =
+            CalcolaRicompensePermanentiIntervallo(
             primaOndaNonPremiata,
             ultimaOndaValida
         );
@@ -1459,7 +1477,7 @@ public class GameManager : MonoBehaviour
                 : 0f;
     }
 
-    private static int SommaRicompensePermanenti(
+    public static int CalcolaRicompensePermanentiIntervallo(
         int primaOnda,
         int ultimaOnda
     )
@@ -1480,10 +1498,10 @@ public class GameManager : MonoBehaviour
     {
         if (onda <= 0) return 0L;
 
-        long gruppiCompleti = (onda - 1L) / 5L;
-        long ondeUltimoGruppo = (onda - 1L) % 5L + 1L;
+        long gruppiCompleti = (onda - 1L) / 10L;
+        long ondeUltimoGruppo = (onda - 1L) % 10L + 1L;
         double totale =
-            5d * gruppiCompleti * (gruppiCompleti + 1d) / 2d +
+            10d * gruppiCompleti * (gruppiCompleti + 1d) / 2d +
             ondeUltimoGruppo * (gruppiCompleti + 1d);
         return totale >= long.MaxValue
             ? long.MaxValue

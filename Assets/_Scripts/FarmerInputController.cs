@@ -11,6 +11,17 @@ public enum SchemaInputContadino
     Touch
 }
 
+public enum ComandoRimappabile
+{
+    MovimentoSu,
+    MovimentoGiu,
+    MovimentoSinistra,
+    MovimentoDestra,
+    Fuoco,
+    Schivata,
+    Pausa
+}
+
 /// <summary>
 /// Unica sorgente degli input del gioco. Le altre componenti leggono azioni
 /// semantiche (movimento, fuoco, schivata, pausa e UI) senza interrogare
@@ -20,6 +31,18 @@ public enum SchemaInputContadino
 [DisallowMultipleComponent]
 public sealed class FarmerInputController : MonoBehaviour
 {
+    [Serializable]
+    private sealed class BindingGameplaySalvati
+    {
+        public string movimentoSu;
+        public string movimentoGiu;
+        public string movimentoSinistra;
+        public string movimentoDestra;
+        public string fuoco;
+        public string schivata;
+        public string pausa;
+    }
+
     private const float SogliaMiraGamepad = 0.18f;
 
     private InputActionMap gameplay;
@@ -38,6 +61,9 @@ public sealed class FarmerInputController : MonoBehaviour
     private InputAction azioneRiprova;
     private InputAction azioneDebugFeedback;
     private InputAction azioneDebugOndata;
+    private InputActionRebindingExtensions.RebindingOperation
+        operazioneRimappatura;
+    private InputAction azioneInRimappatura;
     private Vector2 ultimaMiraGamepad = Vector2.right;
     private bool costruito;
     private float prossimoControlloSelezione;
@@ -86,6 +112,7 @@ public sealed class FarmerInputController : MonoBehaviour
         : 0;
     public bool AzioniAbilitate => gameplay != null && gameplay.enabled &&
         interfaccia != null && interfaccia.enabled;
+    public bool RimappaturaInCorso => operazioneRimappatura != null;
 
     public event Action<SchemaInputContadino> SchemaCambiato;
 
@@ -139,6 +166,7 @@ public sealed class FarmerInputController : MonoBehaviour
 
     private void OnDisable()
     {
+        operazioneRimappatura?.Cancel();
         gameplay?.Disable();
         interfaccia?.Disable();
     }
@@ -270,6 +298,123 @@ public sealed class FarmerInputController : MonoBehaviour
                MappaPossiedeBinding(interfaccia, nomeAzione, percorso);
     }
 
+    public string OttieniNomeBinding(ComandoRimappabile comando)
+    {
+        CostruisciAzioni();
+        if (!ProvaTrovaBindingRimappabile(
+                comando,
+                out InputAction azione,
+                out int indice
+            ))
+        {
+            return "--";
+        }
+
+        string percorso = azione.bindings[indice].effectivePath;
+        if (string.IsNullOrWhiteSpace(percorso)) return "--";
+
+        string leggibile = InputControlPath.ToHumanReadableString(
+            percorso,
+            InputControlPath.HumanReadableStringOptions.OmitDevice
+        );
+        return string.IsNullOrWhiteSpace(leggibile)
+            ? percorso
+            : leggibile.ToUpperInvariant();
+    }
+
+    public string OttieniPercorsoBindingEffettivo(
+        ComandoRimappabile comando
+    )
+    {
+        CostruisciAzioni();
+        return ProvaTrovaBindingRimappabile(
+            comando,
+            out InputAction azione,
+            out int indice
+        )
+            ? azione.bindings[indice].effectivePath
+            : string.Empty;
+    }
+
+    public void AvviaRimappatura(
+        ComandoRimappabile comando,
+        Action<bool, string> completata
+    )
+    {
+        CostruisciAzioni();
+        operazioneRimappatura?.Cancel();
+        if (!ProvaTrovaBindingRimappabile(
+                comando,
+                out InputAction azione,
+                out int indice
+            ))
+        {
+            completata?.Invoke(false, "--");
+            return;
+        }
+
+        azioneInRimappatura = azione;
+        azione.Disable();
+        operazioneRimappatura = azione.PerformInteractiveRebinding(indice)
+            .WithCancelingThrough("<Keyboard>/escape")
+            .WithControlsExcluding("<Gamepad>")
+            .WithControlsExcluding("<Touchscreen>")
+            .OnCancel(_ => ConcludiRimappatura(false, comando, completata))
+            .OnComplete(_ => ConcludiRimappatura(true, comando, completata));
+
+        if (comando != ComandoRimappabile.Fuoco)
+        {
+            operazioneRimappatura.WithControlsHavingToMatchPath(
+                "<Keyboard>"
+            );
+        }
+
+        operazioneRimappatura.Start();
+    }
+
+    public bool ProvaImpostaBinding(
+        ComandoRimappabile comando,
+        string percorso
+    )
+    {
+        CostruisciAzioni();
+        if (string.IsNullOrWhiteSpace(percorso) ||
+            !ProvaTrovaBindingRimappabile(
+                comando,
+                out InputAction azione,
+                out int indice
+            ))
+        {
+            return false;
+        }
+
+        azione.ApplyBindingOverride(indice, percorso);
+        SalvaRimappature();
+        return true;
+    }
+
+    public void RipristinaRimappature()
+    {
+        CostruisciAzioni();
+        operazioneRimappatura?.Cancel();
+        gameplay.RemoveAllBindingOverrides();
+        SalvaRimappature();
+    }
+
+    public void SelezionaPerInterfaccia(Selectable selezionabile)
+    {
+        if (EventSystem.current == null || selezionabile == null ||
+            !selezionabile.IsInteractable() ||
+            !selezionabile.gameObject.activeInHierarchy)
+        {
+            return;
+        }
+
+        EventSystem.current.SetSelectedGameObject(
+            selezionabile.gameObject
+        );
+    }
+
     private void CostruisciAzioni()
     {
         if (costruito) return;
@@ -386,6 +531,169 @@ public sealed class FarmerInputController : MonoBehaviour
 
         SottoscriviRilevamentoDispositivo(gameplay);
         SottoscriviRilevamentoDispositivo(interfaccia);
+        CaricaRimappature();
+    }
+
+    private bool ProvaTrovaBindingRimappabile(
+        ComandoRimappabile comando,
+        out InputAction azione,
+        out int indice
+    )
+    {
+        azione = null;
+        indice = -1;
+        switch (comando)
+        {
+            case ComandoRimappabile.MovimentoSu:
+                azione = azioneMovimento;
+                indice = 3;
+                break;
+            case ComandoRimappabile.MovimentoGiu:
+                azione = azioneMovimento;
+                indice = 4;
+                break;
+            case ComandoRimappabile.MovimentoSinistra:
+                azione = azioneMovimento;
+                indice = 5;
+                break;
+            case ComandoRimappabile.MovimentoDestra:
+                azione = azioneMovimento;
+                indice = 6;
+                break;
+            case ComandoRimappabile.Fuoco:
+                azione = azioneFuoco;
+                indice = 0;
+                break;
+            case ComandoRimappabile.Schivata:
+                azione = azioneSchivata;
+                indice = 0;
+                break;
+            case ComandoRimappabile.Pausa:
+                azione = azionePausa;
+                indice = 0;
+                break;
+        }
+
+        return azione != null && indice >= 0 &&
+               indice < azione.bindings.Count;
+    }
+
+    private void ConcludiRimappatura(
+        bool completataConSuccesso,
+        ComandoRimappabile comando,
+        Action<bool, string> callback
+    )
+    {
+        InputAction azione = azioneInRimappatura;
+        azioneInRimappatura = null;
+        InputActionRebindingExtensions.RebindingOperation operazione =
+            operazioneRimappatura;
+        operazioneRimappatura = null;
+        operazione?.Dispose();
+        if (gameplay != null && gameplay.enabled) azione?.Enable();
+
+        if (completataConSuccesso) SalvaRimappature();
+        callback?.Invoke(
+            completataConSuccesso,
+            OttieniNomeBinding(comando)
+        );
+    }
+
+    private void CaricaRimappature()
+    {
+        string json = SaveService.Dispositivo.overrideBindingGameplayJson;
+        if (string.IsNullOrWhiteSpace(json)) return;
+
+        try
+        {
+            BindingGameplaySalvati salvati =
+                JsonUtility.FromJson<BindingGameplaySalvati>(json);
+            if (salvati == null) return;
+            ApplicaBindingSalvato(
+                ComandoRimappabile.MovimentoSu,
+                salvati.movimentoSu
+            );
+            ApplicaBindingSalvato(
+                ComandoRimappabile.MovimentoGiu,
+                salvati.movimentoGiu
+            );
+            ApplicaBindingSalvato(
+                ComandoRimappabile.MovimentoSinistra,
+                salvati.movimentoSinistra
+            );
+            ApplicaBindingSalvato(
+                ComandoRimappabile.MovimentoDestra,
+                salvati.movimentoDestra
+            );
+            ApplicaBindingSalvato(ComandoRimappabile.Fuoco, salvati.fuoco);
+            ApplicaBindingSalvato(
+                ComandoRimappabile.Schivata,
+                salvati.schivata
+            );
+            ApplicaBindingSalvato(ComandoRimappabile.Pausa, salvati.pausa);
+        }
+        catch (Exception eccezione)
+        {
+            Debug.LogWarning(
+                "Rimappatura comandi ignorata: " + eccezione.Message
+            );
+            gameplay.RemoveAllBindingOverrides();
+            SaveService.ModificaDispositivo(
+                dati => dati.overrideBindingGameplayJson = string.Empty,
+                true
+            );
+        }
+    }
+
+    private void SalvaRimappature()
+    {
+        BindingGameplaySalvati salvati = new BindingGameplaySalvati
+        {
+            movimentoSu = OttieniPercorsoBindingEffettivo(
+                ComandoRimappabile.MovimentoSu
+            ),
+            movimentoGiu = OttieniPercorsoBindingEffettivo(
+                ComandoRimappabile.MovimentoGiu
+            ),
+            movimentoSinistra = OttieniPercorsoBindingEffettivo(
+                ComandoRimappabile.MovimentoSinistra
+            ),
+            movimentoDestra = OttieniPercorsoBindingEffettivo(
+                ComandoRimappabile.MovimentoDestra
+            ),
+            fuoco = OttieniPercorsoBindingEffettivo(
+                ComandoRimappabile.Fuoco
+            ),
+            schivata = OttieniPercorsoBindingEffettivo(
+                ComandoRimappabile.Schivata
+            ),
+            pausa = OttieniPercorsoBindingEffettivo(
+                ComandoRimappabile.Pausa
+            )
+        };
+        string json = JsonUtility.ToJson(salvati);
+        SaveService.ModificaDispositivo(
+            dati => dati.overrideBindingGameplayJson = json,
+            true
+        );
+    }
+
+    private void ApplicaBindingSalvato(
+        ComandoRimappabile comando,
+        string percorso
+    )
+    {
+        if (string.IsNullOrWhiteSpace(percorso) ||
+            !ProvaTrovaBindingRimappabile(
+                comando,
+                out InputAction azione,
+                out int indice
+            ))
+        {
+            return;
+        }
+
+        azione.ApplyBindingOverride(indice, percorso);
     }
 
     private void AggiungiCompositoMovimento(
@@ -498,6 +806,7 @@ public sealed class FarmerInputController : MonoBehaviour
     {
         if (MenuInizialeController.Attivo ||
             ShopPermanentePrePartita.ApertoGlobale ||
+            PcSettingsMenu.ApertoGlobale ||
             (PauseSettingsMenu.Instance != null &&
              PauseSettingsMenu.Instance.Aperto))
         {

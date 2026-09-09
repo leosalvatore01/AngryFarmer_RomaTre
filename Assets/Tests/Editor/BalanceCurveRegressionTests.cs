@@ -130,6 +130,23 @@ public sealed class BalanceCurveRegressionTests
         );
     }
 
+    [Test]
+    public void RicompensaRapidaGameManager_SegueGliScaglioniDaDieciOnde()
+    {
+        Assert.That(
+            GameManager.CalcolaRicompensePermanentiIntervallo(1, 10),
+            Is.EqualTo(10)
+        );
+        Assert.That(
+            GameManager.CalcolaRicompensePermanentiIntervallo(1, 20),
+            Is.EqualTo(30)
+        );
+        Assert.That(
+            GameManager.CalcolaRicompensePermanentiIntervallo(11, 20),
+            Is.EqualTo(20)
+        );
+    }
+
     private PianoMinacciaOndata CreaPiano(int onda)
     {
         RitmoOndata ritmo = WaveChapterDirector.Calcola(
