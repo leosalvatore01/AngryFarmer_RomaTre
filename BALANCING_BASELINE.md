@@ -1,4 +1,7 @@
-# Angry Farmer — baseline di bilanciamento
+# DOCUMENTO STORICO — Angry Farmer, baseline di bilanciamento
+
+> Questa baseline descrive una versione precedente con obiettivi poi rimossi.
+> Per la configurazione corrente usare `Docs/BILANCIAMENTO_RC.md`.
 
 Versione di riferimento: **Baseline 1 — 15 luglio 2026**.
 

@@ -1,4 +1,6 @@
-# Angry Farmer — prima taratura quantitativa del Blocco 12
+# DOCUMENTO STORICO — prima taratura quantitativa del Blocco 12
+
+> I valori finali consolidati sono in `Docs/BILANCIAMENTO_RC.md`.
 
 Versione di riferimento: **Blocco 12 — 9 settembre 2026**.
 

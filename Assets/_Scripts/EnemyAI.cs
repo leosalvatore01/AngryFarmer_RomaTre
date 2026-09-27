@@ -1526,15 +1526,43 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile, IPoolableGameplayObject
 
     public void ImpostaGraficaDedicata(Sprite sprite)
     {
-        if (sprite == null || spriteRendererVisibile == null) return;
+        if (sprite == null) return;
 
-        spriteIdle = sprite;
-        frameCorsa = new[] { sprite };
+        ImpostaGraficaDedicata(new[] { sprite });
+    }
+
+    public void ImpostaGraficaDedicata(Sprite[] frameAnimazione)
+    {
+        if (frameAnimazione == null || frameAnimazione.Length == 0 ||
+            spriteRendererVisibile == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < frameAnimazione.Length; i++)
+        {
+            if (frameAnimazione[i] == null) return;
+        }
+
+        spriteIdle = frameAnimazione[0];
+        frameCorsa = frameAnimazione;
         frameMorte = new Sprite[0];
-        spriteRendererVisibile.sprite = sprite;
+        spriteRendererVisibile.sprite = spriteIdle;
         spriteRendererVisibile.color = Color.white;
         coloreBase = Color.white;
         timerAnimazione = 0f;
+    }
+
+    public void AggiornaPresentazioneControlloEsterno(
+        bool staCamminando,
+        float fattoreCadenza
+    )
+    {
+        if (!controlloEsterno || morto) return;
+
+        fattoreCadenza = Mathf.Clamp(fattoreCadenza, 0.35f, 2f);
+        AggiornaAnimazioneCorsa(staCamminando, fattoreCadenza);
+        AggiornaMovimentoVisivo(staCamminando, fattoreCadenza);
     }
 
     public void NascondiBarraVitaLocale()

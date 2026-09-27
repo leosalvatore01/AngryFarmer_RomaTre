@@ -105,4 +105,23 @@ public sealed class SpecialEncounterDirectorTests
         Assert.That(sprite, Is.Not.Null);
         Assert.That(sprite.pixelsPerUnit, Is.EqualTo(512f));
     }
+
+    [Test]
+    public void Boss_HaUnaCorsaDedicataAQuattroFotogrammiTrasparenti()
+    {
+        const string percorso =
+            "Assets/Resources/Foxes/Boss/Run/IlReDelBranco_Run.png";
+        Texture2D tavola = AssetDatabase.LoadAssetAtPath<Texture2D>(percorso);
+        TextureImporter importatore =
+            AssetImporter.GetAtPath(percorso) as TextureImporter;
+
+        Assert.That(tavola, Is.Not.Null);
+        Assert.That(tavola.width % 2, Is.Zero);
+        Assert.That(tavola.height % 2, Is.Zero);
+        Assert.That(importatore, Is.Not.Null);
+        Assert.That(importatore.alphaIsTransparency, Is.True);
+        Assert.That(importatore.filterMode, Is.EqualTo(FilterMode.Point));
+        Assert.That(BossFoxController.NumeroFrameCorsaDisponibili,
+            Is.EqualTo(4));
+    }
 }

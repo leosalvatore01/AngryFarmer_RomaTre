@@ -188,6 +188,13 @@ public static class ProgressionePartita
         saltaSelezioneAlProssimoCaricamento = false;
     }
 
+    public static void RicaricaDaProfilo()
+    {
+        inizializzata = false;
+        saltaSelezioneAlProssimoCaricamento = false;
+        InizializzaSeNecessario();
+    }
+
     public static void ImpostaDifficolta(DifficoltaPartita difficolta)
     {
         InizializzaSeNecessario();

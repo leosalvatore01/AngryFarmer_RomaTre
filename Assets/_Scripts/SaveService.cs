@@ -220,6 +220,39 @@ public static class SaveService
         return true;
     }
 
+    /// <summary>
+    /// Cancella soltanto i progressi del profilo ospite. Le preferenze del
+    /// dispositivo (audio, video, comandi e tutorial) restano invariate.
+    /// </summary>
+    public static bool AzzeraProfiloOspite()
+    {
+        AssicuraInizializzato();
+        if (profiloSolaLettura)
+        {
+            Debug.LogError(
+                "Il profilo usa una versione piu recente e non puo essere " +
+                "azzerato da questa build."
+            );
+            return false;
+        }
+
+        string copia = JsonUtility.ToJson(profilo);
+        profilo = new SaveData
+        {
+            migrazioneLegacyVersione = VersioneMigrazioneLegacy
+        };
+        NormalizzaProfilo(profilo);
+
+        if (!SalvaProfiloInterno())
+        {
+            RipristinaProfiloDaJson(copia);
+            return false;
+        }
+
+        ProfiloCambiato?.Invoke();
+        return true;
+    }
+
     public static bool ModificaDispositivo(
         Action<DeviceSettingsData> modifica,
         bool salvaSubito = false

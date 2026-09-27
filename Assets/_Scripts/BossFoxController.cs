@@ -6,6 +6,11 @@ public sealed class BossFoxController : MonoBehaviour
 {
     private const string PercorsoSpriteBoss =
         "Foxes/Boss/IlReDelBranco";
+    private const string PercorsoAnimazioneBoss =
+        "Foxes/Boss/Run/IlReDelBranco_Run";
+    private const float PixelPerUnitaAnimazione = 256f;
+
+    private static Sprite[] cacheFrameCorsa;
 
     private EnemyAI nemico;
     private Rigidbody2D corpo;
@@ -14,7 +19,6 @@ public sealed class BossFoxController : MonoBehaviour
     private PlayerHealth giocatore;
     private SpecialEncounterBalanceSettings impostazioni;
     private Vector2 velocita;
-    private Vector3 posizioneGraficaBase;
     private float prossimoAttacco;
     private float prossimoDannoContatto;
     private float prossimoImpulsoFaseDue;
@@ -22,6 +26,7 @@ public sealed class BossFoxController : MonoBehaviour
     private bool attaccoInCorso;
     private bool transizioneFaseEseguita;
     private bool fineGestita;
+    private bool caricaInMovimento;
 
     public EnemyAI Nemico => nemico;
     public string NomeVisualizzato => "Il Re del Branco";
@@ -29,10 +34,18 @@ public sealed class BossFoxController : MonoBehaviour
     public int Apparizione { get; private set; }
     public int FaseCorrente { get; private set; } = 1;
     public bool IsDead => nemico == null || nemico.IsDead;
+    public static int NumeroFrameCorsaDisponibili =>
+        CaricaFrameCorsaBoss()?.Length ?? 0;
     public float PercentualeVita => nemico != null && nemico.VitaMassima > 0
         ? Mathf.Clamp01(nemico.VitaCorrente / (float)nemico.VitaMassima)
         : 0f;
     public bool AttaccoInCorso => attaccoInCorso;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void AzzeraCacheAnimazione()
+    {
+        cacheFrameCorsa = null;
+    }
 
     public static BossFoxController Configura(
         EnemyAI nemico,
@@ -71,25 +84,28 @@ public sealed class BossFoxController : MonoBehaviour
         );
 
         nemico.ImpostaControlloEsterno(true);
-        Sprite spriteBoss = CaricaSpriteBoss();
-        if (spriteBoss != null)
+        Sprite[] frameBoss = CaricaFrameCorsaBoss();
+        if (frameBoss != null && frameBoss.Length > 1)
         {
-            nemico.ImpostaGraficaDedicata(spriteBoss);
+            nemico.ImpostaGraficaDedicata(frameBoss);
         }
         else
         {
-            Debug.LogError(
-                "Sprite del boss non trovato in Resources/" +
-                PercorsoSpriteBoss + ".",
-                this
-            );
+            Sprite spriteBoss = CaricaSpriteBoss();
+            if (spriteBoss != null)
+            {
+                nemico.ImpostaGraficaDedicata(spriteBoss);
+            }
+            else
+            {
+                Debug.LogError(
+                    "Grafica del boss non trovata in Resources/Foxes/Boss.",
+                    this
+                );
+            }
         }
 
         rendererBoss = nemico.RendererVisibile;
-        if (rendererBoss != null)
-        {
-            posizioneGraficaBase = rendererBoss.transform.localPosition;
-        }
         nemico.NascondiBarraVitaLocale();
         nemico.InizializzaVita(
             SpecialEncounterDirector.CalcolaVitaBoss(
@@ -116,6 +132,7 @@ public sealed class BossFoxController : MonoBehaviour
         FaseCorrente = 1;
         transizioneFaseEseguita = false;
         fineGestita = false;
+        caricaInMovimento = false;
         indiceAttacco = Mathf.Max(0, Apparizione - 1) % 3;
         prossimoAttacco = Time.time + 1.35f;
         prossimoImpulsoFaseDue = float.PositiveInfinity;
@@ -181,7 +198,7 @@ public sealed class BossFoxController : MonoBehaviour
             );
         }
 
-        AggiornaAspetto();
+        AggiornaAspettoEMovimento();
         ProvaDannoContatto();
     }
 
@@ -314,6 +331,8 @@ public sealed class BossFoxController : MonoBehaviour
             {
                 float delta = Time.deltaTime;
                 tempo += delta;
+                caricaInMovimento = true;
+                velocita = direzione * impostazioni.velocitaCarica;
                 corpo.position = corpo.position +
                     direzione * impostazioni.velocitaCarica * delta;
                 if (!haColpito && DistanzaDalGiocatore() <= 1.15f)
@@ -325,6 +344,8 @@ public sealed class BossFoxController : MonoBehaviour
             }
             yield return null;
         }
+        caricaInMovimento = false;
+        velocita = Vector2.zero;
 
         FoxAbilityVfx.CreaAnello(
             transform.position,
@@ -443,18 +464,32 @@ public sealed class BossFoxController : MonoBehaviour
         }
     }
 
-    private void AggiornaAspetto()
+    private void AggiornaAspettoEMovimento()
     {
         if (rendererBoss == null) return;
 
-        Vector2 direzione = DirezioneVersoGiocatore();
+        bool staCorrendo = caricaInMovimento ||
+            (!attaccoInCorso && velocita.sqrMagnitude > 0.01f);
+        float velocitaRiferimento = Mathf.Max(
+            0.01f,
+            impostazioni.velocitaInseguimento
+        );
+        float fattoreCadenza = staCorrendo
+            ? Mathf.Clamp(velocita.magnitude / velocitaRiferimento, 0.5f, 2f)
+            : 1f;
+        nemico.AggiornaPresentazioneControlloEsterno(
+            staCorrendo,
+            fattoreCadenza
+        );
+
+        Vector2 direzione = caricaInMovimento &&
+            velocita.sqrMagnitude > 0.001f
+                ? velocita.normalized
+                : DirezioneVersoGiocatore();
         if (Mathf.Abs(direzione.x) > 0.05f)
         {
             rendererBoss.flipX = direzione.x < 0f;
         }
-        float ampiezza = attaccoInCorso ? 0.035f : 0.07f;
-        rendererBoss.transform.localPosition = posizioneGraficaBase +
-            Vector3.up * (Mathf.Sin(Time.time * 3.2f) * ampiezza);
     }
 
     private void ProvaDannoContatto()
@@ -520,6 +555,7 @@ public sealed class BossFoxController : MonoBehaviour
         if (fineGestita) return;
         fineGestita = true;
         velocita = Vector2.zero;
+        caricaInMovimento = false;
         StopAllCoroutines();
         GameplayObjectPool.RilasciaTuttiAttivi<BossFireProjectile>();
         BossHealthBarController.Nascondi(this);
@@ -535,6 +571,48 @@ public sealed class BossFoxController : MonoBehaviour
         return spriteDisponibili != null && spriteDisponibili.Length > 0
             ? spriteDisponibili[0]
             : null;
+    }
+
+    private static Sprite[] CaricaFrameCorsaBoss()
+    {
+        if (cacheFrameCorsa != null && cacheFrameCorsa.Length > 0)
+        {
+            return cacheFrameCorsa;
+        }
+
+        Texture2D tavola = Resources.Load<Texture2D>(
+            PercorsoAnimazioneBoss
+        );
+        if (tavola == null || tavola.width < 2 || tavola.height < 2)
+        {
+            return null;
+        }
+
+        int larghezza = tavola.width / 2;
+        int altezza = tavola.height / 2;
+        Rect[] rettangoli =
+        {
+            new Rect(0, altezza, larghezza, altezza),
+            new Rect(larghezza, altezza, larghezza, altezza),
+            new Rect(0, 0, larghezza, altezza),
+            new Rect(larghezza, 0, larghezza, altezza)
+        };
+        cacheFrameCorsa = new Sprite[rettangoli.Length];
+        for (int i = 0; i < rettangoli.Length; i++)
+        {
+            cacheFrameCorsa[i] = Sprite.Create(
+                tavola,
+                rettangoli[i],
+                new Vector2(0.5f, 0.5f),
+                PixelPerUnitaAnimazione,
+                0,
+                SpriteMeshType.FullRect,
+                Vector4.zero,
+                false
+            );
+            cacheFrameCorsa[i].name = "IlReDelBranco_Run_" + i;
+        }
+        return cacheFrameCorsa;
     }
 
     void OnDisable()

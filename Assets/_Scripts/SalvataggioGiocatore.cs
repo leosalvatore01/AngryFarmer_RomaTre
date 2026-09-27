@@ -67,4 +67,16 @@ public static class SalvataggioGiocatore
             dati.nomeProfilo = nomeValido;
         });
     }
+
+    public static bool AzzeraProfilo()
+    {
+        if (!SaveService.AzzeraProfiloOspite())
+        {
+            return false;
+        }
+
+        ProgressionePermanente.RicaricaDaProfilo();
+        ProgressionePartita.RicaricaDaProfilo();
+        return true;
+    }
 }

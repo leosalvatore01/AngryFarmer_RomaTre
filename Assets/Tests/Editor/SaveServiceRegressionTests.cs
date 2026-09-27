@@ -342,6 +342,56 @@ public sealed class SaveServiceRegressionTests
         );
     }
 
+    [Test]
+    public void ResetProfilo_CancellaProgressiMaConservaIlDispositivo()
+    {
+        ScriviFixtureValide("Veterano");
+        Assert.That(
+            SaveService.ModificaProfilo(dati =>
+            {
+                dati.miglioreOndataAssoluta = 42;
+                dati.progressionePermanente.saldoGettoni = 91;
+                dati.progressionePermanente.livelli[2] = 7;
+                dati.recordDifficolta[1].massimaOndata = 42;
+            }),
+            Is.True
+        );
+        Assert.That(
+            SaveService.ModificaDispositivo(dati =>
+            {
+                dati.volumeMusica = 0.23f;
+                dati.limiteFps = 120;
+                dati.tutorialCompletato = true;
+            }, true),
+            Is.True
+        );
+
+        Assert.That(SaveService.AzzeraProfiloOspite(), Is.True);
+
+        SaveData profilo = SaveService.Profilo;
+        Assert.That(profilo.nomeProfilo, Is.EqualTo("Contadino"));
+        Assert.That(profilo.miglioreOndataAssoluta, Is.Zero);
+        Assert.That(profilo.progressionePermanente.saldoGettoni, Is.Zero);
+        Assert.That(profilo.progressionePermanente.livelli, Is.All.Zero);
+        Assert.That(
+            profilo.recordDifficolta,
+            Has.All.Matches<DatiRecordDifficolta>(r =>
+                r.migliorPunteggio == 0 &&
+                r.massimoVolpi == 0 &&
+                r.massimaOndata == 0)
+        );
+
+        Assert.That(SaveService.Dispositivo.volumeMusica, Is.EqualTo(0.23f));
+        Assert.That(SaveService.Dispositivo.limiteFps, Is.EqualTo(120));
+        Assert.That(SaveService.Dispositivo.tutorialCompletato, Is.True);
+
+        SaveData persistito = LeggiJson<SaveData>(
+            SaveService.PercorsoProfiloOspite
+        );
+        Assert.That(persistito.nomeProfilo, Is.EqualTo("Contadino"));
+        Assert.That(persistito.miglioreOndataAssoluta, Is.Zero);
+    }
+
     private void ScriviFixtureValide(string nomeProfilo)
     {
         ScriviFixture(

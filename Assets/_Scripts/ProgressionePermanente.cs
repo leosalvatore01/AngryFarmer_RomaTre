@@ -228,6 +228,14 @@ public static class ProgressionePermanente
         PotenziamentoAcquistato = null;
     }
 
+    public static void RicaricaDaProfilo()
+    {
+        inizializzata = false;
+        livelli = null;
+        InizializzaSeNecessario();
+        StatoCambiato?.Invoke();
+    }
+
     public static DefinizionePotenziamentoPermanente OttieniDefinizione(
         TipoPotenziamentoPermanente tipo
     )

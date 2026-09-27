@@ -1,4 +1,7 @@
-# Angry Farmer — bilanciamento finale del Blocco 8
+# DOCUMENTO STORICO — bilanciamento finale del Blocco 8
+
+> Questo documento fotografa il Blocco 8 e non rappresenta la release attuale.
+> La baseline valida è `Docs/BILANCIAMENTO_RC.md`.
 
 Versione di riferimento: **Blocco 8 — Fine partita e bilanciamento — 20 luglio 2026**.
 

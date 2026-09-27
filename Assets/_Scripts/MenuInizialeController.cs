@@ -28,6 +28,7 @@ public sealed class MenuInizialeController : MonoBehaviour
     private GameObject pannelloPrincipale;
     private GameObject pannelloDifficolta;
     private GameObject pannelloProfilo;
+    private GameObject pannelloConfermaResetProfilo;
     private GameObject pannelloConfermaUscita;
     private TMP_Text testoPulsanteProfilo;
     private TMP_Text testoPulsanteShop;
@@ -52,6 +53,9 @@ public sealed class MenuInizialeController : MonoBehaviour
         pannelloDifficolta != null && pannelloDifficolta.activeSelf;
     public bool ProfiloAperto =>
         pannelloProfilo != null && pannelloProfilo.activeSelf;
+    public bool ConfermaResetProfiloAperta =>
+        pannelloConfermaResetProfilo != null &&
+        pannelloConfermaResetProfilo.activeSelf;
     public bool ConfermaUscitaAperta =>
         pannelloConfermaUscita != null &&
         pannelloConfermaUscita.activeSelf;
@@ -131,6 +135,15 @@ public sealed class MenuInizialeController : MonoBehaviour
             else if (input.AnnullaPremutaQuestoFrame)
             {
                 TornaAlPannelloPrincipale();
+            }
+            return;
+        }
+
+        if (ConfermaResetProfiloAperta)
+        {
+            if (input.AnnullaPremutaQuestoFrame)
+            {
+                AnnullaResetProfilo();
             }
             return;
         }
@@ -280,6 +293,57 @@ public sealed class MenuInizialeController : MonoBehaviour
         FarmAudioController.RiproduciAcquisto(0.75f);
     }
 
+    public void RichiediResetProfilo()
+    {
+        if (caricamentoInCorso ||
+            pannelloConfermaResetProfilo == null)
+        {
+            return;
+        }
+
+        NascondiPannelliLocali();
+        pannelloConfermaResetProfilo.SetActive(true);
+        pannelloConfermaResetProfilo.transform.SetAsLastSibling();
+        FarmAudioController.RiproduciInterfaccia();
+    }
+
+    public void AnnullaResetProfilo()
+    {
+        NascondiPannelliLocali();
+        AggiornaDatiProfilo();
+        pannelloProfilo?.SetActive(true);
+        pannelloProfilo?.transform.SetAsLastSibling();
+        FarmAudioController.RiproduciInterfaccia(0.75f);
+    }
+
+    public void ConfermaResetProfilo()
+    {
+        bool azzerato = SalvataggioGiocatore.AzzeraProfilo();
+        NascondiPannelliLocali();
+        AggiornaDatiVisibili();
+        AggiornaDatiProfilo();
+        pannelloProfilo?.SetActive(true);
+        pannelloProfilo?.transform.SetAsLastSibling();
+
+        ImpostaMessaggioProfilo(
+            azzerato
+                ? "PROFILO AZZERATO. PUOI RIPARTIRE DA ZERO."
+                : "IMPOSSIBILE AZZERARE IL PROFILO.",
+            azzerato
+                ? FarmPixelUI.TestoConfrontoFlat
+                : FarmPixelUI.TestoErroreFlat
+        );
+
+        if (azzerato)
+        {
+            FarmAudioController.RiproduciAcquisto(0.7f);
+        }
+        else
+        {
+            FarmAudioController.RiproduciInterfaccia(0.6f);
+        }
+    }
+
     public void TornaAlPannelloPrincipale()
     {
         NascondiPannelliLocali();
@@ -325,10 +389,12 @@ public sealed class MenuInizialeController : MonoBehaviour
         CreaPannelloPrincipale(canvas.transform);
         CreaPannelloDifficolta(canvas.transform);
         CreaPannelloProfilo(canvas.transform);
+        CreaPannelloConfermaResetProfilo(canvas.transform);
         CreaPannelloConfermaUscita(canvas.transform);
 
         pannelloDifficolta.SetActive(false);
         pannelloProfilo.SetActive(false);
+        pannelloConfermaResetProfilo.SetActive(false);
         pannelloConfermaUscita.SetActive(false);
     }
 
@@ -719,19 +785,30 @@ public sealed class MenuInizialeController : MonoBehaviour
             "SalvaNome",
             pannello.transform,
             "SALVA NOME",
-            new Vector2(-185f, -248f),
-            new Vector2(320f, 62f),
+            new Vector2(-255f, -248f),
+            new Vector2(220f, 62f),
             FarmPixelUI.ColorePulsanteVerdeFlat,
             FarmPixelIcon.Cuore,
             SalvaNomeProfilo,
             out _
         );
         CreaPulsante(
+            "AzzeraProfilo",
+            pannello.transform,
+            "AZZERA",
+            new Vector2(0f, -248f),
+            new Vector2(220f, 62f),
+            new Color32(190, 92, 68, 255),
+            null,
+            RichiediResetProfilo,
+            out _
+        );
+        CreaPulsante(
             "Indietro",
             pannello.transform,
             "INDIETRO",
-            new Vector2(185f, -248f),
-            new Vector2(320f, 62f),
+            new Vector2(255f, -248f),
+            new Vector2(220f, 62f),
             FarmPixelUI.ColorePulsanteNeutroFlat,
             null,
             TornaAlPannelloPrincipale,
@@ -746,6 +823,74 @@ public sealed class MenuInizialeController : MonoBehaviour
             15f,
             FarmPixelUI.TestoMetaFlat,
             FontStyles.Normal
+        );
+    }
+
+    private void CreaPannelloConfermaResetProfilo(Transform parent)
+    {
+        pannelloConfermaResetProfilo = CreaOverlay(
+            "ConfermaResetProfilo",
+            parent
+        );
+        GameObject pannello = CreaPannello(
+            "PannelloConfermaReset",
+            pannelloConfermaResetProfilo.transform,
+            new Vector2(720f, 430f),
+            Vector2.zero
+        );
+
+        CreaTesto(
+            "Titolo",
+            pannello.transform,
+            "AZZERARE IL PROFILO?",
+            new Vector2(0f, 132f),
+            new Vector2(600f, 60f),
+            34f,
+            FarmPixelUI.TestoErroreFlat,
+            FontStyles.Bold
+        );
+        CreaTesto(
+            "Nota",
+            pannello.transform,
+            "Perderai gettoni, miglioramenti permanenti e record.\n" +
+            "Audio, video e comandi resteranno invariati.",
+            new Vector2(0f, 48f),
+            new Vector2(610f, 78f),
+            19f,
+            FarmPixelUI.TestoChiaroFlat,
+            FontStyles.Normal
+        );
+        CreaTesto(
+            "Avviso",
+            pannello.transform,
+            "QUESTA OPERAZIONE NON PUO ESSERE ANNULLATA",
+            new Vector2(0f, -20f),
+            new Vector2(610f, 38f),
+            16f,
+            FarmPixelUI.TestoErroreFlat,
+            FontStyles.Bold
+        );
+        CreaPulsante(
+            "Annulla",
+            pannello.transform,
+            "ANNULLA",
+            new Vector2(-165f, -112f),
+            new Vector2(270f, 62f),
+            FarmPixelUI.ColorePulsanteVerdeFlat,
+            null,
+            AnnullaResetProfilo,
+            out _
+        );
+        CreaPulsante(
+            "Azzera",
+            pannello.transform,
+            "AZZERA TUTTO",
+            new Vector2(165f, -112f),
+            new Vector2(270f, 62f),
+            new Color32(190, 92, 68, 255),
+            null,
+            ConfermaResetProfilo,
+            out _
         );
     }
 
@@ -1193,6 +1338,10 @@ public sealed class MenuInizialeController : MonoBehaviour
         if (pannelloProfilo != null)
         {
             pannelloProfilo.SetActive(false);
+        }
+        if (pannelloConfermaResetProfilo != null)
+        {
+            pannelloConfermaResetProfilo.SetActive(false);
         }
         if (pannelloConfermaUscita != null)
         {
