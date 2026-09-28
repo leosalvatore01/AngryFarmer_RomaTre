@@ -137,6 +137,7 @@ public class PlayerShooting : MonoBehaviour
     private PlayerTemporaryEffects effettiTemporanei;
     private System.Random casualitaBuild;
     private bool attendiRilascioMouse;
+    private readonly MobileAutoAim miraAutomatica = new MobileAutoAim();
     private int colpiContatiPerRaffica;
     private int segnoColpoAggiuntivo = 1;
 
@@ -230,6 +231,7 @@ public class PlayerShooting : MonoBehaviour
             return;
         }
 
+        if (MobileExperience.Attiva) attendiRilascioMouse = false;
         if (attendiRilascioMouse)
         {
             if (input == null || !input.FuocoPremuto)
@@ -240,7 +242,8 @@ public class PlayerShooting : MonoBehaviour
         }
 
         if (miraValida &&
-            input != null && input.FuocoPremuto &&
+            (MobileExperience.Attiva ? MobileExperience.GameplayTouchAttivo :
+                input != null && input.FuocoPremuto) &&
             Time.time >= nextFire)
         {
             if (Shoot(DirezioneMira))
@@ -268,6 +271,15 @@ public class PlayerShooting : MonoBehaviour
         {
             HaDirezioneMira = false;
             return false;
+        }
+
+        if (MobileExperience.Attiva)
+        {
+            Vector2 mira = Vector2.zero;
+            HaDirezioneMira = MobileExperience.GameplayTouchAttivo &&
+                miraAutomatica.ProvaDirezione(cameraPrincipale, transform.position, out mira);
+            if (HaDirezioneMira) DirezioneMira = mira;
+            return HaDirezioneMira;
         }
 
         if (input == null) input = FarmerInputController.CreaOTrova();

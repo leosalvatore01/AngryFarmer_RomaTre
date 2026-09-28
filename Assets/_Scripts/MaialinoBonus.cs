@@ -74,6 +74,7 @@ public class MaialinoBonus : MonoBehaviour, IDanneggiabile,
     public int VitaMassima => vitaMassima;
     public int VitaCorrente => vitaCorrente;
     public static int NumeroAttivi => attivi.Count;
+    internal static HashSet<MaialinoBonus>.Enumerator EnumeraAttivi() => attivi.GetEnumerator();
 
     void Awake()
     {

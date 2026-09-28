@@ -572,12 +572,13 @@ public class GameManager : MonoBehaviour
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = new Vector2(150f, -310f);
             rect.sizeDelta = new Vector2(270f, 58f);
+            if (MobileExperience.Attiva) rect.sizeDelta = new Vector2(270, 100);
 
             TMP_Text testoPulsante =
                 pulsanteRiprova.GetComponentInChildren<TMP_Text>(true);
             if (testoPulsante != null)
             {
-                testoPulsante.text = "RIPROVA  [R]";
+                testoPulsante.text = MobileExperience.Attiva ? "RIPROVA" : "RIPROVA  [R]";
                 testoPulsante.fontSize = 23f;
                 testoPulsante.fontStyle = FontStyles.Bold;
                 FarmPixelUI.ApplicaTesto(
@@ -618,6 +619,7 @@ public class GameManager : MonoBehaviour
         cambiaRect.pivot = new Vector2(0.5f, 0.5f);
         cambiaRect.anchoredPosition = new Vector2(-150f, -310f);
         cambiaRect.sizeDelta = new Vector2(270f, 58f);
+        if (MobileExperience.Attiva) cambiaRect.sizeDelta = new Vector2(270, 100);
 
         pulsanteCambiaDifficolta = cambiaOggetto.GetComponent<Button>();
         TMP_Text testoCambia =

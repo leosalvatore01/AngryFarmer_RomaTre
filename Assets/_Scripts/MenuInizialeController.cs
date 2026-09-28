@@ -482,7 +482,7 @@ public sealed class MenuInizialeController : MonoBehaviour
         pannelloPrincipale = CreaPannello(
             "PannelloPrincipale",
             parent,
-            new Vector2(820f, 900f),
+            MobileExperience.Attiva ? new Vector2(1320f, 900f) : new Vector2(820f, 900f),
             Vector2.zero
         );
 
@@ -591,7 +591,7 @@ public sealed class MenuInizialeController : MonoBehaviour
         CreaTesto(
             "Comandi",
             pannelloPrincipale.transform,
-            "INVIO: GIOCA  ·  ESC: ESCI",
+            MobileExperience.Attiva ? "TOCCA GIOCA PER INIZIARE" : "INVIO: GIOCA  ·  ESC: ESCI",
             new Vector2(0f, -390f),
             new Vector2(680f, 34f),
             15f,
@@ -961,18 +961,25 @@ public sealed class MenuInizialeController : MonoBehaviour
         out TMP_Text testo
     )
     {
+        if (MobileExperience.Attiva)
+        {
+            int indice = pulsantiPrincipali.Count;
+            posizione = indice == 4 ? new Vector2(0, -254) :
+                new Vector2(indice % 2 == 0 ? -320 : 320, 100 - (indice / 2) * 176);
+        }
         Button pulsante = CreaPulsante(
             nome,
             pannelloPrincipale.transform,
             etichetta,
             posizione,
-            new Vector2(650f, 76f),
+            MobileExperience.Attiva ? new Vector2(604f, 144f) : new Vector2(650f, 76f),
             colore,
             icona,
             azione,
             out testo
         );
         pulsantiPrincipali.Add(pulsante);
+        if (MobileExperience.Attiva) testo.fontSize = 28;
     }
 
     private void CreaPulsanteDifficolta(
@@ -994,7 +1001,7 @@ public sealed class MenuInizialeController : MonoBehaviour
         CreaPulsante(
             "Difficolta_" + difficolta,
             parent,
-            "[" + tasto + "]  " + nomeProfilo + "\n" + descrizione,
+            (MobileExperience.Attiva ? "" : "[" + tasto + "]  ") + nomeProfilo + "\n" + descrizione,
             posizione,
             new Vector2(720f, 100f),
             colore,
@@ -1018,6 +1025,11 @@ public sealed class MenuInizialeController : MonoBehaviour
         out TMP_Text testo
     )
     {
+        if (MobileExperience.Attiva)
+        {
+            dimensione.y = Mathf.Max(dimensione.y, 92f);
+            etichetta = etichetta.Replace("[ESC]", "");
+        }
         GameObject oggetto = new GameObject(
             nome,
             typeof(RectTransform),

@@ -189,6 +189,7 @@ public class PlayerHealth : MonoBehaviour
             if (vitaCorrente > 0)
                 AttivaInvulnerabilitaTemporanea(durataInvulnerabilita);
             DannoSubito?.Invoke(dannoEffettivo);
+            MobileHaptics.Emetti();
             EventoDannoGiocatore evento = new EventoDannoGiocatore(
                 dannoEffettivo,
                 vitaCorrente,

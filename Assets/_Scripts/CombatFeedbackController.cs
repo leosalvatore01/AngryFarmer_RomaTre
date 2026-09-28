@@ -443,6 +443,7 @@ public sealed class CombatFeedbackController : MonoBehaviour
             GameManager.instance != null &&
             GameManager.instance.GameplayAttivo;
         bool visibile =
+            !MobileExperience.Attiva &&
             impostazioni.mirinoPixelAttivo &&
             finestraAttiva &&
             dentroFinestra &&

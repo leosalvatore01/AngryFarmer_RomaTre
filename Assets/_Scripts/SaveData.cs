@@ -54,6 +54,7 @@ public sealed class DeviceSettingsData
     public float volumeMusica = 0.55f;
     public float volumeEffetti = 1f;
     public bool vibrazioneAttiva = true;
+    public bool apticaAttiva = true;
     public bool flashAttivi = true;
     public bool numeriDannoAttivi = true;
     public float dimensioneMirino = 24f;

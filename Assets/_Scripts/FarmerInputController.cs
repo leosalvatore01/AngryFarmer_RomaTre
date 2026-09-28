@@ -66,12 +66,16 @@ public sealed class FarmerInputController : MonoBehaviour
     private InputAction azioneInRimappatura;
     private Vector2 ultimaMiraGamepad = Vector2.right;
     private bool costruito;
+    private Vector2 movimentoTouch;
+    private bool schivataTouch;
     private float prossimoControlloSelezione;
 
     public static FarmerInputController Instance { get; private set; }
     public SchemaInputContadino SchemaCorrente { get; private set; } =
         SchemaInputContadino.TastieraMouse;
-    public Vector2 Movimento => azioneMovimento != null
+    public Vector2 Movimento => MobileExperience.Attiva
+        ? (MobileExperience.GameplayTouchAttivo ? movimentoTouch : Vector2.zero)
+        : azioneMovimento != null
         ? Vector2.ClampMagnitude(
             azioneMovimento.ReadValue<Vector2>(),
             1f
@@ -166,6 +170,7 @@ public sealed class FarmerInputController : MonoBehaviour
 
     private void OnDisable()
     {
+        AzzeraTouch();
         operazioneRimappatura?.Cancel();
         gameplay?.Disable();
         interfaccia?.Disable();
@@ -178,6 +183,11 @@ public sealed class FarmerInputController : MonoBehaviour
 
     private void Update()
     {
+        if (MobileExperience.Attiva)
+        {
+            ImpostaSchema(SchemaInputContadino.Touch);
+            if (!MobileExperience.GameplayTouchAttivo) AzzeraTouch();
+        }
         if (SchemaCorrente != SchemaInputContadino.Gamepad ||
             EventSystem.current == null)
         {
@@ -227,6 +237,33 @@ public sealed class FarmerInputController : MonoBehaviour
                 return false;
         }
     }
+
+    public void ImpostaMovimentoTouch(Vector2 valore)
+    {
+        movimentoTouch = Vector2.ClampMagnitude(valore, 1f);
+    }
+
+    public void RichiediSchivataTouch()
+    {
+        if (MobileExperience.GameplayTouchAttivo) schivataTouch = true;
+    }
+
+    public bool ConsumaSchivata()
+    {
+        if (!MobileExperience.Attiva) return SchivataPremutaQuestoFrame;
+        bool richiesta = schivataTouch && MobileExperience.GameplayTouchAttivo;
+        schivataTouch = false;
+        return richiesta;
+    }
+
+    public void AzzeraTouch()
+    {
+        movimentoTouch = Vector2.zero;
+        schivataTouch = false;
+    }
+
+    private void OnApplicationFocus(bool focus) { if (!focus) AzzeraTouch(); }
+    private void OnApplicationPause(bool pausa) { if (pausa) AzzeraTouch(); }
 
     public void ConfiguraTastoDebugOndata(KeyCode tasto)
     {
@@ -755,6 +792,7 @@ public sealed class FarmerInputController : MonoBehaviour
 
     private void ImpostaSchema(SchemaInputContadino schema)
     {
+        if (MobileExperience.Attiva) schema = SchemaInputContadino.Touch;
         if (SchemaCorrente == schema) return;
         SchemaCorrente = schema;
         SchemaCambiato?.Invoke(schema);

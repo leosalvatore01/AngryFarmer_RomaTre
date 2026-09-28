@@ -40,6 +40,8 @@ public sealed class PauseSettingsMenu : MonoBehaviour
     private Toggle toggleVibrazione;
     private Toggle toggleFlash;
     private Toggle toggleNumeriDanno;
+    private Toggle toggleAptica;
+    private TMP_Text testoStatoAptica;
     private TMP_FontAsset fontInterfaccia;
     private GameOptionsController opzioni;
     private FarmerInputController input;
@@ -278,6 +280,14 @@ public sealed class PauseSettingsMenu : MonoBehaviour
             new Vector2(1f, 0f),
             new Vector2(1f, 0f)
         );
+        if (MobileExperience.Attiva)
+        {
+            RectTransform rectPausa = (RectTransform)pulsanteApri.transform;
+            rectPausa.anchorMin = rectPausa.anchorMax = rectPausa.pivot = new Vector2(1, 1);
+            rectPausa.anchoredPosition = new Vector2(-16, -154);
+            rectPausa.sizeDelta = new Vector2(180, 108);
+            pulsanteApri.GetComponentInChildren<TMP_Text>().text = "PAUSA";
+        }
 
         pannelloOverlay = CreaImmagine(
             "OverlayPausa",
@@ -375,6 +385,13 @@ public sealed class PauseSettingsMenu : MonoBehaviour
             true,
             out testoValoreMirino
         );
+        if (MobileExperience.Attiva)
+        {
+            sliderMirino.gameObject.SetActive(false);
+            toggleAptica = CreaToggle(pannello.transform, "Aptica", "VIBRAZIONE TELEFONO",
+                new Vector2(0, 50), out testoStatoAptica);
+            toggleAptica.onValueChanged.AddListener(opzioni.ImpostaApticaAttiva);
+        }
 
         toggleVibrazione = CreaToggle(
             pannello.transform,
@@ -401,7 +418,8 @@ public sealed class PauseSettingsMenu : MonoBehaviour
         CreaTesto(
             "SuggerimentoComandi",
             pannello.transform,
-            "TASTIERA O GAMEPAD: REGOLA LE OPZIONI  -  ESC: CHIUDI",
+            MobileExperience.Attiva ? "TOCCA LE OPZIONI PER REGOLARLE" :
+                "TASTIERA O GAMEPAD: REGOLA LE OPZIONI  -  ESC: CHIUDI",
             new Vector2(0f, -276f),
             new Vector2(670f, 32f),
             20f,
@@ -449,6 +467,38 @@ public sealed class PauseSettingsMenu : MonoBehaviour
         testoPulsanteChiudi =
             pulsanteChiudi.GetComponentInChildren<TMP_Text>();
 
+        if (MobileExperience.Attiva)
+        {
+            pulsanteVideoComandi.gameObject.SetActive(false);
+            string[] nomi = { "Ripristina", "MenuPrincipale", "Chiudi" };
+            for (int i = 0; i < nomi.Length; i++)
+            {
+                RectTransform rect = (RectTransform)pannello.transform.Find(nomi[i]);
+                rect.anchoredPosition = new Vector2((i - 1) * 250, -346);
+                rect.sizeDelta = new Vector2(230, 96);
+                TMP_Text testo = rect.GetComponentInChildren<TMP_Text>();
+                testo.rectTransform.sizeDelta = new Vector2(214, 80);
+                testo.fontSize = 24;
+            }
+            ((RectTransform)pannello.transform).sizeDelta = new Vector2(1380, 900);
+            pannello.transform.localScale = Vector3.one * 1.12f;
+            sliderMusica.GetComponent<RectTransform>().anchoredPosition = new Vector2(-335, 210);
+            sliderEffetti.GetComponent<RectTransform>().anchoredPosition = new Vector2(335, 210);
+            foreach (Slider slider in new[] { sliderMusica, sliderEffetti })
+            {
+                RectTransform etichetta = (RectTransform)slider.transform.Find("Etichetta");
+                etichetta.anchoredPosition = new Vector2(-150, 23);
+                etichetta.sizeDelta = new Vector2(300, 34);
+            }
+            Toggle[] touchToggle = { toggleAptica, toggleVibrazione, toggleFlash, toggleNumeriDanno };
+            for (int i = 0; i < touchToggle.Length; i++)
+            {
+                RectTransform rect = (RectTransform)touchToggle[i].transform;
+                rect.anchoredPosition = new Vector2(i % 2 == 0 ? -335 : 335, 40 - (i / 2) * 150);
+                rect.sizeDelta = new Vector2(650, 120);
+            }
+        }
+
         sliderMusica.onValueChanged.AddListener(
             opzioni.ImpostaVolumeMusica
         );
@@ -479,6 +529,11 @@ public sealed class PauseSettingsMenu : MonoBehaviour
         sliderEffetti.SetValueWithoutNotify(opzioni.VolumeEffetti);
         sliderMirino.SetValueWithoutNotify(opzioni.DimensioneMirino);
         toggleVibrazione.SetIsOnWithoutNotify(opzioni.VibrazioneAttiva);
+        if (toggleAptica != null)
+        {
+            toggleAptica.SetIsOnWithoutNotify(opzioni.ApticaAttiva);
+            AggiornaStatoToggle(testoStatoAptica, opzioni.ApticaAttiva);
+        }
         toggleFlash.SetIsOnWithoutNotify(opzioni.FlashAttivi);
         toggleNumeriDanno.SetIsOnWithoutNotify(
             opzioni.NumeriDannoAttivi
@@ -561,6 +616,11 @@ public sealed class PauseSettingsMenu : MonoBehaviour
         radice.transform.SetParent(parent, false);
         RectTransform rect = radice.GetComponent<RectTransform>();
         ImpostaRectCentrato(rect, posizione, new Vector2(650f, 82f));
+        if (MobileExperience.Attiva)
+        {
+            Image areaTouch = radice.AddComponent<Image>();
+            areaTouch.color = Color.clear;
+        }
 
         CreaTesto(
             "Etichetta",
@@ -679,6 +739,7 @@ public sealed class PauseSettingsMenu : MonoBehaviour
         radice.transform.SetParent(parent, false);
         RectTransform rect = radice.GetComponent<RectTransform>();
         ImpostaRectCentrato(rect, posizione, new Vector2(650f, 58f));
+        if (MobileExperience.Attiva) rect.sizeDelta = new Vector2(650, 68);
 
         Image sfondo = radice.GetComponent<Image>();
         FarmPixelUI.ApplicaPannello(sfondo, true, true);

@@ -128,6 +128,7 @@ public sealed class PowerUpHudController : MonoBehaviour
         rectRadice.anchorMax = new Vector2(0.5f, 1f);
         rectRadice.pivot = new Vector2(0.5f, 1f);
         rectRadice.anchoredPosition = new Vector2(0f, -144f);
+        if (MobileExperience.Attiva) rectRadice.localScale = Vector3.one * 1.2f;
 
         Image sfondo = GetComponent<Image>();
         FarmPixelUI.ApplicaPannello(sfondo, true, false);

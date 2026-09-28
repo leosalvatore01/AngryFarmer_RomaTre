@@ -144,7 +144,7 @@ public class PlayerMovement : MonoBehaviour
             ultimaDirezioneMovimento = DirezioneMovimento.normalized;
         }
 
-        if (input != null && input.SchivataPremutaQuestoFrame)
+        if (input != null && input.ConsumaSchivata())
         {
             ProvaSchivata(DirezioneMovimento);
         }
@@ -239,6 +239,7 @@ public class PlayerMovement : MonoBehaviour
             );
         }
         SchivataIniziata?.Invoke();
+        MobileHaptics.Emetti();
         return true;
     }
 

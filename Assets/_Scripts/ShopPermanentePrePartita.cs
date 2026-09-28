@@ -276,7 +276,7 @@ public sealed class ShopPermanentePrePartita : MonoBehaviour
         GameObject pannello = CreaPannello(
             "PannelloShopPermanente",
             transform,
-            new Vector2(1240f, 990f),
+            MobileExperience.Attiva ? new Vector2(1440, 990) : new Vector2(1240f, 990f),
             Vector2.zero,
             false
         );
@@ -352,7 +352,7 @@ public sealed class ShopPermanentePrePartita : MonoBehaviour
             pannello.transform,
             "INDIETRO",
             new Vector2(0f, -438f),
-            new Vector2(360f, 58f),
+            MobileExperience.Attiva ? new Vector2(480, 96) : new Vector2(360f, 58f),
             ColorePulsanteChiusura,
             Nascondi
         );
@@ -395,6 +395,7 @@ public sealed class ShopPermanentePrePartita : MonoBehaviour
             int colonna = indice % 2;
             int riga = indice / 2;
             float posizioneX = colonna == 0 ? -292f : 292f;
+            if (MobileExperience.Attiva) posizioneX = colonna == 0 ? -340 : 340;
             float posizioneY = 220f - riga * 220f;
             CreaCarta(
                 parent,
@@ -415,7 +416,7 @@ public sealed class ShopPermanentePrePartita : MonoBehaviour
         GameObject radice = CreaPannello(
             "Potenziamento_" + (indice + 1) + "_" + definizione.Tipo,
             parent,
-            new Vector2(555f, 205f),
+            MobileExperience.Attiva ? new Vector2(645, 205) : new Vector2(555f, 205f),
             posizione,
             true
         );
@@ -497,6 +498,18 @@ public sealed class ShopPermanentePrePartita : MonoBehaviour
             () => Acquista(tipoCatturato)
         );
         Image sfondoPulsante = pulsante.targetGraphic as Image;
+        if (MobileExperience.Attiva)
+        {
+            radice.AddComponent<MobileCardPurchase>().Pulsante = pulsante;
+            titolo.fontSize = 27;
+            titolo.rectTransform.sizeDelta = new Vector2(540, 44);
+            titolo.rectTransform.anchoredPosition = new Vector2(20, 75);
+            descrizione.fontSizeMin = 19;
+            descrizione.fontSizeMax = 20;
+            descrizione.rectTransform.sizeDelta = new Vector2(500, 40);
+            descrizione.rectTransform.anchoredPosition = new Vector2(40, 31);
+            icona.rectTransform.anchoredPosition = new Vector2(-273, 28);
+        }
         TMP_Text testoPulsante = pulsante.GetComponentInChildren<TMP_Text>();
         if (testoPulsante != null)
         {

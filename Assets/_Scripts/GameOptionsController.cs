@@ -21,6 +21,7 @@ public sealed class GameOptionsController : MonoBehaviour
     public float VolumeMusica { get; private set; }
     public float VolumeEffetti { get; private set; }
     public bool VibrazioneAttiva { get; private set; }
+    public bool ApticaAttiva { get; private set; }
     public bool FlashAttivi { get; private set; }
     public bool NumeriDannoAttivi { get; private set; }
     public float DimensioneMirino { get; private set; }
@@ -153,6 +154,14 @@ public sealed class GameOptionsController : MonoBehaviour
         RegistraModifica();
     }
 
+    public void ImpostaApticaAttiva(bool attiva)
+    {
+        if (ApticaAttiva == attiva) return;
+        ApticaAttiva = attiva;
+        SaveService.ModificaDispositivo(dati => dati.apticaAttiva = attiva);
+        RegistraModifica();
+    }
+
     public void ImpostaNumeriDannoAttivi(bool attivi)
     {
         if (NumeriDannoAttivi == attivi) return;
@@ -266,6 +275,7 @@ public sealed class GameOptionsController : MonoBehaviour
         ImpostaVibrazioneAttiva(feedback.vibrazioneCameraAttiva);
         ImpostaFlashAttivi(feedback.effettiVisiviAttivi);
         ImpostaNumeriDannoAttivi(true);
+        ImpostaApticaAttiva(true);
         ImpostaDimensioneMirino(feedback.dimensioneMirino);
         ImpostaRisoluzione(0, 0);
         ImpostaModalitaSchermo(FullScreenMode.FullScreenWindow);
@@ -290,6 +300,7 @@ public sealed class GameOptionsController : MonoBehaviour
         VolumeMusica = Mathf.Clamp01(dati.volumeMusica);
         VolumeEffetti = Mathf.Clamp01(dati.volumeEffetti);
         VibrazioneAttiva = dati.vibrazioneAttiva;
+        ApticaAttiva = dati.apticaAttiva;
         FlashAttivi = dati.flashAttivi;
         NumeriDannoAttivi = dati.numeriDannoAttivi;
         DimensioneMirino = Mathf.Clamp(
@@ -312,6 +323,12 @@ public sealed class GameOptionsController : MonoBehaviour
 
     public void ApplicaImpostazioniVideo()
     {
+        if (Application.isMobilePlatform)
+        {
+            QualitySettings.vSyncCount = 0;
+            Application.targetFrameRate = 60;
+            return;
+        }
         QualitySettings.vSyncCount = VSyncAttivo ? 1 : 0;
         Application.targetFrameRate = VSyncAttivo
             ? -1

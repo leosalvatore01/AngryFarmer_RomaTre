@@ -164,6 +164,7 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile, IPoolableGameplayObject
 
     public static bool isSlowed = false;
     public static int NumeroAttive => volpiAttive.Count;
+    internal static HashSet<EnemyAI>.Enumerator EnumeraAttive() => volpiAttive.GetEnumerator();
 
     public SpriteRenderer RendererVisibile => spriteRendererVisibile;
     public int VitaMassima => vitaMassima;

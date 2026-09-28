@@ -670,6 +670,8 @@ public class ShopInterOndata : MonoBehaviour
                 : preparazioneIniziale
                     ? "SUPPORTO GRATIS  •  1 SCELTA"
                     : testoMonete;
+            if (MobileExperience.Attiva && preparazioneIniziale)
+                testoMoneteBottega.text = FaseSceltaArchetipo ? "4 STILI DISPONIBILI" : "1 SUPPORTO GRATIS";
         }
         if (iconaMoneteBottega != null)
             iconaMoneteBottega.enabled = !preparazioneIniziale;
@@ -759,6 +761,8 @@ public class ShopInterOndata : MonoBehaviour
                     ? "INIZIA ONDATA 1  [SPAZIO]"
                     : "SCEGLI ANCORA  " + scelteGratuiteRimaste)
                 : "PARTI SUBITO  [SPAZIO]";
+            if (MobileExperience.Attiva)
+                testoAvviaBottega.text = testoAvviaBottega.text.Replace("[SPAZIO]", "");
             testoAvviaBottega.color =
                 !preparazioneIniziale || scelteGratuiteRimaste == 0
                     ? TestoPulsante
@@ -970,7 +974,7 @@ public class ShopInterOndata : MonoBehaviour
         pannelloBottega = CreaPannello(
             "BottegaBuild",
             transform,
-            new Vector2(1220f, 980f),
+            MobileExperience.Attiva ? new Vector2(1480, 1020) : new Vector2(1220f, 980f),
             ColorePannello
         );
         CostruisciBottega(pannelloBottega.transform);
@@ -1063,7 +1067,8 @@ public class ShopInterOndata : MonoBehaviour
         CreaTesto(
             "Suggerimento",
             parent,
-            "Solo le monete si spendono. Spazio: riparti subito.",
+            MobileExperience.Attiva ? "Solo le monete si spendono. Tocca per proseguire." :
+                "Solo le monete si spendono. Spazio: riparti subito.",
             new Vector2(0f, -128f),
             new Vector2(790f, 44f),
             20f,
@@ -1222,6 +1227,12 @@ public class ShopInterOndata : MonoBehaviour
             TextAlignmentOptions.Center
         );
         testoMessaggioBottega.overflowMode = TextOverflowModes.Overflow;
+        if (MobileExperience.Attiva)
+        {
+            parent.Find("EtichettaServizi").gameObject.SetActive(false);
+            testoMessaggioBottega.rectTransform.anchoredPosition = new Vector2(0, -289);
+            testoMessaggioBottega.rectTransform.sizeDelta = new Vector2(1060, 28);
+        }
 
         testoAnteprimaBottega = CreaTesto(
             "AnteprimaProssimaOnda",
@@ -1266,6 +1277,13 @@ public class ShopInterOndata : MonoBehaviour
         );
         testoAvviaBottega =
             pulsanteAvviaBottega.GetComponentInChildren<TMP_Text>();
+        if (MobileExperience.Attiva)
+        {
+            titoloBottega.rectTransform.anchoredPosition = new Vector2(-145, 442);
+            titoloBottega.rectTransform.sizeDelta = new Vector2(850, 56);
+            testoMoneteBottega.rectTransform.anchoredPosition = new Vector2(505, 442);
+            testoMoneteBottega.rectTransform.sizeDelta = new Vector2(390, 50);
+        }
     }
 
     void ApriShopPermanente()
@@ -1398,6 +1416,25 @@ public class ShopInterOndata : MonoBehaviour
             ColorePulsanteOro,
             () => AcquistaCarta(indiceCatturato)
         );
+        if (MobileExperience.Attiva)
+        {
+            radice.AddComponent<MobileCardPurchase>().Pulsante = pulsante;
+            ((RectTransform)radice.transform).sizeDelta = new Vector2(1360, 124);
+            iconaRect.anchoredPosition = new Vector2(-620, 0);
+            percorso.rectTransform.anchoredPosition = new Vector2(-325, 45);
+            percorso.rectTransform.sizeDelta = new Vector2(480, 27);
+            titolo.rectTransform.anchoredPosition = new Vector2(-305, 13);
+            titolo.rectTransform.sizeDelta = new Vector2(520, 32);
+            descrizione.rectTransform.anchoredPosition = new Vector2(-305, -30);
+            descrizione.rectTransform.sizeDelta = new Vector2(520, 49);
+            confronto.rectTransform.anchoredPosition = new Vector2(220, 27);
+            confronto.rectTransform.sizeDelta = new Vector2(430, 56);
+            confronto.textWrappingMode = TextWrappingModes.Normal;
+            stato.rectTransform.anchoredPosition = new Vector2(220, -31);
+            stato.rectTransform.sizeDelta = new Vector2(430, 40);
+            stato.textWrappingMode = TextWrappingModes.Normal;
+            ((RectTransform)pulsante.transform).anchoredPosition = new Vector2(565, 0);
+        }
         Image iconaCosto = FarmPixelUI.AggiungiIcona(
             pulsante.transform,
             "IconaCosto",
@@ -1529,6 +1566,11 @@ public class ShopInterOndata : MonoBehaviour
         UnityEngine.Events.UnityAction azione
     )
     {
+        if (MobileExperience.Attiva)
+        {
+            dimensioni.y = Mathf.Max(dimensioni.y, 96f);
+            etichetta = etichetta.Replace("[SPAZIO]", "").Replace("[ESC]", "");
+        }
         GameObject oggetto = new GameObject(
             nome,
             typeof(RectTransform),

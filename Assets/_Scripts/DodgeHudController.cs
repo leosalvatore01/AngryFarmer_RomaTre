@@ -179,7 +179,7 @@ public sealed class DodgeHudController : MonoBehaviour
     private void AggiornaInterfaccia()
     {
         GameManager gestore = GameManager.instance;
-        bool visibile = movimento != null && gestore != null &&
+        bool visibile = !MobileExperience.Attiva && movimento != null && gestore != null &&
             gestore.DifficoltaConfermata &&
             gestore.StatoCorrente == StatoPartita.Onda &&
             !gestore.isGameOver;
