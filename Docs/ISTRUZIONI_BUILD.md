@@ -1,5 +1,8 @@
 # Istruzioni di build
 
+Questa pagina riguarda Windows. Per APK/AAB e installazione dei moduli Android
+vedere [Blocco 16 — Android](BLOCCO_16_ANDROID.md).
+
 ## Requisiti
 
 - Windows 10/11 a 64 bit;

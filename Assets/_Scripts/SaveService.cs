@@ -10,7 +10,7 @@ using UnityEngine;
 /// </summary>
 public static class SaveService
 {
-    public const int VersioneSchemaCorrente = 4;
+    public const int VersioneSchemaCorrente = 5;
     public const int VersioneMigrazioneLegacy = 1;
     public const string IdProfiloOspite = "guest";
 
@@ -970,6 +970,12 @@ public static class SaveService
         }
 
         bool opzioniPcDaInizializzare = dati.versioneSchema < 3;
+        if (dati.versioneSchema < 5)
+        {
+            dati.fpsMobile = 60;
+            dati.qualitaMobileRidotta = false;
+        }
+        dati.fpsMobile = MobilePerformance.NormalizzaFps(dati.fpsMobile);
         if (dati.versioneSchema < 4) dati.apticaAttiva = true;
         if (opzioniPcDaInizializzare)
         {

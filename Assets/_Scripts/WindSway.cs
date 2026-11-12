@@ -14,6 +14,7 @@ public class WindSway : MonoBehaviour
 
     void Update()
     {
+        if (MobilePerformance.ModalitaLeggera) return;
         float oscillazione = Mathf.Sin(
             Time.time * velocita + transform.position.x
         ) * ampiezza;

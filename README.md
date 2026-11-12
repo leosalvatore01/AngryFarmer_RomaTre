@@ -63,6 +63,8 @@ partita completa giocata sulla build.
 - [Istruzioni di build](Docs/ISTRUZIONI_BUILD.md)
 - [Checklist della demo](Docs/CHECKLIST_DEMO.md)
 - [Verifica della release candidate](Docs/VERIFICA_RELEASE.md)
+- [Controlli e interfaccia mobile](Docs/BLOCCO_15_MOBILE.md)
+- [Preparazione Android e prove su telefono](Docs/BLOCCO_16_ANDROID.md)
 - [Credits e licenze](Docs/CREDITS_E_LICENZE.md)
 
 ## Struttura essenziale
@@ -78,7 +80,9 @@ I file prodotti dentro `Builds/` e i salvataggi locali non sono versionati.
 
 ## Stato della release
 
-Target verificato: Windows 64 bit. Il progetto usa già un sistema di input
-unificato adatto anche a gamepad e touch, ma una release mobile richiede ancora
-profilazione su dispositivi reali, layout touch definitivo e pacchettizzazione
-Android/iOS.
+Target della release già verificata: Windows 64 bit. I controlli touch, i menu
+mobile, le opzioni 30/60 FPS e la gestione della sospensione sono implementati.
+La configurazione Android e i comandi APK/AAB sono pronti; la generazione del
+pacchetto è da verificare dopo l'installazione del modulo Android in Unity Hub.
+Prestazioni, qualità visiva e comportamento su telefoni reali restano da
+collaudare. Non è stata preparata una release iOS.

@@ -30,6 +30,8 @@ public sealed class GameOptionsController : MonoBehaviour
     public FullScreenMode ModalitaSchermo { get; private set; }
     public bool VSyncAttivo { get; private set; }
     public int LimiteFps { get; private set; }
+    public int FpsMobile { get; private set; }
+    public bool QualitaMobileRidotta { get; private set; }
     public bool TutorialCompletato { get; private set; }
 
     public event Action ImpostazioniCambiate;
@@ -265,6 +267,24 @@ public sealed class GameOptionsController : MonoBehaviour
         RegistraModifica();
     }
 
+    public void ImpostaFpsMobile(int valore)
+    {
+        valore = MobilePerformance.NormalizzaFps(valore);
+        if (FpsMobile == valore) return;
+        FpsMobile = valore;
+        SaveService.ModificaDispositivo(dati => dati.fpsMobile = valore);
+        if (MobileExperience.Attiva) MobilePerformance.Applica(FpsMobile);
+        RegistraModifica();
+    }
+
+    public void ImpostaQualitaMobileRidotta(bool ridotta)
+    {
+        if (QualitaMobileRidotta == ridotta) return;
+        QualitaMobileRidotta = ridotta;
+        SaveService.ModificaDispositivo(dati => dati.qualitaMobileRidotta = ridotta);
+        RegistraModifica();
+    }
+
     public void RipristinaPredefiniti()
     {
         CombatFeedbackSettings feedback =
@@ -281,6 +301,8 @@ public sealed class GameOptionsController : MonoBehaviour
         ImpostaModalitaSchermo(FullScreenMode.FullScreenWindow);
         ImpostaVSyncAttivo(true);
         ImpostaLimiteFps(60);
+        ImpostaFpsMobile(60);
+        ImpostaQualitaMobileRidotta(false);
         Salva();
     }
 
@@ -318,15 +340,16 @@ public sealed class GameOptionsController : MonoBehaviour
             : FullScreenMode.FullScreenWindow;
         VSyncAttivo = dati.vSyncAttivo;
         LimiteFps = NormalizzaLimiteFps(dati.limiteFps);
+        FpsMobile = MobilePerformance.NormalizzaFps(dati.fpsMobile);
+        QualitaMobileRidotta = dati.qualitaMobileRidotta;
         TutorialCompletato = dati.tutorialCompletato;
     }
 
     public void ApplicaImpostazioniVideo()
     {
-        if (Application.isMobilePlatform)
+        if (MobileExperience.Attiva)
         {
-            QualitySettings.vSyncCount = 0;
-            Application.targetFrameRate = 60;
+            MobilePerformance.Applica(FpsMobile);
             return;
         }
         QualitySettings.vSyncCount = VSyncAttivo ? 1 : 0;

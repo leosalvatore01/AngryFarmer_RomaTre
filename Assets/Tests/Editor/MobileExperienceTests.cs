@@ -122,18 +122,22 @@ public sealed class MobileExperienceTests
         SceneManager.LoadScene(MenuInizialeController.NomeScenaMenu);
         yield return Attendi(() => Object.FindFirstObjectByType<MenuInizialeController>() != null);
         yield return null;
+        // Il batch non ha una finestra Game View in primo piano: simuliamo
+        // esplicitamente l'app attiva prima di inviare tocchi.
+        MobileAppLifecycle.Instance.NotificaPausa(false);
+        MobileAppLifecycle.Instance.NotificaFocus(true);
         MobileVisualCapture.Salva("menu-16-9");
         yield return null;
-        Tocca("ShopPermanente");
+        yield return Tocca("ShopPermanente");
         yield return null;
         Assert.That(ShopPermanentePrePartita.ApertoGlobale, Is.True);
         MobileVisualCapture.Salva("permanenti-20-9", 2400, 1080);
         yield return null;
-        Tocca("Chiudi");
+        yield return Tocca("Chiudi");
         yield return null;
-        Tocca("Gioca");
+        yield return Tocca("Gioca");
         yield return null;
-        Tocca("Difficolta_Normale");
+        yield return Tocca("Difficolta_Normale");
         yield return Attendi(() => SceneManager.GetActiveScene().name == MenuInizialeController.NomeScenaGameplay &&
             GameManager.instance != null &&
             Object.FindFirstObjectByType<ShopInterOndata>(FindObjectsInactive.Include) != null);
@@ -148,12 +152,12 @@ public sealed class MobileExperienceTests
         {
             yield return Attendi(() => Object.FindObjectsByType<Button>(FindObjectsSortMode.None)
                 .Any(b => b.name == "Acquista" && b.IsInteractable()));
-            Tocca("Acquista");
+            yield return Tocca("Acquista");
             yield return null;
             yield return null;
         }
         Assert.That(shop.ScelteGratuiteRimaste, Is.Zero);
-        Tocca("OndataSuccessiva");
+        yield return Tocca("OndataSuccessiva");
         yield return Attendi(() => MobileExperience.GameplayTouchAttivo);
         yield return null;
         var giocatore = Object.FindFirstObjectByType<PlayerShooting>();
@@ -185,12 +189,12 @@ public sealed class MobileExperienceTests
         Assert.That(input.ConsumaSchivata(), Is.True);
         Assert.That(input.ConsumaSchivata(), Is.False);
         stick.OnPointerDown(primo);
-        Tocca("SchivataTouch");
+        yield return Tocca("SchivataTouch");
         yield return null;
         yield return null;
         Assert.That(Object.FindFirstObjectByType<PlayerMovement>().SchivataPronta, Is.False);
-        Tocca("ApriPausaOpzioni");
-        yield return null;
+        yield return Tocca("ApriPausaOpzioni");
+        yield return Attendi(() => !stick.gameObject.activeInHierarchy);
         Assert.That(input.Movimento, Is.EqualTo(Vector2.zero));
         Assert.That(stick.PuntatoreAttivo, Is.Null);
         MobileVisualCapture.Salva("pausa-18-9", 2160, 1080);
@@ -200,10 +204,54 @@ public sealed class MobileExperienceTests
         var aptica = Object.FindObjectsByType<Toggle>(FindObjectsSortMode.None).Single(t => t.name == "Aptica");
         aptica.isOn = false;
         Assert.That(GameOptionsController.Instance.ApticaAttiva, Is.False);
-        Tocca("Chiudi");
-        yield return null;
+        int fpsPc = SaveService.Dispositivo.limiteFps;
+        yield return Tocca("FpsMobile");
+        Assert.That(GameOptionsController.Instance.FpsMobile, Is.EqualTo(30));
+        Assert.That(Application.targetFrameRate, Is.EqualTo(30));
+        yield return Tocca("QualitaMobile");
+        Assert.That(MobilePerformance.ModalitaLeggera, Is.True);
+        Assert.That(SaveService.Dispositivo.limiteFps, Is.EqualTo(fpsPc));
+        DamageNumberFeedback.Mostra(Vector2.zero, 1);
+        int saltatiPrima = DamageNumberFeedback.Instance.NumeriSaltati;
+        for (int i = 0; i < 30; i++) DamageNumberFeedback.Mostra(Vector2.zero, 1);
+        Assert.That(DamageNumberFeedback.Instance.NumeriSaltati, Is.GreaterThan(saltatiPrima));
+        int mostratiPrima = DamageNumberFeedback.Instance.NumeriMostrati;
+        DamageNumberFeedback.MostraGiocatore(Vector2.zero, 1);
+        Assert.That(DamageNumberFeedback.Instance.NumeriMostrati, Is.EqualTo(mostratiPrima + 1));
+        yield return Tocca("Chiudi");
+        yield return Attendi(() => stick.gameObject.activeInHierarchy);
         Assert.That(input.Movimento, Is.EqualTo(Vector2.zero));
         Assert.That(Object.FindObjectsByType<MobileControls>(FindObjectsSortMode.None).Length, Is.EqualTo(1));
+        var lifecycle = MobileAppLifecycle.Instance;
+        Assert.That(lifecycle, Is.Not.Null);
+        stick.OnPointerDown(primo);
+        input.RichiediSchivataTouch();
+        lifecycle.NotificaFocus(false);
+        lifecycle.NotificaPausa(true);
+        Assert.That(lifecycle.Sospesa, Is.True);
+        Assert.That(lifecycle.UltimoSalvataggioRiuscito, Is.True);
+        Assert.That(AudioListener.pause, Is.True);
+        Assert.That(Time.timeScale, Is.Zero);
+        Assert.That(input.Movimento, Is.EqualTo(Vector2.zero));
+        Assert.That(input.ConsumaSchivata(), Is.False);
+        DeviceSettingsData salvato = JsonUtility.FromJson<DeviceSettingsData>(
+            File.ReadAllText(SaveService.PercorsoImpostazioniDispositivo));
+        Assert.That(salvato.fpsMobile, Is.EqualTo(30));
+        Assert.That(salvato.qualitaMobileRidotta, Is.True);
+        lifecycle.NotificaPausa(false);
+        Assert.That(lifecycle.Sospesa, Is.True, "Non riprendere finche' manca il focus.");
+        lifecycle.NotificaFocus(true);
+        yield return null;
+        Assert.That(lifecycle.Sospesa, Is.False);
+        Assert.That(AudioListener.pause, Is.False);
+        Assert.That(Time.timeScale, Is.Zero, "La ripresa deve richiedere una conferma.");
+        Assert.That(MobileExperience.GameplayTouchAttivo, Is.False);
+        MobileVisualCapture.Salva("ripresa-18-9", 2160, 1080);
+        yield return Tocca("Chiudi");
+        yield return null;
+        Assert.That(MobileExperience.GameplayTouchAttivo, Is.True);
+        Assert.That(Time.timeScale, Is.EqualTo(1));
+        Assert.That(input.Movimento, Is.EqualTo(Vector2.zero));
         GameManager.instance.GameOverGiocatore();
         yield return null;
         Assert.That(MobileExperience.GameplayTouchAttivo, Is.False);
@@ -219,7 +267,7 @@ public sealed class MobileExperienceTests
         if (!string.IsNullOrEmpty(root) && Directory.Exists(root)) Directory.Delete(root, true);
     }
 
-    private static void Tocca(string nome)
+    private static IEnumerator Tocca(string nome)
     {
         Canvas.ForceUpdateCanvases();
         Button pulsante = Object.FindObjectsByType<Button>(FindObjectsSortMode.None)
@@ -231,7 +279,18 @@ public sealed class MobileExperienceTests
             position = RectTransformUtility.WorldToScreenPoint(null, rect.TransformPoint(rect.rect.center))
         };
         var risultati = new System.Collections.Generic.List<RaycastResult>();
-        EventSystem.current.RaycastAll(evento, risultati);
+        float limite = Time.realtimeSinceStartup + 2f;
+        // I test batch possono avanzare prima del render: attendiamo la UI reale,
+        // anche a 30 FPS, senza bypassare il raycast o invocare direttamente onClick.
+        do
+        {
+            yield return null;
+            Canvas.ForceUpdateCanvases();
+            evento.position = RectTransformUtility.WorldToScreenPoint(null, rect.TransformPoint(rect.rect.center));
+            risultati.Clear();
+            EventSystem.current.RaycastAll(evento, risultati);
+            if (risultati.Count > 0 && risultati[0].gameObject.GetComponentInParent<Button>() == pulsante) break;
+        } while (Time.realtimeSinceStartup < limite);
         Assert.That(risultati.Count, Is.GreaterThan(0), "Bottone non raggiungibile dal touch: " + nome);
         Assert.That(risultati[0].gameObject.GetComponentInParent<Button>(), Is.SameAs(pulsante),
             "Un altro elemento copre il bottone: " + nome + " -> " + risultati[0].gameObject.name);
@@ -240,10 +299,13 @@ public sealed class MobileExperienceTests
         ExecuteEvents.Execute(pulsante.gameObject, evento, ExecuteEvents.pointerClickHandler);
     }
 
-    private static IEnumerator Attendi(Func<bool> condizione)
+    private static IEnumerator Attendi(Func<bool> condizione,
+        [System.Runtime.CompilerServices.CallerLineNumber] int linea = 0)
     {
         float limite = Time.realtimeSinceStartup + 12f;
         while (!condizione() && Time.realtimeSinceStartup < limite) yield return null;
-        Assert.That(condizione(), Is.True, "Timeout nel flusso mobile");
+        Assert.That(condizione(), Is.True, "Timeout nel flusso mobile, linea " + linea +
+            "; sospesa=" + MobileAppLifecycle.AppSospesa + "; stato=" + GameManager.instance?.StatoCorrente +
+            "; pausa=" + GameManager.instance?.PausaManualeAttiva);
     }
 }

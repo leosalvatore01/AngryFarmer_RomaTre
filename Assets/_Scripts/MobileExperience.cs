@@ -17,6 +17,7 @@ public static class MobileExperience
     }
 
     public static bool GameplayTouchAttivo => Attiva &&
+        !MobileAppLifecycle.AppSospesa &&
         GameManager.instance != null && GameManager.instance.GameplayAttivo &&
         !MenuInizialeController.Attivo && !ShopPermanentePrePartita.ApertoGlobale &&
         !(PauseSettingsMenu.Instance != null && PauseSettingsMenu.Instance.Aperto);
@@ -35,6 +36,7 @@ public static class MobileExperience
         }
         var radice = new GameObject("EsperienzaMobile");
         Object.DontDestroyOnLoad(radice);
+        radice.AddComponent<MobileAppLifecycle>();
         radice.AddComponent<MobileControls>();
     }
 }

@@ -48,11 +48,6 @@ superati**, inclusi 9 casi dedicati al mobile; nessun errore di compilazione.
 Rapporto locale: `Logs/tests-block15.xml`. Anteprime di menu, shop iniziale,
 shop permanente, gameplay e pausa controllate visivamente.
 
-Esecuzione del 28 settembre 2026 con Unity 6000.3.4f1: **119/119 test
-superati**, inclusi 9 casi dedicati al mobile; nessun errore di compilazione.
-Rapporto locale: `Logs/tests-block15.xml`. Anteprime di menu, shop iniziale,
-shop permanente, gameplay e pausa controllate visivamente.
-
 `MobileExperienceTests` controlla safe area ai formati 16:9, 18:9, 20:9 e tablet,
 joystick, mira, pulsanti disabilitati e persistenza della preferenza aptica.
 Il test in Play Mode percorre menu, shop, scelte gratuite, ondata, schivata,

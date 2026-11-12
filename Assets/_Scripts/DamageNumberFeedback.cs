@@ -84,6 +84,12 @@ public sealed class DamageNumberFeedback : MonoBehaviour
         bool giocatore
     )
     {
+        // Mantiene i danni al giocatore; riduce solo la folla di numeri sulle volpi.
+        if (!giocatore && MobilePerformance.ModalitaLeggera && popupAttivi >= 10)
+        {
+            NumeriSaltati++;
+            return;
+        }
         DamageNumberPopup popup = null;
         while (pool.Count > 0 && popup == null)
         {

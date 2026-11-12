@@ -70,6 +70,7 @@ public class GameManager : MonoBehaviour
     public StatoPartita StatoCorrente { get; private set; } = StatoPartita.Onda;
     public bool PausaManualeAttiva { get; private set; }
     public bool GameplayAttivo =>
+        !MobileAppLifecycle.AppSospesa &&
         !isGameOver &&
         DifficoltaConfermata &&
         StatoCorrente == StatoPartita.Onda &&
@@ -1474,7 +1475,7 @@ public class GameManager : MonoBehaviour
         Time.timeScale =
             DifficoltaConfermata &&
             StatoCorrente == StatoPartita.Onda &&
-            !PausaManualeAttiva
+            !PausaManualeAttiva && !MobileAppLifecycle.AppSospesa
                 ? 1f
                 : 0f;
     }

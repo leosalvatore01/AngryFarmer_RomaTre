@@ -42,6 +42,8 @@ public sealed class PauseSettingsMenu : MonoBehaviour
     private Toggle toggleNumeriDanno;
     private Toggle toggleAptica;
     private TMP_Text testoStatoAptica;
+    private TMP_Text testoFpsMobile;
+    private TMP_Text testoQualitaMobile;
     private TMP_FontAsset fontInterfaccia;
     private GameOptionsController opzioni;
     private FarmerInputController input;
@@ -497,6 +499,15 @@ public sealed class PauseSettingsMenu : MonoBehaviour
                 rect.anchoredPosition = new Vector2(i % 2 == 0 ? -335 : 335, 40 - (i / 2) * 150);
                 rect.sizeDelta = new Vector2(650, 120);
             }
+            pannello.transform.Find("SuggerimentoComandi").gameObject.SetActive(false);
+            Button fps = CreaPulsante("FpsMobile", pannello.transform, "", new Vector2(-335, -240),
+                new Vector2(650, 90), FarmPixelUI.ColorePulsanteNeutroFlat,
+                () => opzioni.ImpostaFpsMobile(opzioni.FpsMobile == 60 ? 30 : 60));
+            Button qualita = CreaPulsante("QualitaMobile", pannello.transform, "", new Vector2(335, -240),
+                new Vector2(650, 90), FarmPixelUI.ColorePulsanteNeutroFlat,
+                () => opzioni.ImpostaQualitaMobileRidotta(!opzioni.QualitaMobileRidotta));
+            testoFpsMobile = fps.GetComponentInChildren<TMP_Text>();
+            testoQualitaMobile = qualita.GetComponentInChildren<TMP_Text>();
         }
 
         sliderMusica.onValueChanged.AddListener(
@@ -524,6 +535,10 @@ public sealed class PauseSettingsMenu : MonoBehaviour
     private void AggiornaControlli()
     {
         if (!costruito || opzioni == null) return;
+        if (testoFpsMobile != null)
+            testoFpsMobile.text = opzioni.FpsMobile == 60 ? "60 FPS  ·  FLUIDITA" : "30 FPS  ·  RISPARMIO";
+        if (testoQualitaMobile != null)
+            testoQualitaMobile.text = opzioni.QualitaMobileRidotta ? "GRAFICA: LEGGERA" : "GRAFICA: COMPLETA";
 
         sliderMusica.SetValueWithoutNotify(opzioni.VolumeMusica);
         sliderEffetti.SetValueWithoutNotify(opzioni.VolumeEffetti);

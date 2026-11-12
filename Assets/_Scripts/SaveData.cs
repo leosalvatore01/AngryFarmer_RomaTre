@@ -63,6 +63,8 @@ public sealed class DeviceSettingsData
     public int modalitaSchermo = (int)UnityEngine.FullScreenMode.FullScreenWindow;
     public bool vSyncAttivo = true;
     public int limiteFps = 60;
+    public int fpsMobile = 60;
+    public bool qualitaMobileRidotta;
     public bool tutorialCompletato;
     public string overrideBindingGameplayJson = string.Empty;
 }

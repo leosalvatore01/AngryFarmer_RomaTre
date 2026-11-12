@@ -25,3 +25,6 @@
 *.sbr
 .DS_Store
 /TestResults*.xml
+# Chiavi di firma Android: conservarle e farne backup fuori dal repository.
+*.keystore
+*.jks
