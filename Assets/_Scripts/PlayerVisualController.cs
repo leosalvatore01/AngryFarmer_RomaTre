@@ -38,6 +38,7 @@ public class PlayerVisualController : MonoBehaviour
     private Vector2 direzioneRinculo = Vector2.down;
     private float tempoLampo;
     private bool lampoPerforante;
+    private float intensitaFeedbackSparo = 1f;
 
     public int LampiEmessi { get; private set; }
     public bool LampoVisibile =>
@@ -135,6 +136,7 @@ public class PlayerVisualController : MonoBehaviour
         direzioneRinculo = direzione.normalized;
         direzioneCorrente = OttieniDirezione(direzioneRinculo);
         tempoFeedbackSparo = Mathf.Max(0.01f, durataFeedbackSparo);
+        intensitaFeedbackSparo = potente ? 1.45f : perforante ? 1.25f : 1.1f;
 
         bool flashConsentito =
             GameOptionsController.Instance == null ||
@@ -181,6 +183,12 @@ public class PlayerVisualController : MonoBehaviour
     private void AggiornaLampoSparo()
     {
         if (rendererLampo == null || !rendererLampo.enabled) return;
+        if (GameOptionsController.Instance != null && !GameOptionsController.Instance.FlashAttivi)
+        {
+            rendererLampo.enabled = false;
+            tempoLampo = 0f;
+            return;
+        }
         if (GameManager.instance != null &&
             GameManager.instance.PausaManualeAttiva)
         {
@@ -376,7 +384,7 @@ public class PlayerVisualController : MonoBehaviour
         {
             float durata = Mathf.Max(0.01f, durataFeedbackSparo);
             forzaSparo = Mathf.Clamp01(tempoFeedbackSparo / durata);
-            forzaSparo *= forzaSparo;
+            forzaSparo = forzaSparo * forzaSparo * intensitaFeedbackSparo;
             tempoFeedbackSparo = Mathf.Max(
                 0f,
                 tempoFeedbackSparo - Time.deltaTime

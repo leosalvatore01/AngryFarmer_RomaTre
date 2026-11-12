@@ -15,6 +15,11 @@ public sealed class CombatFeedbackController : MonoBehaviour
     private AudioClip[] clipSparo;
     private AudioClip[] clipImpatto;
     private PixelImpactBurst[] poolBurst;
+    private RewardBurstFeedback[] poolRicompense;
+    private int indiceRicompensa;
+    private float prossimaVibrazione;
+    public int EliminazioniRegistrate { get; private set; }
+    public int CapacitaRicompense => poolRicompense != null ? poolRicompense.Length : 0;
     private GameOptionsController opzioniGioco;
     private FarmerInputController input;
     private Transform giocatoreMirino;
@@ -102,6 +107,14 @@ public sealed class CombatFeedbackController : MonoBehaviour
         CreaMirino();
         CreaAudioProcedurale();
         CreaPoolBurst();
+        poolRicompense = new RewardBurstFeedback[10];
+        for (int i = 0; i < poolRicompense.Length; i++)
+        {
+            GameObject premio = new GameObject("FeedbackRicompensa_" + i);
+            premio.transform.SetParent(transform, false);
+            poolRicompense[i] = premio.AddComponent<RewardBurstFeedback>();
+            premio.SetActive(false);
+        }
     }
 
     void Update()
@@ -238,6 +251,19 @@ public sealed class CombatFeedbackController : MonoBehaviour
         );
     }
 
+    public void RegistraEliminazione(Vector2 posizione, SpriteRenderer renderer, int monete)
+    {
+        EliminazioniRegistrate++;
+        if (!VfxAbilitati || poolRicompense == null) return;
+        if (giocatoreMirino == null)
+            giocatoreMirino = GameObject.FindGameObjectWithTag("Player")?.transform;
+        RewardBurstFeedback premio = poolRicompense[indiceRicompensa];
+        indiceRicompensa = (indiceRicompensa + 1) % poolRicompense.Length;
+        premio.Attiva(posizione, giocatoreMirino, Mathf.Max(0, monete),
+            renderer != null ? renderer.sortingLayerID : 0,
+            renderer != null ? renderer.sortingOrder : 2);
+    }
+
     public void RegistraPericolo(Vector2 posizione)
     {
         PericoliRegistrati++;
@@ -331,7 +357,8 @@ public sealed class CombatFeedbackController : MonoBehaviour
 
     private void RichiediVibrazione(float intensita, float durata)
     {
-        if (!VibrazioneAbilitata || intensita <= 0f || durata <= 0f) return;
+        if (!VibrazioneAbilitata || intensita <= 0f || durata <= 0f ||
+            Time.unscaledTime < prossimaVibrazione) return;
 
         Camera camera = Camera.main;
         CameraFollow follow = camera != null
@@ -342,6 +369,7 @@ public sealed class CombatFeedbackController : MonoBehaviour
         follow.ImpostaVibrazioneAbilitata(VibrazioneAbilitata);
         if (follow.RichiediVibrazione(intensita, durata))
         {
+            prossimaVibrazione = Time.unscaledTime + 0.12f;
             VibrazioniRichieste++;
         }
     }
@@ -788,6 +816,8 @@ public sealed class CombatFeedbackController : MonoBehaviour
         {
             opzioniGioco.ImpostazioniCambiate -= ApplicaOpzioni;
         }
+        RewardBurstFeedback.LiberaRisorse();
+        PixelImpactBurst.LiberaRisorse();
         Instance = null;
         ImpostaVisibilitaCursoreSistema(true);
     }
@@ -809,6 +839,7 @@ public sealed class CombatHitFeedback2D : MonoBehaviour
     private float durataFlash;
     private bool effettoPerforante;
     private float moltiplicatoreRinculo = 1f;
+    private float deformazioneColpo;
 
     public SpriteRenderer RendererSorgente => rendererSorgente;
     public bool FeedbackAttivo => tempoRinculo > 0f || tempoFlash > 0f;
@@ -892,6 +923,7 @@ public sealed class CombatHitFeedback2D : MonoBehaviour
         tempoRinculo = durataRinculo;
         tempoFlash = durataFlash;
         effettoPerforante = perforante;
+        deformazioneColpo = (critico ? 0.075f : potente ? 0.055f : 0.035f) * moltiplicatoreRinculo;
 
         AggiornaFeedbackVisivo(0f);
     }
@@ -930,11 +962,17 @@ public sealed class CombatHitFeedback2D : MonoBehaviour
             {
                 pivotFeedback.localPosition =
                     (Vector3)(direzioneRinculo * distanzaRinculo * impulso);
+                pivotFeedback.localScale = new Vector3(1f + deformazioneColpo * impulso,
+                    1f - deformazioneColpo * impulso, 1f);
+                pivotFeedback.localRotation = Quaternion.Euler(0f, 0f,
+                    -direzioneRinculo.x * deformazioneColpo * 60f * impulso);
             }
         }
         else if (pivotFeedback != null)
         {
             pivotFeedback.localPosition = Vector3.zero;
+            pivotFeedback.localScale = Vector3.one;
+            pivotFeedback.localRotation = Quaternion.identity;
         }
 
         if (tempoFlash > 0f)
@@ -989,7 +1027,12 @@ public sealed class CombatHitFeedback2D : MonoBehaviour
     {
         tempoRinculo = 0f;
         tempoFlash = 0f;
-        if (pivotFeedback != null) pivotFeedback.localPosition = Vector3.zero;
+        if (pivotFeedback != null)
+        {
+            pivotFeedback.localPosition = Vector3.zero;
+            pivotFeedback.localScale = Vector3.one;
+            pivotFeedback.localRotation = Quaternion.identity;
+        }
         if (rendererFlash != null) rendererFlash.enabled = false;
     }
 }
@@ -998,6 +1041,11 @@ public sealed class PixelImpactBurst : MonoBehaviour
 {
     private const int NumeroMassimoParticelle = 8;
     private static Sprite spritePixel;
+    private static Sprite spriteScintilla;
+    private SpriteRenderer scintilla;
+    private float durataScintilla;
+    private float scalaScintilla;
+    private bool criticoAttivo;
 
     private SpriteRenderer[] rendererParticelle;
     private Vector2[] velocitaParticelle;
@@ -1018,6 +1066,11 @@ public sealed class PixelImpactBurst : MonoBehaviour
             renderer.enabled = false;
             rendererParticelle[i] = renderer;
         }
+        GameObject centro = new GameObject("ScintillaImpatto", typeof(SpriteRenderer));
+        centro.transform.SetParent(transform, false);
+        scintilla = centro.GetComponent<SpriteRenderer>();
+        scintilla.sprite = OttieniSpriteScintilla();
+        scintilla.enabled = false;
     }
 
     public void Attiva(
@@ -1061,12 +1114,21 @@ public sealed class PixelImpactBurst : MonoBehaviour
         transform.rotation = Quaternion.identity;
         tempo = 0f;
         durata = Mathf.Max(0.05f, nuovaDurata);
+        criticoAttivo = critico;
+        durataScintilla = critico ? 0.085f : 0.045f;
+        scalaScintilla = critico ? 1.45f : potente ? 1.05f : 0.75f;
+        scintilla.sortingLayerID = sortingLayer;
+        scintilla.sortingOrder = sortingOrder + 3;
+        scintilla.transform.localScale = Vector3.one * scalaScintilla;
+        scintilla.transform.localRotation = Quaternion.Euler(0f, 0f, critico ? 15f : -12f);
+        scintilla.enabled = CombatFeedbackController.Instance == null || CombatFeedbackController.Instance.FlashAbilitati;
+        scintilla.color = critico ? new Color32(255, 218, 107, 255) : new Color32(255, 244, 204, 235);
 
         Vector2 avanti = direzione.sqrMagnitude > 0.0001f
             ? direzione.normalized
             : Vector2.right;
         int quantita = Mathf.Clamp(
-            numeroParticelle + (potente ? 1 : 0) +
+            (MobilePerformance.ModalitaLeggera ? 3 : numeroParticelle) + (potente ? 1 : 0) +
             (perforante ? 1 : 0) + (critico ? 2 : 0),
             1,
             NumeroMassimoParticelle
@@ -1095,8 +1157,8 @@ public sealed class PixelImpactBurst : MonoBehaviour
             );
             float scala = 0.9f + (i % 2) * 0.45f;
             renderer.transform.localScale = new Vector3(
-                perforante ? scala * 1.8f : scala,
-                scala,
+                (perforante ? 1.8f : 1.35f) * scala,
+                scala * 0.7f,
                 1f
             );
             renderer.sortingLayerID = sortingLayer;
@@ -1113,6 +1175,12 @@ public sealed class PixelImpactBurst : MonoBehaviour
 
     void Update()
     {
+        CombatFeedbackController controller = CombatFeedbackController.Instance;
+        if (controller != null && !controller.VfxAbilitati)
+        {
+            gameObject.SetActive(false);
+            return;
+        }
         float delta =
             GameManager.instance != null &&
             GameManager.instance.PausaManualeAttiva
@@ -1120,6 +1188,15 @@ public sealed class PixelImpactBurst : MonoBehaviour
                 : Time.unscaledDeltaTime;
         tempo += delta;
         float progresso = Mathf.Clamp01(tempo / durata);
+        scintilla.enabled = tempo < durataScintilla && (controller == null || controller.FlashAbilitati);
+        if (scintilla.enabled)
+        {
+            float t = Mathf.Clamp01(tempo / durataScintilla);
+            scintilla.transform.localScale = Vector3.one * scalaScintilla * (1f - t * 0.35f);
+            Color c = criticoAttivo ? new Color(1f, 0.85f, 0.42f) : new Color(1f, 0.96f, 0.8f);
+            c.a = 1f - t;
+            scintilla.color = c;
+        }
 
         for (int i = 0; i < rendererParticelle.Length; i++)
         {
@@ -1129,8 +1206,10 @@ public sealed class PixelImpactBurst : MonoBehaviour
             renderer.transform.localPosition +=
                 (Vector3)(velocitaParticelle[i] * delta);
             velocitaParticelle[i] *= Mathf.Exp(-8f * delta);
+            velocitaParticelle[i].y -= delta * 2.6f;
+            renderer.transform.Rotate(0f, 0f, (i % 2 == 0 ? 1f : -1f) * 230f * delta);
             Color colore = renderer.color;
-            colore.a = 1f - progresso;
+            colore.a = 1f - progresso * progresso;
             renderer.color = colore;
         }
 
@@ -1153,8 +1232,8 @@ public sealed class PixelImpactBurst : MonoBehaviour
             Color[] criticoColori =
             {
                 new Color(1f, 0.96f, 0.78f, alpha),
-                new Color(0.93f, 0.35f, 0.88f, alpha),
-                new Color(0.56f, 0.18f, 0.72f, alpha)
+                new Color(1f, 0.76f, 0.21f, alpha),
+                new Color(0.86f, 0.43f, 0.1f, alpha)
             };
             return criticoColori[indice % criticoColori.Length];
         }
@@ -1216,5 +1295,45 @@ public sealed class PixelImpactBurst : MonoBehaviour
         spritePixel.name = "PixelImpatto";
         spritePixel.hideFlags = HideFlags.HideAndDontSave;
         return spritePixel;
+    }
+
+    private static Sprite OttieniSpriteScintilla()
+    {
+        if (spriteScintilla != null) return spriteScintilla;
+        const int lato = 17;
+        var pixel = new Color32[lato * lato];
+        for (int y = 0; y < lato; y++)
+            for (int x = 0; x < lato; x++)
+            {
+                int dx = Mathf.Abs(x - 8), dy = Mathf.Abs(y - 8);
+                if ((dx <= 1 && dy <= 7) || (dy <= 1 && dx <= 7) || dx + dy <= 4)
+                    pixel[y * lato + x] = new Color32(255, 255, 255, 255);
+            }
+        Texture2D texture = new Texture2D(lato, lato, TextureFormat.RGBA32, false);
+        texture.name = "ScintillaPatataRuntime";
+        texture.filterMode = FilterMode.Point;
+        texture.wrapMode = TextureWrapMode.Clamp;
+        texture.hideFlags = HideFlags.HideAndDontSave;
+        texture.SetPixels32(pixel);
+        texture.Apply(false, true);
+        spriteScintilla = Sprite.Create(texture, new Rect(0, 0, lato, lato), Vector2.one * 0.5f, 64f);
+        spriteScintilla.hideFlags = HideFlags.HideAndDontSave;
+        return spriteScintilla;
+    }
+
+    public static void LiberaRisorse()
+    {
+        if (spriteScintilla != null)
+        {
+            Destroy(spriteScintilla.texture);
+            Destroy(spriteScintilla);
+            spriteScintilla = null;
+        }
+        if (spritePixel != null)
+        {
+            Destroy(spritePixel.texture);
+            Destroy(spritePixel);
+            spritePixel = null;
+        }
     }
 }

@@ -23,6 +23,7 @@ public class GameManager : MonoBehaviour
     private TMP_Text testoMonete;
     private Image barraVitaHud;
     private PlayerHealth saluteHud;
+    private float tempoFeedbackMonete;
     private TMP_Text titoloFinePartita;
     private TMP_Text riepilogoFinePartita;
     private Button pulsanteRiprova;
@@ -162,6 +163,10 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
+        tempoFeedbackMonete = Mathf.Max(0f, tempoFeedbackMonete - Time.deltaTime);
+        if (testoMonete != null)
+            testoMonete.rectTransform.localScale = Vector3.one *
+                (1f + Mathf.Sin(Mathf.Clamp01(tempoFeedbackMonete / 0.22f) * Mathf.PI) * 0.08f);
         if (saluteHud == null) saluteHud = FindFirstObjectByType<PlayerHealth>();
         if (barraVitaHud != null && saluteHud != null)
         {
@@ -1093,6 +1098,8 @@ public class GameManager : MonoBehaviour
         );
         AggiornaContatoreMonete();
         MoneteCambiate?.Invoke(monete);
+        if (GameplayAttivo && (CombatFeedbackController.Instance == null || CombatFeedbackController.Instance.VfxAbilitati))
+            tempoFeedbackMonete = 0.22f;
         FarmAudioController.RiproduciMoneta();
     }
 

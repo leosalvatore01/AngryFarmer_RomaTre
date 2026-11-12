@@ -1900,6 +1900,9 @@ public class EnemyAI : MonoBehaviour, IDanneggiabile, IPoolableGameplayObject
             GameManager.instance.RegistraVolpeEliminata(tipo);
             GameManager.instance.AggiungiMonete(monetePerEliminazione);
         }
+        if (Application.isPlaying)
+            CombatFeedbackController.CreaOTrova().RegistraEliminazione(
+                transform.position, spriteRendererVisibile, monetePerEliminazione);
         TemporaryDropDirector drop = OttieniDirettoreDrop();
         bool vitaPiena = playerHealth != null && playerHealth.VitaPiena;
         if (dropGarantiti > 0)
