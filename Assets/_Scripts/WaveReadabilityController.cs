@@ -62,10 +62,7 @@ public sealed class WaveReadabilityController : MonoBehaviour
     private GameObject radiceInterfaccia;
     private GameObject schedaHud;
     private TMP_Text testoRimasti;
-    private TMP_Text testoGruppo;
     private Image[] segmentiBarra;
-    private TMP_Text[] chipTipi;
-    private Image[] sfondiChipTipi;
     private GameObject pannelloSegnale;
     private CanvasGroup gruppoSegnale;
     private TMP_Text testoSegnale;
@@ -502,16 +499,8 @@ public sealed class WaveReadabilityController : MonoBehaviour
 
         if (testoRimasti != null)
         {
-            testoRimasti.text = "RIMASTE  " + rimasti + " / " + totale;
+            testoRimasti.text = "VOLPI  " + rimasti;
         }
-        if (testoGruppo != null)
-        {
-            testoGruppo.text = gruppiTotali > 0
-                ? "GRUPPO  " + Mathf.Clamp(gruppo, 0, gruppiTotali) +
-                  " / " + gruppiTotali
-                : string.Empty;
-        }
-
         if (segmentiBarra == null) return;
         float rapporto = totale > 0 ? Mathf.Clamp01((float)rimasti / totale) : 0f;
         int accesi = rimasti > 0
@@ -534,35 +523,9 @@ public sealed class WaveReadabilityController : MonoBehaviour
 
     private void AggiornaChipTipi(ComposizioneVolpi composizione)
     {
-        if (chipTipi == null || sfondiChipTipi == null) return;
-
-        for (int i = 0; i < chipTipi.Length; i++)
-        {
-            TipoVolpe tipo = (TipoVolpe)i;
-            int quantita = composizione.Ottieni(tipo);
-            if (conteggiTipiVisualizzati[i] == quantita) continue;
-            conteggiTipiVisualizzati[i] = quantita;
-            if (chipTipi[i] != null)
-            {
-                chipTipi[i].SetText(
-                    FoxVariantStyle.Abbreviazione(tipo) + "  " + quantita
-                );
-                chipTipi[i].color = quantita > 0
-                    ? new Color32(255, 247, 216, 255)
-                    : new Color32(139, 117, 96, 210);
-            }
-            if (sfondiChipTipi[i] != null)
-            {
-                Color coloreTipo = FoxVariantStyle.ColoreUi(tipo);
-                Color colore = Color.Lerp(
-                    FarmPixelUI.ColoreCartaFlat,
-                    coloreTipo,
-                    quantita > 0 ? 0.28f : 0.08f
-                );
-                colore.a = quantita > 0 ? 0.64f : 0.36f;
-                sfondiChipTipi[i].color = colore;
-            }
-        }
+        // I conteggi restano disponibili; i dettagli sono consultabili nella pausa.
+        for (int i = 0; i < NumeroTipiVolpe; i++)
+            conteggiTipiVisualizzati[i] = composizione.Ottieni((TipoVolpe)i);
     }
 
     private void AggiornaIndicatoriBordo()
@@ -997,145 +960,33 @@ public sealed class WaveReadabilityController : MonoBehaviour
 
     private void CostruisciSchedaHud(Transform parent, TMP_FontAsset font)
     {
-        schedaHud = CreaPannello(
-            "SchedaMinacceOndata",
-            parent,
-            new Vector2(1f, 1f),
-            new Vector2(1f, 1f),
-            new Vector2(1f, 1f),
-            new Vector2(-12f, -12f),
-            new Vector2(360f, 112f),
-            false
-        );
-
-        FarmPixelUI.AggiungiIcona(
-            schedaHud.transform,
-            "IconaVolpe",
-            FarmPixelIcon.Volpe,
-            new Vector2(-151f, 22f),
-            new Vector2(38f, 38f)
-        );
-
-        CreaTesto(
-            "TitoloMinacce",
-            schedaHud.transform,
-            "VOLPI RIMASTE",
-            font,
-            new Vector2(24f, 35f),
-            new Vector2(272f, 18f),
-            15f,
-            new Color32(255, 220, 143, 255),
-            TextAlignmentOptions.Center,
-            FontStyles.Bold
-        );
-        testoRimasti = CreaTesto(
-            "ConteggioMinacce",
-            schedaHud.transform,
-            "RIMASTE  0 / 0",
-            font,
-            new Vector2(24f, 14f),
-            new Vector2(272f, 24f),
-            20f,
-            new Color32(255, 181, 67, 255),
-            TextAlignmentOptions.Center,
-            FontStyles.Bold
-        );
-        testoGruppo = CreaTesto(
-            "ConteggioGruppo",
-            schedaHud.transform,
-            string.Empty,
-            font,
-            new Vector2(-122f, -10f),
-            new Vector2(90f, 18f),
-            13f,
-            new Color32(242, 211, 157, 255),
-            TextAlignmentOptions.Center,
-            FontStyles.Bold
-        );
-
-        GameObject fondoBarra = CreaPannello(
-            "FondoBarraMinacce",
-            schedaHud.transform,
-            new Vector2(0.5f, 0.5f),
-            new Vector2(0.5f, 0.5f),
-            new Vector2(0.5f, 0.5f),
-            new Vector2(28f, -10f),
-            new Vector2(226f, 16f),
-            true
-        );
-
+        schedaHud = CreaPannello("SchedaMinacceOndata", parent,
+            new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f),
+            new Vector2(0f, -73f), new Vector2(244f, 38f), true);
+        schedaHud.GetComponent<Image>().enabled = false;
+        Outline bordo = schedaHud.GetComponent<Outline>();
+        if (bordo != null) bordo.enabled = false;
+        FarmPixelUI.AggiungiIcona(schedaHud.transform, "IconaVolpe", FarmPixelIcon.Volpe,
+            new Vector2(-65f, 2f), new Vector2(22f, 22f));
+        testoRimasti = CreaTesto("ConteggioMinacce", schedaHud.transform, "VOLPI  0", font,
+            new Vector2(12f, 2f), new Vector2(128f, 24f), 18f,
+            new Color32(234, 215, 179, 255), TextAlignmentOptions.Center, FontStyles.Normal);
+        GameObject fondo = CreaPannello("FondoBarraMinacce", schedaHud.transform,
+            Vector2.one * 0.5f, Vector2.one * 0.5f, Vector2.one * 0.5f,
+            new Vector2(0f, -16f), new Vector2(200f, 4f), true);
+        Outline bordoBarra = fondo.GetComponent<Outline>();
+        if (bordoBarra != null) bordoBarra.enabled = false;
         segmentiBarra = new Image[SegmentiBarra];
-        const float larghezza = 18f;
-        const float spazio = 2f;
-        float totale = SegmentiBarra * larghezza +
-                       (SegmentiBarra - 1) * spazio;
-        float primoX = -totale * 0.5f + larghezza * 0.5f;
         for (int i = 0; i < segmentiBarra.Length; i++)
         {
-            GameObject segmento = new GameObject(
-                "SegmentoBarra_" + i,
-                typeof(RectTransform),
-                typeof(CanvasRenderer),
-                typeof(Image)
-            );
-            segmento.transform.SetParent(fondoBarra.transform, false);
-            RectTransform rect = segmento.GetComponent<RectTransform>();
-            ImpostaRectCentrato(
-                rect,
-                new Vector2(primoX + i * (larghezza + spazio), 0f),
-                new Vector2(larghezza, 9f)
-            );
-            Image immagine = segmento.GetComponent<Image>();
-            immagine.raycastTarget = false;
-            immagine.color = new Color32(76, 42, 27, 210);
-            segmentiBarra[i] = immagine;
+            GameObject segmento = new GameObject("SegmentoBarra_" + i, typeof(RectTransform), typeof(Image));
+            segmento.transform.SetParent(fondo.transform, false);
+            ImpostaRectCentrato(segmento.GetComponent<RectTransform>(),
+                new Vector2(-90f + i * 20f, 0f), new Vector2(18f, 3f));
+            segmentiBarra[i] = segmento.GetComponent<Image>();
+            segmentiBarra[i].raycastTarget = false;
         }
-        CreaChipTipi(schedaHud.transform, font);
         schedaHud.SetActive(false);
-    }
-
-    private void CreaChipTipi(Transform parent, TMP_FontAsset font)
-    {
-        chipTipi = new TMP_Text[NumeroTipiVolpe];
-        sfondiChipTipi = new Image[NumeroTipiVolpe];
-        const float larghezza = 40f;
-        const float spazio = 3f;
-        float totale = chipTipi.Length * larghezza +
-                       (chipTipi.Length - 1) * spazio;
-        float primoX = -totale * 0.5f + larghezza * 0.5f;
-
-        for (int i = 0; i < chipTipi.Length; i++)
-        {
-            TipoVolpe tipo = (TipoVolpe)i;
-            conteggiTipiVisualizzati[i] = -1;
-            GameObject pannello = CreaPannello(
-                "ChipTipo_" + tipo,
-                parent,
-                new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f),
-                new Vector2(primoX + i * (larghezza + spazio), -40f),
-                new Vector2(larghezza, 22f),
-                true
-            );
-            Image sfondo = pannello.GetComponent<Image>();
-            sfondo.raycastTarget = false;
-            sfondiChipTipi[i] = sfondo;
-
-            chipTipi[i] = CreaTesto(
-                "TestoChip_" + tipo,
-                pannello.transform,
-                FoxVariantStyle.Abbreviazione(tipo) + "  0",
-                font,
-                Vector2.zero,
-                new Vector2(larghezza - 2f, 19f),
-                12f,
-                new Color32(255, 247, 216, 255),
-                TextAlignmentOptions.Center,
-                FontStyles.Bold
-            );
-        }
-        AggiornaChipTipi(default);
     }
 
     private void CostruisciIndicatori(Transform parent, TMP_FontAsset font)

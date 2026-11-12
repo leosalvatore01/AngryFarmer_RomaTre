@@ -71,7 +71,8 @@ public sealed class BossHealthBarController : MonoBehaviour
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920f, 1080f);
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-        scaler.matchWidthOrHeight = 0.5f;
+        scaler.matchWidthOrHeight = 1f;
+        gameObject.AddComponent<MobileSafeAreaCanvas>();
 
         CostruisciInterfaccia();
     }
@@ -122,7 +123,7 @@ public sealed class BossHealthBarController : MonoBehaviour
         rect.anchorMin = new Vector2(0.5f, 1f);
         rect.anchorMax = new Vector2(0.5f, 1f);
         rect.pivot = new Vector2(0.5f, 1f);
-        rect.anchoredPosition = new Vector2(0f, -18f);
+        rect.anchoredPosition = new Vector2(0f, -116f);
         rect.sizeDelta = new Vector2(500f, 58f);
 
         Image sfondo = pannello.GetComponent<Image>();
@@ -170,13 +171,12 @@ public sealed class BossHealthBarController : MonoBehaviour
             "FondoBarra",
             new Color32(38, 19, 16, 245)
         );
-        ImpostaRect(
-            fondoBarra.GetComponent<RectTransform>(),
-            new Vector2(0f, 8f),
-            new Vector2(-28f, 14f),
-            Vector2.zero,
-            Vector2.one
-        );
+        RectTransform rectFondoBarra = fondoBarra.GetComponent<RectTransform>();
+        rectFondoBarra.anchorMin = Vector2.zero;
+        rectFondoBarra.anchorMax = new Vector2(1f, 0f);
+        rectFondoBarra.pivot = new Vector2(0.5f, 0f);
+        rectFondoBarra.anchoredPosition = new Vector2(0f, 8f);
+        rectFondoBarra.sizeDelta = new Vector2(-28f, 14f);
 
         GameObject barra = CreaImmagine(
             fondoBarra.transform,

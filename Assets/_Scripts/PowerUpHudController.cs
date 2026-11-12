@@ -47,6 +47,7 @@ public sealed class PowerUpHudController : MonoBehaviour
     private PlayerTemporaryEffects effettiTemporanei;
     private float prossimoAggiornamento;
     private int numeroSlotVisibili;
+    private bool mostraDettagli;
 
     public int NumeroPotenziamentiPermanentiAttivi { get; private set; }
     public int NumeroMiglioramentiInterpartitaAttivi { get; private set; }
@@ -112,7 +113,22 @@ public sealed class PowerUpHudController : MonoBehaviour
 
         bool partitaVisibile = GameManager.instance == null ||
             GameManager.instance.GameplayAttivo;
-        gruppo.alpha = partitaVisibile && numeroSlotVisibili > 0 ? 1f : 0f;
+        gruppo.alpha = (mostraDettagli || partitaVisibile) && numeroSlotVisibili > 0 ? 1f : 0f;
+    }
+
+    public static PowerUpHudController CreaRiepilogo(Transform parent)
+    {
+        GameObject oggetto = new GameObject("RiepilogoPotenziamenti", typeof(RectTransform),
+            typeof(Image), typeof(CanvasGroup));
+        oggetto.transform.SetParent(parent, false);
+        PowerUpHudController vista = oggetto.AddComponent<PowerUpHudController>();
+        vista.mostraDettagli = true;
+        vista.rectRadice.anchorMin = vista.rectRadice.anchorMax = Vector2.one * 0.5f;
+        vista.rectRadice.pivot = new Vector2(0.5f, 1f);
+        vista.rectRadice.anchoredPosition = new Vector2(0f, 130f);
+        vista.rectRadice.localScale = Vector3.one * 1.35f;
+        vista.AggiornaStatoCompleto();
+        return vista;
     }
 
     public void AggiornaSubitoPerTest()
@@ -124,10 +140,10 @@ public sealed class PowerUpHudController : MonoBehaviour
     private void CostruisciInterfaccia()
     {
         rectRadice = GetComponent<RectTransform>();
-        rectRadice.anchorMin = new Vector2(0.5f, 1f);
-        rectRadice.anchorMax = new Vector2(0.5f, 1f);
-        rectRadice.pivot = new Vector2(0.5f, 1f);
-        rectRadice.anchoredPosition = new Vector2(0f, -144f);
+        rectRadice.anchorMin = new Vector2(0f, 1f);
+        rectRadice.anchorMax = new Vector2(0f, 1f);
+        rectRadice.pivot = new Vector2(0f, 1f);
+        rectRadice.anchoredPosition = new Vector2(16f, -108f);
         if (MobileExperience.Attiva) rectRadice.localScale = Vector3.one * 1.2f;
 
         Image sfondo = GetComponent<Image>();
@@ -423,7 +439,7 @@ public sealed class PowerUpHudController : MonoBehaviour
                 ? potenziamenti.OttieniLivello(coppia.Key)
                 : 0;
             bool attivo = livello > 0;
-            coppia.Value.radice.SetActive(attivo);
+            coppia.Value.radice.SetActive(attivo && mostraDettagli);
             if (!attivo) continue;
 
             NumeroPotenziamentiPermanentiAttivi++;
@@ -440,7 +456,7 @@ public sealed class PowerUpHudController : MonoBehaviour
                 coppia.Key
             );
             bool attivo = livello > 0;
-            coppia.Value.radice.SetActive(attivo);
+            coppia.Value.radice.SetActive(attivo && mostraDettagli);
             if (!attivo) continue;
 
             NumeroMiglioramentiInterpartitaAttivi++;
@@ -455,7 +471,7 @@ public sealed class PowerUpHudController : MonoBehaviour
                 ? potenziamenti.OttieniLivelloEvoluzione(coppia.Key)
                 : 0;
             bool attivo = stadio > 0;
-            coppia.Value.radice.SetActive(attivo);
+            coppia.Value.radice.SetActive(attivo && mostraDettagli);
             if (!attivo) continue;
 
             NumeroEvoluzioniAttive++;
@@ -482,13 +498,11 @@ public sealed class PowerUpHudController : MonoBehaviour
             (calamitaAttiva ? 1 : 0) +
             (furiaAttiva ? 1 : 0);
 
-        numeroSlotVisibili = NumeroPotenziamentiPermanentiAttivi +
+        numeroSlotVisibili = mostraDettagli ? NumeroPotenziamentiPermanentiAttivi +
                             NumeroMiglioramentiInterpartitaAttivi +
                             NumeroEvoluzioniAttive +
-                            NumeroEffettiTemporaneiAttivi;
-        intestazione.text = numeroSlotVisibili == 1
-            ? "1 POWER-UP ATTIVO"
-            : numeroSlotVisibili + " POWER-UP ATTIVI";
+                            NumeroEffettiTemporaneiAttivi : NumeroEffettiTemporaneiAttivi;
+        intestazione.text = mostraDettagli ? "I TUOI POTENZIAMENTI" : "EFFETTI ATTIVI";
         AggiornaTimerTemporanei();
         AggiornaDimensioni();
     }

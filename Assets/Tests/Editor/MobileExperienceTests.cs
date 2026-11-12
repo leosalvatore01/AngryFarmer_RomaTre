@@ -173,6 +173,7 @@ public sealed class MobileExperienceTests
         Assert.That(Vector2.Dot(direzione, Vector2.right), Is.GreaterThan(.99f));
         yield return Attendi(() => giocatore.UltimoNumeroProiettiliCreati > 0);
         var input = FarmerInputController.Instance;
+        MobileVisualCapture.Salva("hud-16-9");
         MobileVisualCapture.Salva("gameplay-20-9", 2400, 1080);
         var stick = Object.FindFirstObjectByType<MobileJoystick>();
         Assert.That(stick, Is.Not.Null);
@@ -198,6 +199,17 @@ public sealed class MobileExperienceTests
         Assert.That(input.Movimento, Is.EqualTo(Vector2.zero));
         Assert.That(stick.PuntatoreAttivo, Is.Null);
         MobileVisualCapture.Salva("pausa-18-9", 2160, 1080);
+        yield return Tocca("SchedaBuild");
+        yield return null;
+        Assert.That(Time.timeScale, Is.Zero, "Consultare la build deve mantenere la pausa.");
+        var riepilogo = Object.FindObjectsByType<PowerUpHudController>(FindObjectsSortMode.None)
+            .Single(v => v.name == "RiepilogoPotenziamenti");
+        Assert.That(riepilogo.NumeroPotenziamentiPermanentiAttivi, Is.GreaterThan(0));
+        MobileVisualCapture.Salva("build-pausa-18-9", 2160, 1080);
+        yield return Tocca("SchedaOpzioni");
+        yield return null;
+        Assert.That(Object.FindObjectsByType<PowerUpHudController>(FindObjectsSortMode.None)
+            .Any(v => v.name == "RiepilogoPotenziamenti"), Is.False);
         Assert.That(stick.gameObject.activeInHierarchy, Is.False);
         input.RichiediSchivataTouch();
         Assert.That(input.ConsumaSchivata(), Is.False);

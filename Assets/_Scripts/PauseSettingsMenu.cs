@@ -1,4 +1,5 @@
 using TMPro;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -48,6 +49,12 @@ public sealed class PauseSettingsMenu : MonoBehaviour
     private GameOptionsController opzioni;
     private FarmerInputController input;
     private bool costruito;
+    private readonly List<KeyValuePair<GameObject, bool>> controlliOpzioni = new List<KeyValuePair<GameObject, bool>>();
+    private GameObject pannelloRiepilogo;
+    private TMP_Text testoRiepilogo;
+    private Button pulsanteBuild;
+    private Button pulsanteSchedaOpzioni;
+    private PowerUpHudController vistaBuild;
 
     public static PauseSettingsMenu Instance { get; private set; }
     public bool Aperto =>
@@ -220,6 +227,7 @@ public sealed class PauseSettingsMenu : MonoBehaviour
 
         AggiornaControlli();
         AggiornaTestiStatoPartita();
+        MostraSchedaBuild(false);
         input?.SelezionaPerInterfaccia(pulsanteChiudi);
     }
 
@@ -227,6 +235,7 @@ public sealed class PauseSettingsMenu : MonoBehaviour
     {
         if (!costruito || !Aperto) return;
 
+        MostraSchedaBuild(false);
         pannelloOverlay.SetActive(false);
         pulsanteApri.gameObject.SetActive(false);
         AggiornaVisibilitaPulsanteApri();
@@ -245,6 +254,7 @@ public sealed class PauseSettingsMenu : MonoBehaviour
     {
         if (!costruito) return;
 
+        MostraSchedaBuild(false);
         pannelloOverlay.SetActive(false);
         pulsanteApri.gameObject.SetActive(true);
     }
@@ -273,21 +283,22 @@ public sealed class PauseSettingsMenu : MonoBehaviour
         pulsanteApri = CreaPulsante(
             "ApriPausaOpzioni",
             transform,
-            "PAUSA [ESC]",
-            new Vector2(-14f, 14f),
-            new Vector2(166f, 40f),
-            new Color32(191, 143, 94, 199),
+            "PAUSA  [ESC]",
+            new Vector2(-16f, -16f),
+            new Vector2(166f, 62f),
+            new Color32(59, 52, 37, 225),
             Mostra,
-            new Vector2(1f, 0f),
-            new Vector2(1f, 0f),
-            new Vector2(1f, 0f)
+            new Vector2(1f, 1f),
+            new Vector2(1f, 1f),
+            new Vector2(1f, 1f)
         );
+        pulsanteApri.GetComponentInChildren<TMP_Text>().color = FarmPixelUI.TestoChiaroFlat;
         if (MobileExperience.Attiva)
         {
             RectTransform rectPausa = (RectTransform)pulsanteApri.transform;
             rectPausa.anchorMin = rectPausa.anchorMax = rectPausa.pivot = new Vector2(1, 1);
-            rectPausa.anchoredPosition = new Vector2(-16, -154);
-            rectPausa.sizeDelta = new Vector2(180, 108);
+            rectPausa.anchoredPosition = new Vector2(-16, -16);
+            rectPausa.sizeDelta = new Vector2(130, 80);
             pulsanteApri.GetComponentInChildren<TMP_Text>().text = "PAUSA";
         }
 
@@ -337,7 +348,7 @@ public sealed class PauseSettingsMenu : MonoBehaviour
         testoTitolo = CreaTesto(
             "Titolo",
             pannello.transform,
-            "PAUSA NEL FIENILE",
+            "PAUSA",
             new Vector2(0f, 354f),
             new Vector2(550f, 46f),
             31f,
@@ -481,6 +492,8 @@ public sealed class PauseSettingsMenu : MonoBehaviour
                 TMP_Text testo = rect.GetComponentInChildren<TMP_Text>();
                 testo.rectTransform.sizeDelta = new Vector2(214, 80);
                 testo.fontSize = 24;
+                testo.fontSizeMax = 24;
+                testo.fontSizeMin = 18;
             }
             ((RectTransform)pannello.transform).sizeDelta = new Vector2(1380, 900);
             pannello.transform.localScale = Vector3.one * 1.12f;
@@ -529,12 +542,71 @@ public sealed class PauseSettingsMenu : MonoBehaviour
             opzioni.ImpostaNumeriDannoAttivi
         );
 
+        pannello.transform.Find("Sottotitolo").gameObject.SetActive(false);
+        pannello.transform.Find("IconaBottegaSinistra").gameObject.SetActive(false);
+        pannello.transform.Find("IconaBottegaDestra").gameObject.SetActive(false);
+        float altezzaTab = MobileExperience.Attiva ? 64f : 42f;
+        pulsanteSchedaOpzioni = CreaPulsante("SchedaOpzioni", pannello.transform, "OPZIONI", new Vector2(-150f, 306f),
+            new Vector2(280f, altezzaTab), FarmPixelUI.ColorePulsanteNeutroFlat, () => MostraSchedaBuild(false));
+        pulsanteBuild = CreaPulsante("SchedaBuild", pannello.transform, "LA TUA BUILD", new Vector2(150f, 306f),
+            new Vector2(280f, altezzaTab), FarmPixelUI.ColorePulsanteNeutroFlat, () => MostraSchedaBuild(true));
+        // Si conserva lo stato originale: i controlli esclusivi PC/mobile restano tali.
+        foreach (Transform figlio in pannello.transform)
+        {
+            string nome = figlio.name;
+            if (nome == "Titolo" || nome == "SchedaOpzioni" || nome == "SchedaBuild" ||
+                nome == "Chiudi" || nome == "MenuPrincipale") continue;
+            controlliOpzioni.Add(new KeyValuePair<GameObject, bool>(figlio.gameObject, figlio.gameObject.activeSelf));
+        }
+        pannelloRiepilogo = new GameObject("DettagliPartita", typeof(RectTransform));
+        pannelloRiepilogo.transform.SetParent(pannello.transform, false);
+        RectTransform riepilogoRect = pannelloRiepilogo.GetComponent<RectTransform>();
+        riepilogoRect.anchorMin = riepilogoRect.anchorMax = Vector2.one * 0.5f;
+        riepilogoRect.sizeDelta = new Vector2(620f, 580f);
+        riepilogoRect.anchoredPosition = new Vector2(0f, -14f);
+        testoRiepilogo = CreaTesto("RiepilogoPartitaInPausa", pannelloRiepilogo.transform, "",
+            new Vector2(0f, 204f), new Vector2(620f, 142f), 21f, Crema, FontStyles.Normal, TextAlignmentOptions.TopLeft);
+        testoRiepilogo.textWrappingMode = TextWrappingModes.Normal;
+        testoRiepilogo.enableAutoSizing = true;
+        testoRiepilogo.fontSizeMin = 16f;
+        testoRiepilogo.fontSizeMax = 21f;
+        pannelloRiepilogo.SetActive(false);
+
         pannelloOverlay.SetActive(false);
+    }
+
+    private void MostraSchedaBuild(bool mostra)
+    {
+        if (pannelloRiepilogo == null) return;
+        pulsanteSchedaOpzioni.GetComponent<Image>().color = mostra
+            ? FarmPixelUI.ColorePulsanteNeutroFlat : FarmPixelUI.ColorePulsanteOroFlat;
+        pulsanteBuild.GetComponent<Image>().color = mostra
+            ? FarmPixelUI.ColorePulsanteOroFlat : FarmPixelUI.ColorePulsanteNeutroFlat;
+        foreach (var controllo in controlliOpzioni)
+            controllo.Key.SetActive(!mostra && controllo.Value);
+        pannelloRiepilogo.SetActive(mostra);
+        if (vistaBuild != null)
+        {
+            vistaBuild.gameObject.SetActive(false);
+            Destroy(vistaBuild.gameObject);
+            vistaBuild = null;
+        }
+        if (!mostra) return;
+        EnemySpawner spawner = FindFirstObjectByType<EnemySpawner>();
+        PlayerUpgrades potenziamenti = FindFirstObjectByType<PlayerUpgrades>();
+        AnteprimaOndata onda = spawner != null ? spawner.AnteprimaCorrente : default;
+        testoRiepilogo.text = onda.Valida
+            ? "<b>ONDATA " + onda.Indice + "  ·  CAPITOLO " + onda.NumeroCapitolo + "</b>\n" +
+              onda.Composizione.FormattaEstesa("  ·  ") + "\n\n" +
+              (potenziamenti != null ? potenziamenti.DescriviBuildCompatta() : "NESSUNA BUILD")
+            : "INIZIA UNA PARTITA PER COSTRUIRE LA TUA BUILD";
+        vistaBuild = PowerUpHudController.CreaRiepilogo(pannelloRiepilogo.transform);
     }
 
     private void AggiornaControlli()
     {
         if (!costruito || opzioni == null) return;
+        if (pulsanteBuild != null) pulsanteBuild.interactable = GameManager.instance != null;
         if (testoFpsMobile != null)
             testoFpsMobile.text = opzioni.FpsMobile == 60 ? "60 FPS  ·  FLUIDITA" : "30 FPS  ·  RISPARMIO";
         if (testoQualitaMobile != null)
@@ -579,8 +651,8 @@ public sealed class PauseSettingsMenu : MonoBehaviour
             !gestore.isGameOver;
 
         testoTitolo.text = duranteOnda
-            ? "PAUSA NEL FIENILE"
-            : "OPZIONI DELLA FATTORIA";
+            ? "PAUSA"
+            : "OPZIONI";
         testoPulsanteChiudi.text = duranteOnda ? "RIPRENDI" : "CHIUDI";
         if (pulsanteMenuPrincipale != null)
         {
@@ -848,7 +920,7 @@ public sealed class PauseSettingsMenu : MonoBehaviour
         FarmPixelUI.ApplicaPulsante(pulsante, tinta);
         pulsante.onClick.AddListener(azione);
 
-        CreaTesto(
+        TMP_Text testoPulsante = CreaTesto(
             "Testo",
             oggetto.transform,
             etichetta,
@@ -859,6 +931,9 @@ public sealed class PauseSettingsMenu : MonoBehaviour
             FontStyles.Bold,
             TextAlignmentOptions.Center
         );
+        testoPulsante.enableAutoSizing = true;
+        testoPulsante.fontSizeMin = 14f;
+        testoPulsante.fontSizeMax = 20f;
         return pulsante;
     }
 

@@ -1472,13 +1472,9 @@ public class EnemySpawner : MonoBehaviour
                 anteprima.Ritmo.OndePerCapitolo;
         }
 
-        string minaccia = anteprima.BudgetMinaccia > 0
-            ? "  •  MINACCIA " + anteprima.MinacciaUsata
-            : string.Empty;
         return
             intestazione + "  •  ONDATA " + anteprima.Indice +
-            "\n" + anteprima.Nome.ToUpperInvariant() + minaccia +
-            "\n" + anteprima.Composizione.FormattaCompatta();
+            "\n" + anteprima.Nome.ToUpperInvariant();
     }
 
     IEnumerator TransizioneBreve(
@@ -1527,10 +1523,7 @@ public class EnemySpawner : MonoBehaviour
                 ? "PROSSIMA: INCONTRO ELITE"
                 : "PROSSIMA: ONDATA " + prossimaOnda.Indice;
         return titolo +
-               "\n" + prossima +
-               "\nCAPITOLO " + prossimaOnda.NumeroCapitolo +
-               "  •  " + prossimaOnda.PosizioneNelCapitolo + "/" +
-               prossimaOnda.Ritmo.OndePerCapitolo;
+               "\n" + prossima;
     }
 
     IEnumerator AttendiConToken(float durata, int tokenCorrente)
@@ -1628,14 +1621,8 @@ public class EnemySpawner : MonoBehaviour
     {
         if (testoOndata != null)
         {
-            RitmoOndata ritmo = OttieniRitmoOndata(
-                currentWaveIndex + 1
-            );
             testoOndata.text =
-                "Onda " + (currentWaveIndex + 1) +
-                "  •  C" + ritmo.NumeroCapitolo +
-                "  " + ritmo.PosizioneNelCapitolo + "/" +
-                ritmo.OndePerCapitolo;
+                "ONDATA " + (currentWaveIndex + 1);
         }
     }
 
@@ -1661,8 +1648,8 @@ public class EnemySpawner : MonoBehaviour
         pannelloRect.anchorMin = new Vector2(0.5f, 1f);
         pannelloRect.anchorMax = new Vector2(0.5f, 1f);
         pannelloRect.pivot = new Vector2(0.5f, 1f);
-        pannelloRect.anchoredPosition = new Vector2(0f, -18f);
-        pannelloRect.sizeDelta = new Vector2(430f, 96f);
+        pannelloRect.anchoredPosition = new Vector2(0f, -128f);
+        pannelloRect.sizeDelta = new Vector2(500f, 70f);
 
         Image sfondo = contenitoreMessaggio.GetComponent<Image>();
         FarmPixelUI.ApplicaPannello(sfondo, false, false);
@@ -1713,7 +1700,7 @@ public class EnemySpawner : MonoBehaviour
             new Vector2(32f, 32f)
         );
 
-        messaggioOndata.fontSize = 20f;
+        messaggioOndata.fontSize = 19f;
         messaggioOndata.fontStyle = FontStyles.Bold;
         messaggioOndata.alignment = TextAlignmentOptions.Center;
         FarmPixelUI.ApplicaTesto(
@@ -1722,7 +1709,7 @@ public class EnemySpawner : MonoBehaviour
         );
         messaggioOndata.textWrappingMode = TextWrappingModes.Normal;
         messaggioOndata.overflowMode = TextOverflowModes.Ellipsis;
-        messaggioOndata.maxVisibleLines = 3;
+        messaggioOndata.maxVisibleLines = 2;
         messaggioOndata.raycastTarget = false;
         messaggioOndata.gameObject.SetActive(true);
     }
@@ -1733,6 +1720,8 @@ public class EnemySpawner : MonoBehaviour
 
         if (contenitoreMessaggio != null)
         {
+            contenitoreMessaggio.GetComponent<RectTransform>().anchoredPosition =
+                new Vector2(0f, AnteprimaCorrente.Boss ? -194f : -128f);
             contenitoreMessaggio.SetActive(true);
         }
         else

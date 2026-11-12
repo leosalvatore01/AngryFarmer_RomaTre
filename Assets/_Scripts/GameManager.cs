@@ -21,6 +21,8 @@ public class GameManager : MonoBehaviour
     [SerializeField] private GameObject gameOverPanel;
 
     private TMP_Text testoMonete;
+    private Image barraVitaHud;
+    private PlayerHealth saluteHud;
     private TMP_Text titoloFinePartita;
     private TMP_Text riepilogoFinePartita;
     private Button pulsanteRiprova;
@@ -160,6 +162,14 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
+        if (saluteHud == null) saluteHud = FindFirstObjectByType<PlayerHealth>();
+        if (barraVitaHud != null && saluteHud != null)
+        {
+            float rapporto = (float)saluteHud.VitaCorrente / Mathf.Max(1, saluteHud.VitaMassima);
+            barraVitaHud.rectTransform.sizeDelta = new Vector2(244f * Mathf.Clamp01(rapporto), 6f);
+            barraVitaHud.color = rapporto > 0.5f ? new Color32(151, 201, 111, 255)
+                : rapporto > 0.25f ? new Color32(245, 192, 85, 255) : new Color32(239, 99, 76, 255);
+        }
         FarmerInputController input = FarmerInputController.CreaOTrova();
         if (ShopPermanentePrePartita.ApertoGlobale)
         {
@@ -223,198 +233,86 @@ public class GameManager : MonoBehaviour
     {
         GameObject interfaccia = GameObject.Find("Interfaccia");
         if (interfaccia == null) return;
-
         Canvas canvas = interfaccia.GetComponent<Canvas>();
-        if (canvas != null)
-        {
-            canvas.pixelPerfect = true;
-        }
+        if (canvas != null) canvas.pixelPerfect = true;
         CanvasScaler scaler = interfaccia.GetComponent<CanvasScaler>();
-        if (scaler != null)
-        {
-            scaler.matchWidthOrHeight = 1f;
-        }
+        if (scaler != null) scaler.matchWidthOrHeight = 1f;
 
-        Transform pannelloEsistente = interfaccia.transform.Find("PannelloHUD");
-        GameObject pannello;
-        if (pannelloEsistente == null)
-        {
-            pannello = new GameObject(
-                "PannelloHUD",
-                typeof(RectTransform),
-                typeof(CanvasRenderer),
-                typeof(Image)
-            );
-            pannello.transform.SetParent(interfaccia.transform, false);
-            pannello.transform.SetAsFirstSibling();
-        }
-        else
-        {
-            pannello = pannelloEsistente.gameObject;
-            pannello.transform.SetAsFirstSibling();
-        }
+        GameObject pannello = CreaPannelloHud(interfaccia.transform, "PannelloHUD",
+            new Vector2(0f, 1f), new Vector2(16f, -16f), new Vector2(300f, 80f));
+        FarmPixelUI.AggiungiIcona(pannello.transform, "IconaVita", FarmPixelIcon.Cuore,
+            new Vector2(-121f, 12f), new Vector2(26f, 26f));
+        FarmPixelUI.AggiungiIcona(pannello.transform, "IconaMonete", FarmPixelIcon.Moneta,
+            new Vector2(24f, 12f), new Vector2(24f, 24f));
+        ConfiguraTestoHUD(TrovaTestoInterfaccia("VitaText"), new Vector2(0f, 1f),
+            new Vector2(72f, -44f), new Vector2(108f, 32f), 26f,
+            new Color32(191, 226, 159, 255), TextAlignmentOptions.MidlineLeft);
+        ConfiguraTestoHUD(testoMonete, new Vector2(0f, 1f), new Vector2(212f, -44f),
+            new Vector2(88f, 32f), 24f, new Color32(255, 214, 117, 255), TextAlignmentOptions.MidlineLeft);
 
-        RectTransform rect = pannello.GetComponent<RectTransform>();
-        rect.anchorMin = new Vector2(0f, 1f);
-        rect.anchorMax = new Vector2(0f, 1f);
-        rect.pivot = new Vector2(0f, 1f);
-        rect.anchoredPosition = new Vector2(12f, -12f);
-        rect.sizeDelta = new Vector2(286f, 124f);
-
-        Image immagine = pannello.GetComponent<Image>();
-        FarmPixelUI.ApplicaPannello(immagine, false, false);
-        ImpostaTrasparenzaPannello(immagine, 0.70f, 0.58f);
-
-        CreaTitoloHUD(pannello.transform);
-        CreaSchedaHUD(
-            pannello.transform,
-            "SchedaOndata",
-            FarmPixelIcon.Ondata,
-            -44f
-        );
-        CreaSchedaHUD(
-            pannello.transform,
-            "SchedaVita",
-            FarmPixelIcon.Cuore,
-            -75f
-        );
-        CreaSchedaHUD(
-            pannello.transform,
-            "SchedaMonete",
-            FarmPixelIcon.Moneta,
-            -106f
-        );
-
-        ConfiguraTestoHUD(
-            TrovaTestoInterfaccia("OndataText"),
-            new Vector2(52f, -56f),
-            new Color(1f, 0.77f, 0.32f, 1f)
-        );
-        ConfiguraTestoHUD(
-            TrovaTestoInterfaccia("VitaText"),
-            new Vector2(52f, -87f),
-            new Color(0.5f, 0.95f, 0.47f, 1f)
-        );
-        ConfiguraTestoHUD(
-            testoMonete,
-            new Vector2(52f, -118f),
-            new Color(1f, 0.9f, 0.24f, 1f)
-        );
-    }
-
-    void CreaTitoloHUD(Transform parent)
-    {
-        if (parent.Find("TitoloFattoria") != null) return;
-
-        GameObject oggetto = new GameObject(
-            "TitoloFattoria",
-            typeof(RectTransform),
-            typeof(CanvasRenderer),
-            typeof(TextMeshProUGUI)
-        );
-        oggetto.transform.SetParent(parent, false);
-
-        RectTransform rect = oggetto.GetComponent<RectTransform>();
-        rect.anchorMin = new Vector2(0.5f, 1f);
-        rect.anchorMax = new Vector2(0.5f, 1f);
-        rect.pivot = new Vector2(0.5f, 0.5f);
-        rect.anchoredPosition = new Vector2(0f, -16f);
-        rect.sizeDelta = new Vector2(258f, 22f);
-
-        TextMeshProUGUI titolo = oggetto.GetComponent<TextMeshProUGUI>();
-        TMP_Text riferimento = TrovaTestoInterfaccia("OndataText");
-        if (riferimento != null) titolo.font = riferimento.font;
-        titolo.text = "SOPRAVVIVENZA";
-        titolo.fontSize = 17f;
-        titolo.fontStyle = FontStyles.Bold;
-        titolo.alignment = TextAlignmentOptions.Center;
-        titolo.textWrappingMode = TextWrappingModes.NoWrap;
-        titolo.raycastTarget = false;
-        FarmPixelUI.ApplicaTesto(
-            titolo,
-            new Color(1f, 0.88f, 0.55f, 1f)
-        );
-    }
-
-    static GameObject CreaSchedaHUD(
-        Transform parent,
-        string nome,
-        FarmPixelIcon icona,
-        float posizioneY
-    )
-    {
-        Transform esistente = parent.Find(nome);
-        if (esistente != null) return esistente.gameObject;
-
-        GameObject scheda = new GameObject(
-            nome,
-            typeof(RectTransform),
-            typeof(CanvasRenderer),
-            typeof(Image)
-        );
-        scheda.transform.SetParent(parent, false);
-
-        RectTransform rect = scheda.GetComponent<RectTransform>();
-        rect.anchorMin = new Vector2(0f, 1f);
-        rect.anchorMax = new Vector2(0f, 1f);
+        GameObject fondo = new GameObject("FondoVita", typeof(RectTransform), typeof(Image));
+        fondo.transform.SetParent(pannello.transform, false);
+        RectTransform rect = fondo.GetComponent<RectTransform>();
+        rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
         rect.pivot = new Vector2(0f, 0.5f);
-        rect.anchoredPosition = new Vector2(11f, posizioneY);
-        rect.sizeDelta = new Vector2(264f, 28f);
+        rect.anchoredPosition = new Vector2(28f, -62f);
+        rect.sizeDelta = new Vector2(244f, 6f);
+        fondo.GetComponent<Image>().color = new Color32(66, 62, 43, 255);
+        fondo.GetComponent<Image>().raycastTarget = false;
+        GameObject pieno = new GameObject("VitaRimanente", typeof(RectTransform), typeof(Image));
+        pieno.transform.SetParent(fondo.transform, false);
+        barraVitaHud = pieno.GetComponent<Image>();
+        barraVitaHud.raycastTarget = false;
+        barraVitaHud.rectTransform.anchorMin = barraVitaHud.rectTransform.anchorMax = new Vector2(0f, 0.5f);
+        barraVitaHud.rectTransform.pivot = new Vector2(0f, 0.5f);
 
-        Image sfondo = scheda.GetComponent<Image>();
-        FarmPixelUI.ApplicaPannello(sfondo, true, false);
-        ImpostaTrasparenzaPannello(sfondo, 0.58f, 0.44f);
-
-        FarmPixelUI.AggiungiIcona(
-            scheda.transform,
-            "Icona",
-            icona,
-            new Vector2(-111f, 0f),
-            new Vector2(22f, 22f)
-        );
-        return scheda;
+        CreaPannelloHud(interfaccia.transform, "PannelloOndataCompatto", new Vector2(0.5f, 1f),
+            new Vector2(0f, -16f), new Vector2(260f, 86f));
+        ConfiguraTestoHUD(TrovaTestoInterfaccia("OndataText"), new Vector2(0.5f, 1f),
+            new Vector2(0f, -38f), new Vector2(240f, 28f), 23f,
+            new Color32(255, 231, 182, 255), TextAlignmentOptions.Center);
     }
 
-    static void ImpostaTrasparenzaPannello(
-        Image immagine,
-        float alphaSfondo,
-        float alphaBordo
-    )
+    private static GameObject CreaPannelloHud(Transform parent, string nome, Vector2 ancora,
+        Vector2 posizione, Vector2 dimensioni)
     {
-        if (immagine == null) return;
-
-        Color colore = immagine.color;
-        colore.a = Mathf.Clamp01(alphaSfondo);
-        immagine.color = colore;
-
-        Outline bordo = immagine.GetComponent<Outline>();
-        if (bordo == null) return;
-        Color coloreBordo = bordo.effectColor;
-        coloreBordo.a = Mathf.Clamp01(alphaBordo);
-        bordo.effectColor = coloreBordo;
-        bordo.effectDistance = new Vector2(1f, 1f);
+        GameObject pannello = new GameObject(nome, typeof(RectTransform), typeof(Image));
+        pannello.transform.SetParent(parent, false);
+        pannello.transform.SetAsFirstSibling();
+        RectTransform rect = pannello.GetComponent<RectTransform>();
+        rect.anchorMin = rect.anchorMax = rect.pivot = ancora;
+        rect.anchoredPosition = posizione;
+        rect.sizeDelta = dimensioni;
+        Image sfondo = pannello.GetComponent<Image>();
+        FarmPixelUI.ApplicaPannello(sfondo, true, false);
+        sfondo.color = new Color32(38, 34, 26, 210);
+        sfondo.raycastTarget = false;
+        Outline bordo = sfondo.GetComponent<Outline>();
+        if (bordo != null)
+        {
+            bordo.effectColor = new Color32(168, 134, 71, 95);
+            bordo.effectDistance = Vector2.one;
+        }
+        return pannello;
     }
 
-    static void ConfiguraTestoHUD(
-        TMP_Text testo,
-        Vector2 posizione,
-        Color colore
-    )
+    private static void ConfiguraTestoHUD(TMP_Text testo, Vector2 ancora, Vector2 posizione,
+        Vector2 dimensioni, float font, Color colore, TextAlignmentOptions allineamento)
     {
         if (testo == null) return;
-
         RectTransform rect = testo.rectTransform;
-        rect.anchorMin = new Vector2(0f, 1f);
-        rect.anchorMax = new Vector2(0f, 1f);
-        rect.pivot = new Vector2(0f, 0.5f);
+        rect.anchorMin = rect.anchorMax = ancora;
+        rect.pivot = new Vector2(ancora.x, 0.5f);
         rect.anchoredPosition = posizione;
-        rect.sizeDelta = new Vector2(230f, 26f);
-
-        testo.fontSize = 20f;
+        rect.sizeDelta = dimensioni;
+        testo.fontSize = font;
         testo.fontStyle = FontStyles.Bold;
-        testo.alignment = TextAlignmentOptions.MidlineLeft;
+        testo.alignment = allineamento;
         testo.textWrappingMode = TextWrappingModes.NoWrap;
-        testo.overflowMode = TextOverflowModes.Overflow;
+        testo.overflowMode = TextOverflowModes.Ellipsis;
+        testo.enableAutoSizing = true;
+        testo.fontSizeMin = 14f;
+        testo.fontSizeMax = font;
         testo.raycastTarget = false;
         FarmPixelUI.ApplicaTesto(testo, colore);
     }
@@ -1213,7 +1111,7 @@ public class GameManager : MonoBehaviour
     {
         if (testoMonete != null)
         {
-            testoMonete.text = "Monete   " + monete;
+            testoMonete.text = monete.ToString();
         }
     }
 

@@ -144,7 +144,7 @@ public sealed class PcOnboardingController : MonoBehaviour
     {
         if (MobileExperience.Attiva)
         {
-            testoComandi.text = "JOYSTICK: MUOVITI  •  SCHIVA: EVITA I COLPI\nMIRA E SPARO AUTOMATICI";
+            testoComandi.text = "MUOVITI CON IL JOYSTICK  •  TOCCA SCHIVA\nMIRA E SPARO SONO AUTOMATICI";
             return;
         }
         if (schema == SchemaInputContadino.Gamepad)
@@ -191,16 +191,16 @@ public sealed class PcOnboardingController : MonoBehaviour
         RectTransform rect = pannello.GetComponent<RectTransform>();
         rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0f);
         rect.pivot = new Vector2(0.5f, 0f);
-        rect.anchoredPosition = new Vector2(0f, 42f);
-        rect.sizeDelta = new Vector2(1510f, 78f);
+        rect.anchoredPosition = new Vector2(0f, 24f);
+        rect.sizeDelta = new Vector2(1220f, 52f);
         if (MobileExperience.Attiva)
         {
-            rect.anchoredPosition = new Vector2(0f, 28f);
-            rect.sizeDelta = new Vector2(830f, 96f);
+            rect.anchoredPosition = new Vector2(0f, 22f);
+            rect.sizeDelta = new Vector2(760f, 76f);
         }
         Image sfondo = pannello.GetComponent<Image>();
-        sfondo.color = new Color(0.16f, 0.075f, 0.025f, 0.86f);
         FarmPixelUI.ApplicaPannello(sfondo, true, true);
+        sfondo.color = new Color32(38, 34, 26, 205);
 
         GameObject oggettoTesto = new GameObject(
             "Testo",
@@ -218,7 +218,10 @@ public sealed class PcOnboardingController : MonoBehaviour
         TMP_Text riferimento = GameManager.TrovaTestoInterfaccia("OndataText");
         if (riferimento != null) testoComandi.font = riferimento.font;
         testoComandi.fontSize = 20f;
-        if (MobileExperience.Attiva) testoComandi.fontSize = 26f;
+        if (MobileExperience.Attiva) testoComandi.fontSize = 23f;
+        testoComandi.enableAutoSizing = true;
+        testoComandi.fontSizeMin = 14f;
+        testoComandi.fontSizeMax = MobileExperience.Attiva ? 23f : 20f;
         testoComandi.fontStyle = FontStyles.Bold;
         testoComandi.alignment = TextAlignmentOptions.Center;
         testoComandi.textWrappingMode = TextWrappingModes.NoWrap;
