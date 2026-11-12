@@ -21,6 +21,10 @@ public class FarmBackgroundDecorator : MonoBehaviour
         new Dictionary<Vector2Int, GameObject>();
     private readonly List<UnityEngine.Object> risorseGenerate =
         new List<UnityEngine.Object>();
+    private readonly Dictionary<Vector2Int, Sprite> sentieriChunk =
+        new Dictionary<Vector2Int, Sprite>();
+
+    private const int PixelSentieroPerUnita = 32;
 
     private Camera cameraPrincipale;
     private SpriteRenderer rendererPrato;
@@ -34,7 +38,6 @@ public class FarmBackgroundDecorator : MonoBehaviour
     private Sprite ciuffoErba;
     private Sprite fiorellini;
     private Sprite sassolini;
-    private Sprite staccionata;
 
     void Awake()
     {
@@ -126,6 +129,11 @@ public class FarmBackgroundDecorator : MonoBehaviour
             if (!necessari.Contains(coppia.Key))
             {
                 if (coppia.Value != null) Destroy(coppia.Value);
+                if (sentieriChunk.TryGetValue(coppia.Key, out Sprite sentiero))
+                {
+                    DistruggiSentiero(sentiero);
+                    sentieriChunk.Remove(coppia.Key);
+                }
                 daRimuovere.Add(coppia.Key);
             }
         }
@@ -149,7 +157,8 @@ public class FarmBackgroundDecorator : MonoBehaviour
         );
 
         System.Random casuale = new System.Random(HashChunk(coordinata));
-        int quantita = Mathf.Max(1, dettagliPerChunk + casuale.Next(-1, 2));
+        CreaSentiero(chunk.transform, coordinata);
+        int quantita = Mathf.Max(2, dettagliPerChunk + 2 + casuale.Next(-1, 2));
 
         for (int i = 0; i < quantita; i++)
         {
@@ -158,7 +167,18 @@ public class FarmBackgroundDecorator : MonoBehaviour
                 Intervallo(casuale, -margine, margine),
                 Intervallo(casuale, -margine, margine)
             );
+            Vector2 mondo = (Vector2)chunk.transform.position + posizione;
+            // I sentieri restano sgombri; i dettagli formano piccoli gruppi sui prati.
+            if (DistanzaSentiero(mondo) < 0.15f) continue;
             CreaDettaglio(chunk.transform, casuale, posizione, i);
+            if (casuale.Next(100) < 58)
+            {
+                Vector2 vicino = posizione + new Vector2(
+                    Intervallo(casuale, -0.55f, 0.55f),
+                    Intervallo(casuale, -0.22f, 0.22f));
+                if (DistanzaSentiero((Vector2)chunk.transform.position + vicino) > 0.15f)
+                    CreaDettaglio(chunk.transform, casuale, vicino, i + 100);
+            }
         }
 
         return chunk;
@@ -178,50 +198,34 @@ public class FarmBackgroundDecorator : MonoBehaviour
         float scalaMax;
         Color colore = Color.white;
 
-        if (scelta < 250)
+        if (scelta < 100)
         {
             sprite = macchieTerra[casuale.Next(macchieTerra.Length)];
             ordine = ordineTerreno + 1;
-            scalaMin = 1.1f;
-            scalaMax = 1.75f;
-            colore = new Color(1f, 1f, 1f, 0.9f);
+            scalaMin = 0.95f;
+            scalaMax = 1.55f;
+            colore = new Color(1f, 1f, 1f, 0.65f);
         }
-        else if (scelta < 530)
+        else if (scelta < 620)
         {
             sprite = ciuffoErba;
             ordine = ordineTerreno + 3;
-            scalaMin = 0.78f;
-            scalaMax = 1.18f;
+            scalaMin = 0.8f;
+            scalaMax = 1.3f;
         }
-        else if (scelta < 770)
+        else if (scelta < 870)
         {
             sprite = fiorellini;
             ordine = ordineTerreno + 4;
-            scalaMin = 0.88f;
-            scalaMax = 1.25f;
-        }
-        else if (scelta < 940)
-        {
-            sprite = sassolini;
-            ordine = ordineTerreno + 2;
-            scalaMin = 0.7f;
-            scalaMax = 1.2f;
-        }
-        else if (scelta < 990)
-        {
-            // Nel survival lo sfondo non deve simulare casse, balle o
-            // zucche: restano soltanto dettagli naturali non interattivi.
-            sprite = sassolini;
-            ordine = ordineTerreno + 2;
-            scalaMin = 0.7f;
-            scalaMax = 1.2f;
+            scalaMin = 0.8f;
+            scalaMax = 1.1f;
         }
         else
         {
-            sprite = staccionata;
-            ordine = ordineTerreno + 5;
-            scalaMin = 0.72f;
-            scalaMax = 0.95f;
+            sprite = sassolini;
+            ordine = ordineTerreno + 2;
+            scalaMin = 0.7f;
+            scalaMax = 1.2f;
         }
 
         GameObject dettaglio = new GameObject("Dettaglio_" + indice);
@@ -262,74 +266,136 @@ public class FarmBackgroundDecorator : MonoBehaviour
         ciuffoErba = CreaCiuffoErba();
         fiorellini = CreaFiorellini();
         sassolini = CreaSassolini();
-        staccionata = CreaStaccionata();
     }
 
     private Sprite CreaPratoPixel()
     {
-        const int lato = 192;
-        Color32 basePrato = new Color32(105, 148, 61, 255);
+        const int lato = 384;
         Color32[] pixel = new Color32[lato * lato];
-        for (int i = 0; i < pixel.Length; i++) pixel[i] = basePrato;
-
-        Color32[] coloriMacchie =
+        // Rumore periodico: i bordi coincidono quando lo sprite viene ripetuto.
+        // La variazione resta tenue, dietro alle sagome e ai segnali di attacco.
+        float seme = (seedMondo & 255) * 0.17f;
+        for (int y = 0; y < lato; y++)
         {
-            new Color32(101, 144, 59, 255),
-            new Color32(110, 153, 64, 255),
-            new Color32(106, 146, 57, 255),
-            new Color32(112, 151, 62, 255)
-        };
-        System.Random casuale = new System.Random(seedMondo ^ 0x51F15EED);
-
-        // Zone di verde ampie e morbide: spezzano la piastrellatura senza
-        // trasformare il terreno in una texture piena di rumore minuto.
-        for (int i = 0; i < 12; i++)
-        {
-            int centroX = casuale.Next(lato);
-            int centroY = casuale.Next(lato);
-            float raggioX = Intervallo(casuale, 15f, 35f);
-            float raggioY = Intervallo(casuale, 9f, 22f);
-            Color32 colore = coloriMacchie[casuale.Next(coloriMacchie.Length)];
-
-            for (int y = 0; y < lato; y++)
+            for (int x = 0; x < lato; x++)
             {
-                float distanzaY = Mathf.Abs(y - centroY);
-                distanzaY = Mathf.Min(distanzaY, lato - distanzaY);
-                for (int x = 0; x < lato; x++)
-                {
-                    float distanzaX = Mathf.Abs(x - centroX);
-                    distanzaX = Mathf.Min(distanzaX, lato - distanzaX);
-                    float nx = distanzaX / raggioX;
-                    float ny = distanzaY / raggioY;
-                    float bordo = RumorePixel(x / 3, y / 3, i + seedMondo) * 0.16f;
-                    if (nx * nx + ny * ny <= 1f + bordo)
-                    {
-                        Imposta(pixel, lato, lato, x, y, colore);
-                    }
-                }
+                float u = x / (float)lato;
+                float v = y / (float)lato;
+                float a = Mathf.PerlinNoise(seme + u * 4f, seme + v * 4f);
+                float b = Mathf.PerlinNoise(seme + (u - 1f) * 4f, seme + v * 4f);
+                float c = Mathf.PerlinNoise(seme + u * 4f, seme + (v - 1f) * 4f);
+                float d = Mathf.PerlinNoise(seme + (u - 1f) * 4f, seme + (v - 1f) * 4f);
+                float macchia = Mathf.Lerp(Mathf.Lerp(a, b, u), Mathf.Lerp(c, d, u), v);
+                int tono = Mathf.RoundToInt((macchia - 0.5f) * 18f);
+                pixel[y * lato + x] = new Color32(
+                    (byte)(97 + tono), (byte)(132 + tono), (byte)(70 + tono / 2), 255);
             }
         }
 
-        Color32 filoScuro = new Color32(69, 113, 47, 255);
-        Color32 filoChiaro = new Color32(145, 174, 72, 255);
-        for (int i = 0; i < 52; i++)
+        System.Random casuale = new System.Random(seedMondo ^ 0x51F15EED);
+        for (int i = 0; i < 560; i++)
         {
             int x = casuale.Next(5, lato - 6);
             int y = casuale.Next(5, lato - 7);
-            Color32 colore = casuale.Next(4) == 0 ? filoChiaro : filoScuro;
-            Imposta(pixel, lato, lato, x, y, colore);
-            Imposta(pixel, lato, lato, x + 1, y + 1, colore);
-            if (casuale.Next(2) == 0)
-            {
-                Imposta(pixel, lato, lato, x - 1, y + 2, colore);
-            }
-            else
-            {
-                Imposta(pixel, lato, lato, x + 2, y + 2, colore);
-            }
+            Color32 baseFilo = pixel[y * lato + x];
+            Color32 scuro = new Color32((byte)(baseFilo.r - 11), (byte)(baseFilo.g - 12), (byte)(baseFilo.b - 6), 255);
+            Color32 luce = new Color32((byte)(baseFilo.r + 16), (byte)(baseFilo.g + 12), (byte)(baseFilo.b + 4), 255);
+            int direzione = casuale.Next(2) == 0 ? -1 : 1;
+            Imposta(pixel, lato, lato, x, y, scuro);
+            Imposta(pixel, lato, lato, x + direzione, y + 1, scuro);
+            Imposta(pixel, lato, lato, x + direzione, y + 2, luce);
+            if (casuale.Next(3) == 0)
+                Imposta(pixel, lato, lato, x - direzione, y + 1, luce);
         }
 
-        return CreaSprite("PratoPixelFattoria", pixel, lato, lato);
+        return CreaSprite("PratoPixelFattoria", pixel, lato, lato, 64f);
+    }
+
+    private float AsseSentieroOrizzontale(float x)
+    {
+        float fase = (seedMondo % 97) * 0.031f;
+        return 1.7f + x * 0.16f + Mathf.Sin(x * 0.19f + fase) * 0.85f;
+    }
+
+    private float AsseSentieroVerticale(float y)
+    {
+        return 5.8f + y * 0.08f + Mathf.Sin(y * 0.15f) * 1.1f;
+    }
+
+    private static float DistanzaPeriodica(float coordinata, float periodo)
+    {
+        return Mathf.Abs(Mathf.Repeat(coordinata + periodo * 0.5f, periodo) - periodo * 0.5f);
+    }
+
+    private float DistanzaSentiero(Vector2 mondo)
+    {
+        return Mathf.Min(
+            DistanzaPeriodica(mondo.y - AsseSentieroOrizzontale(mondo.x), 26f) - 0.62f,
+            DistanzaPeriodica(mondo.x - AsseSentieroVerticale(mondo.y), 33f) - 0.43f);
+    }
+
+    private void CreaSentiero(Transform parent, Vector2Int coordinata)
+    {
+        if (DistanzaSentiero(parent.position) > dimensioneChunk * 0.85f) return;
+        int lato = Mathf.RoundToInt(dimensioneChunk * PixelSentieroPerUnita);
+        float origineX = coordinata.x * dimensioneChunk;
+        float origineY = coordinata.y * dimensioneChunk;
+        var assiX = new float[lato];
+        var assiY = new float[lato];
+        // Trigonometria per riga/colonna, non per pixel, anche durante lo streaming.
+        for (int i = 0; i < lato; i++)
+        {
+            assiX[i] = AsseSentieroOrizzontale(origineX + (i + 0.5f) / PixelSentieroPerUnita);
+            assiY[i] = AsseSentieroVerticale(origineY + (i + 0.5f) / PixelSentieroPerUnita);
+        }
+        Color32[] pixel = TelaTrasparente(lato, lato);
+        bool presente = false;
+        for (int y = 0; y < lato; y++)
+        {
+            float mondoY = origineY + (y + 0.5f) / PixelSentieroPerUnita;
+            for (int x = 0; x < lato; x++)
+            {
+                float mondoX = origineX + (x + 0.5f) / PixelSentieroPerUnita;
+                int px = coordinata.x * lato + x;
+                int py = coordinata.y * lato + y;
+                // Coordinate globali: colori e bordi continuano tra chunk adiacenti.
+                float bordo = RumorePixel(Mathf.FloorToInt(px / 4f), Mathf.FloorToInt(py / 4f), seedMondo) * 0.16f;
+                float orizzontale = DistanzaPeriodica(mondoY - assiX[x], 26f);
+                float verticale = DistanzaPeriodica(mondoX - assiY[y], 33f);
+                float distanza = Mathf.Min(orizzontale - 0.62f, verticale - 0.43f) + bordo;
+                if (distanza > 0.17f) continue;
+                presente = true;
+                float interno = Mathf.Clamp01(-distanza / 0.26f);
+                int grana = Mathf.RoundToInt(RumorePixel(px / 2, py / 2, seedMondo + 13) * 11f);
+                Color colore = Color.Lerp(new Color32(119, 126, 70, 255), new Color32(171, 145, 96, 255), interno);
+                // Due solchi tenui danno al sentiero il carattere di una strada poderale.
+                bool solco = Mathf.Abs(orizzontale - 0.24f) < 0.035f && verticale > 0.5f;
+                int ombra = solco ? 9 : 0;
+                Color32 c = colore;
+                c.r = (byte)(c.r + grana - ombra);
+                c.g = (byte)(c.g + grana - ombra);
+                c.b = (byte)(c.b + grana / 2 - ombra / 2);
+                c.a = (byte)Mathf.RoundToInt(Mathf.Clamp01((0.17f - distanza) / 0.15f) * 255f);
+                pixel[y * lato + x] = c;
+            }
+        }
+        if (!presente) return;
+        Sprite sprite = CreaSprite("Sentiero_" + coordinata.x + "_" + coordinata.y,
+            pixel, lato, lato, PixelSentieroPerUnita, false);
+        sentieriChunk.Add(coordinata, sprite);
+        GameObject oggetto = new GameObject("SentieroDecorativo");
+        oggetto.transform.SetParent(parent, false);
+        SpriteRenderer renderer = oggetto.AddComponent<SpriteRenderer>();
+        renderer.sprite = sprite;
+        renderer.sortingLayerID = rendererPrato.sortingLayerID;
+        renderer.sortingOrder = ordineTerreno + 1;
+    }
+
+    private static void DistruggiSentiero(Sprite sprite)
+    {
+        if (sprite == null) return;
+        Destroy(sprite.texture);
+        Destroy(sprite);
     }
 
     private Sprite CreaMacchiaTerra(int seed, int larghezza, int altezza)
@@ -353,13 +419,13 @@ public class FarmBackgroundDecorator : MonoBehaviour
                 int variante = casuale.Next(100);
                 Color32 colore;
                 if (variante < 12)
-                    colore = new Color32(83, 54, 28, 112);
+                    colore = new Color32(111, 107, 61, 85);
                 else if (variante < 38)
-                    colore = new Color32(112, 70, 34, 126);
+                    colore = new Color32(133, 122, 69, 95);
                 else if (variante < 63)
-                    colore = new Color32(132, 83, 39, 130);
+                    colore = new Color32(147, 131, 76, 105);
                 else
-                    colore = new Color32(121, 77, 36, 122);
+                    colore = new Color32(140, 126, 71, 95);
 
                 if (distanza > 0.78f + rumore)
                 {
@@ -378,16 +444,19 @@ public class FarmBackgroundDecorator : MonoBehaviour
         const int w = 24;
         const int h = 20;
         Color32[] pixel = TelaTrasparente(w, h);
-        Color32 scuro = new Color32(52, 92, 35, 255);
-        Color32 medio = new Color32(83, 126, 43, 255);
-        Color32 luce = new Color32(151, 165, 57, 255);
+        Color32 scuro = new Color32(64, 100, 50, 255);
+        Color32 medio = new Color32(91, 129, 58, 255);
+        Color32 luce = new Color32(149, 164, 83, 255);
 
+        Rettangolo(pixel, w, h, 5, 2, 18, 3, new Color32(49, 76, 39, 55));
         Linea(pixel, w, h, 11, 3, 8, 16, scuro, 2);
         Linea(pixel, w, h, 12, 3, 14, 18, medio, 2);
         Linea(pixel, w, h, 10, 3, 4, 12, medio, 2);
         Linea(pixel, w, h, 13, 3, 20, 12, scuro, 2);
         Linea(pixel, w, h, 12, 4, 11, 15, luce, 1);
         Linea(pixel, w, h, 8, 3, 2, 8, luce, 1);
+        Linea(pixel, w, h, 14, 3, 16, 11, luce, 1);
+        Linea(pixel, w, h, 10, 3, 6, 11, luce, 1);
         return CreaSprite("CiuffoErba", pixel, w, h);
     }
 
@@ -396,8 +465,8 @@ public class FarmBackgroundDecorator : MonoBehaviour
         const int w = 26;
         const int h = 22;
         Color32[] pixel = TelaTrasparente(w, h);
-        Color32 verde = new Color32(60, 105, 38, 255);
-        Color32 verdeLuce = new Color32(105, 143, 46, 255);
+        Color32 verde = new Color32(70, 108, 51, 255);
+        Color32 verdeLuce = new Color32(113, 145, 66, 255);
 
         Linea(pixel, w, h, 7, 3, 7, 15, verde, 2);
         Linea(pixel, w, h, 13, 3, 14, 18, verdeLuce, 2);
@@ -419,37 +488,13 @@ public class FarmBackgroundDecorator : MonoBehaviour
         return CreaSprite("Sassolini", pixel, w, h);
     }
 
-    private Sprite CreaStaccionata()
-    {
-        const int w = 54;
-        const int h = 30;
-        Color32[] pixel = TelaTrasparente(w, h);
-        Color32 contorno = new Color32(45, 24, 16, 255);
-        Color32 scuro = new Color32(103, 53, 24, 255);
-        Color32 medio = new Color32(151, 82, 37, 255);
-        Color32 luce = new Color32(202, 132, 60, 255);
-
-        Rettangolo(pixel, w, h, 3, 12, 50, 17, contorno);
-        Rettangolo(pixel, w, h, 5, 13, 48, 15, medio);
-        Rettangolo(pixel, w, h, 3, 5, 50, 10, contorno);
-        Rettangolo(pixel, w, h, 5, 6, 48, 8, scuro);
-
-        int[] pali = { 6, 26, 45 };
-        foreach (int x in pali)
-        {
-            Rettangolo(pixel, w, h, x, 3, x + 6, 25, contorno);
-            Rettangolo(pixel, w, h, x + 2, 5, x + 4, 23, medio);
-            Rettangolo(pixel, w, h, x + 3, 18, x + 4, 22, luce);
-            Imposta(pixel, w, h, x + 3, 26, luce);
-        }
-        return CreaSprite("Staccionata", pixel, w, h);
-    }
-
     private Sprite CreaSprite(
         string nome,
         Color32[] pixel,
         int larghezza,
-        int altezza
+        int altezza,
+        float pixelPerUnita = 48f,
+        bool conservaRisorsa = true
     )
     {
         Texture2D texture = new Texture2D(
@@ -469,15 +514,18 @@ public class FarmBackgroundDecorator : MonoBehaviour
             texture,
             new Rect(0f, 0f, larghezza, altezza),
             new Vector2(0.5f, 0.5f),
-            32f,
+            pixelPerUnita,
             0,
             SpriteMeshType.FullRect
         );
         sprite.name = nome;
         sprite.hideFlags = HideFlags.HideAndDontSave;
 
-        risorseGenerate.Add(sprite);
-        risorseGenerate.Add(texture);
+        if (conservaRisorsa)
+        {
+            risorseGenerate.Add(sprite);
+            risorseGenerate.Add(texture);
+        }
         return sprite;
     }
 
@@ -547,13 +595,24 @@ public class FarmBackgroundDecorator : MonoBehaviour
         int yMax
     )
     {
-        Color32 contorno = new Color32(60, 53, 42, 220);
-        Color32 medio = new Color32(126, 118, 91, 220);
-        Color32 luce = new Color32(173, 159, 116, 220);
-        Rettangolo(pixel, w, h, xMin + 1, yMin, xMax - 1, yMax, contorno);
-        Rettangolo(pixel, w, h, xMin, yMin + 1, xMax, yMax - 1, contorno);
-        Rettangolo(pixel, w, h, xMin + 2, yMin + 2, xMax - 2, yMax - 2, medio);
-        Rettangolo(pixel, w, h, xMin + 2, yMax - 3, xMax - 4, yMax - 2, luce);
+        float cx = (xMin + xMax) * 0.5f;
+        float cy = (yMin + yMax) * 0.5f;
+        for (int y = yMin; y <= yMax; y++)
+        {
+            for (int x = xMin; x <= xMax; x++)
+            {
+                float nx = (x - cx) / Mathf.Max(1f, (xMax - xMin) * 0.5f);
+                float ny = (y - cy) / Mathf.Max(1f, (yMax - yMin) * 0.5f);
+                float distanza = nx * nx + ny * ny;
+                if (distanza > 1f) continue;
+                Color32 colore = distanza > 0.78f
+                    ? new Color32(78, 87, 65, 230)
+                    : y > cy && x < cx + 2
+                        ? new Color32(162, 160, 128, 255)
+                        : new Color32(124, 131, 105, 255);
+                Imposta(pixel, w, h, x, y, colore);
+            }
+        }
     }
 
     private static void Rettangolo(
@@ -634,6 +693,9 @@ public class FarmBackgroundDecorator : MonoBehaviour
 
     void OnDestroy()
     {
+        foreach (Sprite sentiero in sentieriChunk.Values)
+            DistruggiSentiero(sentiero);
+        sentieriChunk.Clear();
         if (contenitore != null)
         {
             Destroy(contenitore.gameObject);
