@@ -669,7 +669,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 6
+  orthographic size: 4.5
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -712,9 +712,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 781d2f10b2be988408f9ecc54491f73c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraFollow
-  zonaMortaOrizzontale: 0.35
-  zonaMortaVerticale: 0.3
-  tempoFluidita: 0.17
+  zonaMortaOrizzontale: 0.18
+  zonaMortaVerticale: 0.16
+  tempoFluidita: 0.12
   vibrazioneAbilitata: 1
 --- !u!1 &580176929
 GameObject:

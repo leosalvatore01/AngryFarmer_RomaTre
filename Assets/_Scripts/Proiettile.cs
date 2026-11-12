@@ -17,6 +17,10 @@ public class Proiettile : MonoBehaviour, IPoolableGameplayObject
     [Min(0f)] public float rotazioneVisivaMinima = 100f;
     [Min(0f)] public float rotazioneVisivaMassima = 165f;
 
+    [Header("Leggibilita")]
+    [Tooltip("Ingrandisce la grafica della patata senza alterare collisioni e potenziamenti.")]
+    [Min(0.5f)] public float scalaVisiva = 1.2f;
+
     private readonly HashSet<int> bersagliColpiti = new HashSet<int>();
     private readonly HashSet<int> rallentamentiPropagati =
         new HashSet<int>();
@@ -85,6 +89,7 @@ public class Proiettile : MonoBehaviour, IPoolableGameplayObject
         durataVita = Mathf.Max(0.05f, bilanciamento.durataProiettile);
 
         ConfiguraGraficaRotante();
+        AggiornaAspettoColpo();
 
         float minimo = Mathf.Min(rotazioneVisivaMinima, rotazioneVisivaMassima);
         float massimo = Mathf.Max(rotazioneVisivaMinima, rotazioneVisivaMassima);
@@ -486,7 +491,7 @@ public class Proiettile : MonoBehaviour, IPoolableGameplayObject
         if (grafica != null)
         {
             grafica.localRotation = Quaternion.identity;
-            grafica.localScale = Vector3.one;
+            grafica.localScale = Vector3.one * scalaVisiva;
         }
     }
 
@@ -708,6 +713,9 @@ public class Proiettile : MonoBehaviour, IPoolableGameplayObject
         {
             rendererGrafica.color = new Color(1f, 0.9f, 0.62f, 1f);
         }
+
+        // La scala appartiene al figlio visivo: la hitbox resta quella della build.
+        rendererGrafica.transform.localScale *= scalaVisiva;
     }
 
     private static int OttieniIdBersaglio(

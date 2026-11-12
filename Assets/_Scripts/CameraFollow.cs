@@ -3,12 +3,12 @@ using UnityEngine;
 public class CameraFollow : MonoBehaviour
 {
     [Range(0.1f, 0.9f)]
-    public float zonaMortaOrizzontale = 0.5f;
+    public float zonaMortaOrizzontale = 0.18f;
 
     [Range(0.1f, 0.9f)]
-    public float zonaMortaVerticale = 0.5f;
+    public float zonaMortaVerticale = 0.16f;
 
-    public float tempoFluidita = 0.25f;
+    public float tempoFluidita = 0.12f;
 
     [Header("Vibrazione colpi potenti")]
     [SerializeField] private bool vibrazioneAbilitata = true;
