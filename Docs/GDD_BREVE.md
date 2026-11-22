@@ -33,7 +33,7 @@ massima raggiunta, accompagnata da punteggio e volpi eliminate.
 
 Il contadino si muove in otto direzioni, mira indipendentemente, spara patate e
 può effettuare una schivata con breve invulnerabilità. Parte da 5 punti vita,
-velocità 8, danno 1 e un colpo ogni 0,4 secondi nella configurazione base.
+velocità 5,8, danno 1 e un colpo ogni 0,4 secondi nella configurazione base.
 
 La build della partita può specializzarsi in Tiratore, Artigliere, Critico o
 Controllore. I power-up non hanno un tetto artificiale: oltre le soglie di

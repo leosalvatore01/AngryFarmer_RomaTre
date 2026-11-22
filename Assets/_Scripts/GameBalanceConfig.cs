@@ -5,10 +5,10 @@ using UnityEngine;
 public sealed class PlayerBalanceSettings
 {
     [Header("Movimento")]
-    [Min(0f)] public float velocitaMovimento = 8f;
-    [Min(0f)] public float accelerazione = 45f;
-    [Min(0f)] public float decelerazione = 60f;
-    [Min(1f)] public float moltiplicatoreInversione = 1.35f;
+    [Min(0f)] public float velocitaMovimento = 5.8f;
+    [Min(0f)] public float accelerazione = 68f;
+    [Min(0f)] public float decelerazione = 110f;
+    [Min(1f)] public float moltiplicatoreInversione = 1.55f;
 
     [Header("Salute")]
     [Min(1)] public int vitaMassima = 5;
@@ -24,16 +24,16 @@ public sealed class PlayerBalanceSettings
     [Header("Sparo")]
     [Min(0.01f)] public float intervalloSparo = 0.4f;
     [Min(0.01f)] public float intervalloSparoMinimo = 0.12f;
-    [Min(0f)] public float velocitaProiettile = 10f;
+    [Min(0f)] public float velocitaProiettile = 16f;
     [Min(1)] public int dannoProiettile = 1;
     [Min(0)] public int penetrazioneProiettile;
-    [Min(0.05f)] public float durataProiettile = 3f;
+    [Min(0.05f)] public float durataProiettile = 1.875f;
     [Min(0f)] public float distanzaMinimaMira = 0.2f;
     [Min(0f)] public float distanzaUscitaProiettile = 0.44f;
 
     [Header("Power-up temporanei")]
     [Min(0f)] public float durataBoostVelocita = 5f;
-    [Min(1f)] public float moltiplicatoreBoostVelocita = 2f;
+    [Min(1f)] public float moltiplicatoreBoostVelocita = 1.25f;
     [Min(0f)] public float durataTriploSparo = 5f;
     [Range(0f, 45f)] public float angoloLateraleTriploSparo = 10f;
     [Min(0.1f)] public float durataScudoTemporaneo = 8f;
@@ -167,7 +167,7 @@ public sealed class ShopBalanceSettings
     public int[] costiSpinta = { 3, 6, 9 };
 
     [Header("Effetti")]
-    [Min(0f)] public float incrementoMovimento = 0.5f;
+    [Min(0f)] public float incrementoMovimento = 0.32f;
     [Min(2)] public int[] frequenzeBlocco = { 5, 4, 3 };
     [Min(0)] public int incrementoSaluteMassima = 1;
     [Min(0)] public int curaSuIncrementoSalute = 1;

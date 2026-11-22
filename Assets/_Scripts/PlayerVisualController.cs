@@ -4,14 +4,12 @@ using System;
 [RequireComponent(typeof(SpriteRenderer))]
 public class PlayerVisualController : MonoBehaviour
 {
-    public float frameAlSecondo = 6f;
+    private const float QuotaAppoggio = -0.45f;
 
-    [Header("Movimento visivo")]
-    [Min(0f)] public float ampiezzaIdle = 0.02f;
-    [Min(0f)] public float frequenzaIdle = 1.2f;
-    [Min(0f)] public float ampiezzaCamminata = 0.08f;
-    [Min(0f)] public float frequenzaCamminata = 3f;
-    [Min(0f)] public float velocitaTransizione = 12f;
+    [Header("Corsa")]
+    [Min(0.1f)] public float distanzaTraPassi = 0.82f;
+    [Min(0f)] public float ampiezzaCamminata = 0.018f;
+    [Range(0f, 0.1f)] public float compressioneAppoggio = 0.05f;
 
     [Header("Feedback sparo")]
     [Min(0.01f)] public float durataFeedbackSparo = 0.1f;
@@ -29,11 +27,8 @@ public class PlayerVisualController : MonoBehaviour
     private static Sprite[] spriteLampo;
 
     private int direzioneCorrente = 0;
-    private float timerAnimazione;
-    private float faseIdle;
-    private float faseCamminata;
-    private float blendCamminata;
-    private bool camminavaNelFramePrecedente;
+    private Vector2 ultimaPosizione;
+    private float avanzamentoCorsa;
     private float tempoFeedbackSparo;
     private Vector2 direzioneRinculo = Vector2.down;
     private float tempoLampo;
@@ -49,6 +44,7 @@ public class PlayerVisualController : MonoBehaviour
         spriteRenderer = CreaRendererVisivo(GetComponent<SpriteRenderer>());
         movimento = GetComponent<PlayerMovement>();
         sparo = GetComponent<PlayerShooting>();
+        ultimaPosizione = transform.position;
         CreaRendererLampo();
 
         frameCamminata = Resources.LoadAll<Sprite>("FarmerWalk-v1");
@@ -65,7 +61,7 @@ public class PlayerVisualController : MonoBehaviour
         OmbraDinamica2D.Crea(
             transform,
             spriteRenderer,
-            new Vector2(0f, -0.42f),
+            new Vector2(0f, QuotaAppoggio),
             new Vector2(0.66f, 0.22f)
         );
     }
@@ -76,53 +72,46 @@ public class PlayerVisualController : MonoBehaviour
 
         if (frameCamminata.Length < 16 || movimento == null)
         {
-            AggiornaMovimentoVisivo(false, 1f);
+            AggiornaMovimentoVisivo(0f, 0f);
             return;
         }
 
-        Vector2 direzione = movimento.VelocitaAttuale;
-        bool staCamminando = movimento.StaCamminando;
+        Vector2 posizione = transform.position;
+        float distanzaPercorsa = Vector2.Distance(ultimaPosizione, posizione);
+        ultimaPosizione = posizione;
 
-        Vector2 direzioneMira;
-        if (sparo != null &&
-            sparo.ProvaOttieniDirezioneMira(out direzioneMira))
+        if (sparo != null && sparo.ProvaOttieniDirezioneMira(out Vector2 direzioneMira))
         {
             direzioneCorrente = OttieniDirezione(direzioneMira);
         }
-        else if (staCamminando)
+        else if (movimento.StaCamminando)
         {
-            direzioneCorrente = OttieniDirezione(direzione.normalized);
+            direzioneCorrente = OttieniDirezione(movimento.VelocitaAttuale);
         }
 
-        if (staCamminando)
+        if (!movimento.StaCamminando || movimento.SchivataAttiva)
         {
-            float cadenza = Mathf.Clamp(
-                direzione.magnitude /
-                Mathf.Max(0.01f, movimento.VelocitaFinale),
-                0.35f,
+            avanzamentoCorsa = 0f;
+            spriteRenderer.sprite = frameCamminata[direzioneCorrente * 2];
+            AggiornaMovimentoVisivo(0f, 0f);
+            return;
+        }
+
+        if (Time.deltaTime > 0f)
+        {
+            avanzamentoCorsa = Mathf.Repeat(
+                avanzamentoCorsa + distanzaPercorsa / Mathf.Max(0.1f, distanzaTraPassi),
                 2f
             );
-            timerAnimazione += Time.deltaTime * cadenza;
-        }
-        else
-        {
-            timerAnimazione = 0f;
         }
 
-        int passo = staCamminando
-            ? Mathf.FloorToInt(timerAnimazione * frameAlSecondo) % 2
-            : 0;
-
-        int indiceSprite = direzioneCorrente * 2 + passo;
-        spriteRenderer.sprite = frameCamminata[indiceSprite];
-
-        float fattoreCadenza = Mathf.Clamp(
-            direzione.magnitude /
-            Mathf.Max(0.01f, movimento.VelocitaFinale),
-            0.35f,
-            2f
-        );
-        AggiornaMovimentoVisivo(staCamminando, fattoreCadenza);
+        // Ogni cambio di posa inizia con l'appoggio, poi il piede si solleva.
+        int passo = (int)avanzamentoCorsa;
+        float fase = avanzamentoCorsa - passo;
+        float appoggio = 1f - Mathf.Clamp01(fase / 0.35f);
+        float sollevamento = Mathf.Sin(Mathf.InverseLerp(0.45f, 1f, fase) * Mathf.PI);
+        spriteRenderer.sprite = frameCamminata[direzioneCorrente * 2 + passo];
+        AggiornaMovimentoVisivo(sollevamento * ampiezzaCamminata, appoggio * compressioneAppoggio);
     }
 
     public void RiproduciFeedbackSparo(
@@ -338,46 +327,9 @@ public class PlayerVisualController : MonoBehaviour
         return nuovoRenderer;
     }
 
-    void AggiornaMovimentoVisivo(bool staCamminando, float fattoreCadenza)
+    private void AggiornaMovimentoVisivo(float sollevamento, float compressione)
     {
         if (grafica == null) return;
-
-        faseIdle = Mathf.Repeat(
-            faseIdle + Time.deltaTime * frequenzaIdle * Mathf.PI * 2f,
-            Mathf.PI * 2f
-        );
-
-        if (staCamminando && !camminavaNelFramePrecedente)
-        {
-            faseCamminata = 0f;
-        }
-
-        if (staCamminando)
-        {
-            faseCamminata = Mathf.Repeat(
-                faseCamminata +
-                Time.deltaTime * frequenzaCamminata *
-                Mathf.Clamp(fattoreCadenza, 0.5f, 2f) * Mathf.PI * 2f,
-                Mathf.PI * 2f
-            );
-        }
-
-        float transizione = 1f - Mathf.Exp(-velocitaTransizione * Time.deltaTime);
-        blendCamminata = Mathf.Lerp(
-            blendCamminata,
-            staCamminando ? 1f : 0f,
-            transizione
-        );
-
-        float offsetIdle = Mathf.Sin(faseIdle) * ampiezzaIdle;
-        float offsetCamminata =
-            (1f - Mathf.Cos(faseCamminata)) * 0.5f * ampiezzaCamminata;
-
-        float offsetVerticale = Mathf.Lerp(
-            offsetIdle,
-            offsetCamminata,
-            blendCamminata
-        );
 
         float forzaSparo = 0f;
         if (tempoFeedbackSparo > 0f)
@@ -393,19 +345,18 @@ public class PlayerVisualController : MonoBehaviour
 
         Vector2 offsetRinculo =
             -direzioneRinculo * distanzaRinculo * forzaSparo;
+        compressione += compressioneSparo * forzaSparo;
         grafica.localPosition = new Vector3(
             offsetRinculo.x,
-            offsetVerticale + offsetRinculo.y,
+            QuotaAppoggio * compressione + sollevamento + offsetRinculo.y,
             0f
         );
 
-        float compressione = compressioneSparo * forzaSparo;
         grafica.localScale = new Vector3(
             1f + compressione * 0.55f,
             1f - compressione,
             1f
         );
-        camminavaNelFramePrecedente = staCamminando;
     }
 
     int OttieniDirezione(Vector2 direzione)

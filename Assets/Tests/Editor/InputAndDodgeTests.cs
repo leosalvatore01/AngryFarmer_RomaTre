@@ -179,6 +179,39 @@ public sealed class InputAndDodgeTests
     }
 
     [Test]
+    public void Movimento_LaCodaNonMoltiplicaIBonusELePatateRestanoPiuVeloci()
+    {
+        PlayerMovement movimento = CreaGiocatore();
+        PlayerShooting sparo = giocatore.AddComponent<PlayerShooting>();
+        RichiamaMetodo(sparo, "Awake");
+        PlayerUpgrades upgrades = giocatore.GetComponent<PlayerUpgrades>();
+        RichiamaMetodo(upgrades, "Awake");
+
+        movimento.AttivaBoostVelocita();
+        float bonusCoda = movimento.VelocitaEffettiva - movimento.VelocitaFinale;
+        Assert.That(bonusCoda / movimento.VelocitaBase, Is.InRange(0.15f, 0.3f));
+        Assert.That(sparo.VelocitaProiettileFinale, Is.GreaterThan(movimento.VelocitaEffettiva * 2f));
+
+        movimento.ImpostaBonusVelocitaPermanente(
+            ProgressionePermanente.CalcolaBonusVelocitaMovimento(int.MaxValue)
+        );
+        for (int i = 0; i < 100; i++)
+        {
+            Assert.That(upgrades.ProvaApplicareGratis(TipoPotenziamento.Movimento, out _), Is.True);
+        }
+        for (int i = 0; i < 12; i++)
+        {
+            Assert.That(upgrades.ProvaApplicareGratis(TipoPotenziamento.PatataGigante, out _), Is.True);
+        }
+
+        movimento.AttivaBoostVelocita();
+        float velocitaPatataGigante = sparo.VelocitaProiettileFinale *
+            upgrades.CreaProfiloProiettile(false).MoltiplicatoreVelocita;
+        Assert.That(movimento.VelocitaEffettiva - movimento.VelocitaFinale, Is.EqualTo(bonusCoda).Within(0.001f));
+        Assert.That(velocitaPatataGigante, Is.GreaterThan(movimento.VelocitaEffettiva));
+    }
+
+    [Test]
     public void HudSchivata_VieneCreatoUnaSolaVoltaSullInterfaccia()
     {
         interfaccia = new GameObject("Interfaccia");

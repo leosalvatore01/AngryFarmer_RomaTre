@@ -79,6 +79,7 @@ public sealed class MenuInizialeController : MonoBehaviour
         AssicuraAudioListener();
         CostruisciInterfaccia();
         AggiornaDatiVisibili();
+        if (!LoginSession.AccessoLocaleScelto) OnlineLoginController.Mostra(this);
     }
 
     private void OnEnable()
@@ -109,6 +110,7 @@ public sealed class MenuInizialeController : MonoBehaviour
 
     private void Update()
     {
+        if (OnlineLoginController.BloccaInputMenu) return;
         FarmerInputController input = FarmerInputController.CreaOTrova();
         if (caricamentoInCorso ||
             ShopPermanentePrePartita.ApertoGlobale ||
@@ -188,6 +190,10 @@ public sealed class MenuInizialeController : MonoBehaviour
         pannelloDifficolta.transform.SetAsLastSibling();
         FarmAudioController.RiproduciInterfaccia();
     }
+
+    public void AggiornaProfiloDopoAccesso() { AggiornaDatiVisibili(); }
+
+    public void MostraAccesso() { OnlineLoginController.Mostra(this); }
 
     public void AvviaPartita(DifficoltaPartita difficolta)
     {
@@ -581,13 +587,19 @@ public sealed class MenuInizialeController : MonoBehaviour
         CreaTesto(
             "NotaSalvataggio",
             pannelloPrincipale.transform,
-            "PROFILO OSPITE  ·  SALVATAGGIO LOCALE ATTIVO",
+            "",
             new Vector2(0f, -345f),
             new Vector2(680f, 34f),
             16f,
             FarmPixelUI.TestoMetaFlat,
             FontStyles.Bold
         );
+        CreaPulsante("CambiaAccount", pannelloPrincipale.transform, "ACCESSO ACCOUNT",
+            MobileExperience.Attiva ? new Vector2(320f, -254f) : new Vector2(0f, -345f),
+            MobileExperience.Attiva ? new Vector2(604f, 144f) : new Vector2(590f, 44f), FarmPixelUI.ColorePulsanteNeutroFlat,
+            null, MostraAccesso, out _);
+        if (MobileExperience.Attiva)
+            pannelloPrincipale.transform.Find("Esci").GetComponent<RectTransform>().anchoredPosition = new Vector2(-320f, -254f);
         CreaTesto(
             "Comandi",
             pannelloPrincipale.transform,
@@ -1418,7 +1430,7 @@ public sealed class MenuInizialeController : MonoBehaviour
             SalvataggioGiocatore.NomeProfilo
         );
         ImpostaMessaggioProfilo(
-            "Il collegamento a un account online rimane opzionale.",
+            "I progressi sono salvati su questo dispositivo.",
             FarmPixelUI.TestoMetaFlat
         );
     }

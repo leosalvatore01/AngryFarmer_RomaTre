@@ -126,6 +126,8 @@ public sealed class MobileExperienceTests
         // esplicitamente l'app attiva prima di inviare tocchi.
         MobileAppLifecycle.Instance.NotificaPausa(false);
         MobileAppLifecycle.Instance.NotificaFocus(true);
+        yield return Tocca("ContinuaOspite");
+        yield return null;
         MobileVisualCapture.Salva("menu-16-9");
         yield return null;
         yield return Tocca("ShopPermanente");

@@ -68,7 +68,7 @@ public static class ProgressionePermanente
 
     private const float LimiteRiduzioneCadenza = 0.18f;
     private const float CurvaCadenza = 7f;
-    private const float LimiteVelocitaMovimento = 2.25f;
+    private const float LimiteVelocitaMovimento = 1.5f;
     private const float CurvaMovimento = 8f;
     private const float LimiteProbabilitaBlocco = 0.30f;
     private const float CurvaResistenza = 9f;

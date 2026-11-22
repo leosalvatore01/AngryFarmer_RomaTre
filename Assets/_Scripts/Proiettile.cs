@@ -50,7 +50,7 @@ public class Proiettile : MonoBehaviour, IPoolableGameplayObject
     private Transform grafica;
     private SpriteRenderer rendererGrafica;
     private float velocitaRotazioneVisiva;
-    private float durataVita = 3f;
+    private float durataVita = 1.875f;
     private float tempoFineVita;
     private bool colpoPotente;
     private bool aspettoPerforante;

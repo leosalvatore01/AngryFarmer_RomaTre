@@ -12,7 +12,7 @@ public class PlayerShooting : MonoBehaviour
     [SerializeField, Min(0.01f)] private float intervalloSparoBase = 0.4f;
 
     [FormerlySerializedAs("bulletSpeed")]
-    [SerializeField, Min(0f)] private float velocitaProiettileBase = 10f;
+    [SerializeField, Min(0f)] private float velocitaProiettileBase = 16f;
 
     [FormerlySerializedAs("dannoProiettile")]
     [SerializeField, Min(1)] private int dannoBase = 1;

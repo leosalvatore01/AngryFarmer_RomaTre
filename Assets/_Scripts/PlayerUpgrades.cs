@@ -1206,10 +1206,10 @@ public class PlayerUpgrades : MonoBehaviour
         );
         float velocitaBase = movimento != null
             ? movimento.VelocitaBase
-            : 8f;
+            : GameBalanceConfig.Corrente.Giocatore.velocitaMovimento;
         float limite = Mathf.Max(
             incremento * 8f,
-            velocitaBase * 0.5f
+            velocitaBase * 0.4f
         );
         double costante = Math.Max(1d, limite / incremento - 1d);
         return (float)(limite * livello / (livello + costante));
@@ -1359,7 +1359,7 @@ public class PlayerUpgrades : MonoBehaviour
                 0f,
                 Configurazione.riduzioneVelocitaPatataGigante
             ),
-            0.55f,
+            0.78f,
             1f
         );
     }

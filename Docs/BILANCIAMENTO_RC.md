@@ -11,11 +11,12 @@ resta `Assets/_Scripts/GameBalanceConfig.cs`.
 | Valore | Base |
 |---|---:|
 | Vita massima | 5 |
-| Velocità | 8 |
+| Velocità | 5,8 |
 | Intervallo di fuoco | 0,40 s |
 | Intervallo minimo | 0,12 s |
 | Danno del proiettile | 1 |
-| Velocità del proiettile | 10 |
+| Velocità del proiettile | 16 |
+| Coda scattante | +25% della velocità base per 5 s |
 | Schivata | 0,18 s |
 | Recupero schivata | 1,10 s |
 

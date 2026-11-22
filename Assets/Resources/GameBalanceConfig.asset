@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameBalanceConfig
   versioneRiferimento: Blocco 12 - prima taratura quantitativa - 2026-09-09
   giocatore:
-    velocitaMovimento: 8
-    accelerazione: 45
-    decelerazione: 60
-    moltiplicatoreInversione: 1.35
+    velocitaMovimento: 5.8
+    accelerazione: 68
+    decelerazione: 110
+    moltiplicatoreInversione: 1.55
     vitaMassima: 5
     frequenzaBloccoBase: 0
     durataInvulnerabilitaDopoColpo: 0.65
@@ -27,14 +27,14 @@ MonoBehaviour:
     durataInvulnerabilitaSchivata: 0.24
     intervalloSparo: 0.4
     intervalloSparoMinimo: 0.12
-    velocitaProiettile: 10
+    velocitaProiettile: 16
     dannoProiettile: 1
     penetrazioneProiettile: 0
-    durataProiettile: 3
+    durataProiettile: 1.875
     distanzaMinimaMira: 0.2
     distanzaUscitaProiettile: 0.44
     durataBoostVelocita: 5
-    moltiplicatoreBoostVelocita: 2
+    moltiplicatoreBoostVelocita: 1.25
     durataTriploSparo: 5
     angoloLateraleTriploSparo: 10
     durataScudoTemporaneo: 8
@@ -250,7 +250,7 @@ MonoBehaviour:
     costiRimbalzo: 080000000e000000
     costiRallentamento: 0300000006000000
     costiSpinta: 030000000600000009000000
-    incrementoMovimento: 0.5
+    incrementoMovimento: 0.32
     frequenzeBlocco: 050000000400000003000000
     incrementoSaluteMassima: 1
     curaSuIncrementoSalute: 1

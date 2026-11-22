@@ -1897,10 +1897,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 674e0d0278cee4e8aa53efe4c3ca45e7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
-  velocitaBase: 8
+  velocitaBase: 5.8
   durataBoost: 5
-  accelerazione: 45
-  decelerazione: 60
+  accelerazione: 68
+  decelerazione: 110
 --- !u!212 &1813665474
 SpriteRenderer:
   serializedVersion: 2
@@ -1989,7 +1989,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerShooting
   bulletPrefab: {fileID: 2816885290978022999, guid: c4e60d5e961bc42a587cf54e478ddc8a, type: 3}
   intervalloSparoBase: 0.4
-  velocitaProiettileBase: 10
+  velocitaProiettileBase: 16
   dannoBase: 1
   penetrazioneBase: 0
   distanzaMinimaMira: 0.2
@@ -2083,12 +2083,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2dd89971dde98dc49a31b7215d64f19a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerVisualController
-  frameAlSecondo: 6
-  ampiezzaIdle: 0.02
-  frequenzaIdle: 1.2
-  ampiezzaCamminata: 0.08
-  frequenzaCamminata: 3
-  velocitaTransizione: 12
+  distanzaTraPassi: 0.82
+  ampiezzaCamminata: 0.018
+  compressioneAppoggio: 0.05
   durataFeedbackSparo: 0.1
   distanzaRinculo: 0.08
   compressioneSparo: 0.035
